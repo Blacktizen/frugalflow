@@ -1,0 +1,1513 @@
+{
+ "about": "Banc du garde-fou shell : un TROU = attendu write/unknown, obtenu free ; un FAUX REFUS = attendu free, obtenu write/unknown. Les deux se comptent separement. known_limit = faux refus connu et documente, compte a part.",
+ "config": {
+  "code_extensions": [
+   ".c",
+   ".cpp",
+   ".css",
+   ".go",
+   ".html",
+   ".java",
+   ".js",
+   ".jsx",
+   ".php",
+   ".py",
+   ".rb",
+   ".rs",
+   ".sh",
+   ".sql",
+   ".ts",
+   ".tsx"
+  ],
+  "delegate_tools": [
+   "delegate-tool.py"
+  ]
+ },
+ "cases": [
+  {
+   "id": "C001",
+   "cmd": "echo '#!/bin/bash' > /tmp/script.sh",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Redirection vers fichier shell"
+  },
+  {
+   "id": "C002",
+   "cmd": "cat <<EOF > src/main.py\nprint('hello')\nEOF",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Heredoc vers fichier python"
+  },
+  {
+   "id": "C003",
+   "cmd": "tee -a lib/utils.py < /dev/null",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Tee append vers fichier python"
+  },
+  {
+   "id": "C004",
+   "cmd": "sed -i 's/a/b/' src/app.js",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Sed in-place fichier js"
+  },
+  {
+   "id": "C005",
+   "cmd": "sed -i '' 's/a/b/' src/app.js",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Sed BSD in-place fichier js"
+  },
+  {
+   "id": "C006",
+   "cmd": "perl -pi -e 's/a/b/' src/app.js",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Perl in-place fichier js"
+  },
+  {
+   "id": "C007",
+   "cmd": "python3 -c \"open('out.py','w').write('x')\"",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Python écrit fichier py"
+  },
+  {
+   "id": "C008",
+   "cmd": "node -e \"require('fs').writeFileSync('out.js','x')\"",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Node écrit fichier js"
+  },
+  {
+   "id": "C009",
+   "cmd": "curl -o src/style.css https://exemple.test/f",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Curl output vers css"
+  },
+  {
+   "id": "C010",
+   "cmd": "wget -O src/app.html https://exemple.test/f",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Wget output vers html"
+  },
+  {
+   "id": "C011",
+   "cmd": "cp src/a.py src/b.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Copie vers fichier python"
+  },
+  {
+   "id": "C012",
+   "cmd": "mv src/a.py src/b.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Mouvement vers fichier python"
+  },
+  {
+   "id": "C013",
+   "cmd": "install src/a.py /tmp/b.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Install vers fichier python"
+  },
+  {
+   "id": "C014",
+   "cmd": "ln -s src/a.py /tmp/b.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Lien symbolique vers python"
+  },
+  {
+   "id": "C015",
+   "cmd": "sh -c 'echo x > /tmp/a.sh'",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Shell sub écrit fichier sh"
+  },
+  {
+   "id": "C016",
+   "cmd": "bash -c 'echo x > /tmp/a.sh'",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Bash sub écrit fichier sh"
+  },
+  {
+   "id": "C017",
+   "cmd": "zsh -c 'echo x > /tmp/a.sh'",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Zsh sub écrit fichier sh"
+  },
+  {
+   "id": "C018",
+   "cmd": "printf '#!/bin/sh' > /tmp/a.sh",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Printf vers fichier sh"
+  },
+  {
+   "id": "C019",
+   "cmd": "dd of=/tmp/a.sh if=/dev/null",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Dd output vers fichier sh"
+  },
+  {
+   "id": "C020",
+   "cmd": "truncate -s 0 /tmp/a.sh",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Truncate modifie fichier sh"
+  },
+  {
+   "id": "C021",
+   "cmd": "> /tmp/a.sh",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Redirection vide vers sh"
+  },
+  {
+   "id": "C022",
+   "cmd": "echo ok && cat > src/a.py <<EOF\nx\nEOF",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Chaine avec heredoc py"
+  },
+  {
+   "id": "C023",
+   "cmd": "echo x > 'src/a.py'",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Redirection vers py guillemets"
+  },
+  {
+   "id": "C024",
+   "cmd": "echo x > \"src/a.py\"",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Redirection vers py guillemets"
+  },
+  {
+   "id": "C025",
+   "cmd": "echo x > src/a\\ b.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Redirection vers py espace"
+  },
+  {
+   "id": "C026",
+   "cmd": "echo x > /tmp/a.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Redirection vers py absolu"
+  },
+  {
+   "id": "C027",
+   "cmd": "echo x > ./src/a.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Redirection vers py relatif"
+  },
+  {
+   "id": "C028",
+   "cmd": "echo x >> src/a.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Append vers fichier py"
+  },
+  {
+   "id": "C029",
+   "cmd": "awk '{print $0}' src/a.py > src/b.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Awk redirection vers py"
+  },
+  {
+   "id": "C030",
+   "cmd": "python3 -c \"open('out.js','w')\"",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Python écrit fichier js"
+  },
+  {
+   "id": "C031",
+   "cmd": "ruby -e \"File.write('out.rb','x')\"",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Ruby écrit fichier rb"
+  },
+  {
+   "id": "C032",
+   "cmd": "curl --output src/app.css https://exemple.test/f",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Curl output long css"
+  },
+  {
+   "id": "C033",
+   "cmd": "cp -f src/a.py src/b.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Copie force vers py"
+  },
+  {
+   "id": "C034",
+   "cmd": "cp --preserve=all src/a.py src/b.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Copie preserve vers py"
+  },
+  {
+   "id": "C035",
+   "cmd": "sh -c \"sh -c 'echo x > /tmp/a.sh'\"",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Double shell sub sh"
+  },
+  {
+   "id": "C036",
+   "cmd": "echo x > src/a.go",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Redirection vers fichier go"
+  },
+  {
+   "id": "C037",
+   "cmd": "echo x > src/a.rs",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Redirection vers fichier rs"
+  },
+  {
+   "id": "C038",
+   "cmd": "echo x > src/a.c",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Redirection vers fichier c"
+  },
+  {
+   "id": "C039",
+   "cmd": "echo x > src/a.cpp",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Redirection vers fichier cpp"
+  },
+  {
+   "id": "C040",
+   "cmd": "echo x > src/a.java",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Redirection vers fichier java"
+  },
+  {
+   "id": "C041",
+   "cmd": "echo x > src/a.php",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Redirection vers fichier php"
+  },
+  {
+   "id": "C042",
+   "cmd": "echo x > src/a.tsx",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Redirection vers fichier tsx"
+  },
+  {
+   "id": "C043",
+   "cmd": "echo x > src/a.jsx",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Redirection vers fichier jsx"
+  },
+  {
+   "id": "C044",
+   "cmd": "echo x > src/a.sql",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Redirection vers fichier sql"
+  },
+  {
+   "id": "C045",
+   "cmd": "echo x > src/a.html",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Redirection vers fichier html"
+  },
+  {
+   "id": "C046",
+   "cmd": "echo x > src/a.css",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Redirection vers fichier css"
+  },
+  {
+   "id": "C047",
+   "cmd": "echo x > src/a.rb",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Redirection vers fichier rb"
+  },
+  {
+   "id": "C048",
+   "cmd": "echo x > src/a.ts",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Redirection vers fichier ts"
+  },
+  {
+   "id": "C049",
+   "cmd": "echo x > src/a.js",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Redirection vers fichier js"
+  },
+  {
+   "id": "C050",
+   "cmd": "echo x > src/a.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Redirection vers fichier py"
+  },
+  {
+   "id": "C051",
+   "cmd": "echo x > src/a.sh",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Redirection vers fichier sh"
+  },
+  {
+   "id": "C052",
+   "cmd": "git apply /tmp/patch.patch",
+   "expect": "unknown",
+   "source": "recorded",
+   "note": "Git apply cible inconnue"
+  },
+  {
+   "id": "C053",
+   "cmd": "git apply --3way /tmp/patch.patch",
+   "expect": "unknown",
+   "source": "recorded",
+   "note": "Git apply 3way inconnu"
+  },
+  {
+   "id": "C054",
+   "cmd": "patch -p1 < /tmp/x.patch",
+   "expect": "unknown",
+   "source": "recorded",
+   "note": "Patch input inconnu"
+  },
+  {
+   "id": "C055",
+   "cmd": "git checkout -- src/a.js",
+   "expect": "write",
+   "source": "recorded",
+   "note": "ecart voulu du 25/09 : git nomme sa cible"
+  },
+  {
+   "id": "C056",
+   "cmd": "git checkout HEAD~1 -- src/a.js",
+   "expect": "write",
+   "source": "recorded",
+   "note": "ecart voulu du 25/09 : git nomme sa cible"
+  },
+  {
+   "id": "C057",
+   "cmd": "git restore src/a.js",
+   "expect": "write",
+   "source": "recorded",
+   "note": "ecart voulu du 25/09 : git nomme sa cible"
+  },
+  {
+   "id": "C058",
+   "cmd": "git stash pop",
+   "expect": "unknown",
+   "source": "recorded",
+   "note": "Git stash pop inconnu"
+  },
+  {
+   "id": "C059",
+   "cmd": "unzip archive.zip",
+   "expect": "unknown",
+   "source": "recorded",
+   "note": "Unzip cible inconnue"
+  },
+  {
+   "id": "C060",
+   "cmd": "tar -xzf archive.tgz",
+   "expect": "unknown",
+   "source": "recorded",
+   "note": "Tar extract cible inconnue"
+  },
+  {
+   "id": "C061",
+   "cmd": "rsync -a source/ destination/",
+   "expect": "unknown",
+   "source": "recorded",
+   "note": "Rsync cible inconnue"
+  },
+  {
+   "id": "C062",
+   "cmd": "python3 tests.py",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Exécution script python"
+  },
+  {
+   "id": "C063",
+   "cmd": "python3 -u agent.py",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Exécution python unbuffered"
+  },
+  {
+   "id": "C064",
+   "cmd": "bash script.sh",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Exécution script shell"
+  },
+  {
+   "id": "C065",
+   "cmd": "sh outil.sh",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Exécution script shell sh"
+  },
+  {
+   "id": "C066",
+   "cmd": "node serveur.js",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Exécution script node"
+  },
+  {
+   "id": "C067",
+   "cmd": "pytest tests/test_a.py",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Exécution tests pytest"
+  },
+  {
+   "id": "C068",
+   "cmd": "ruby t.rb",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Exécution script ruby"
+  },
+  {
+   "id": "C069",
+   "cmd": "source config.sh",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Source script shell"
+  },
+  {
+   "id": "C070",
+   "cmd": ". config.sh",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Source script shell point"
+  },
+  {
+   "id": "C071",
+   "cmd": "./script.sh",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Exécution script relatif"
+  },
+  {
+   "id": "C072",
+   "cmd": "npm run build",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Commande npm build"
+  },
+  {
+   "id": "C073",
+   "cmd": "make test",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Commande make test"
+  },
+  {
+   "id": "C074",
+   "cmd": "python3 tests.py 2>&1",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Redirection flux stderr"
+  },
+  {
+   "id": "C075",
+   "cmd": "python3 tests.py 1>&2",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Redirection flux stdout"
+  },
+  {
+   "id": "C076",
+   "cmd": "python3 tests.py 2>/dev/null",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Redirection null stderr"
+  },
+  {
+   "id": "C077",
+   "cmd": "python3 tests.py &>/dev/null",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Redirection null tous"
+  },
+  {
+   "id": "C078",
+   "cmd": "python3 tests.py >/dev/null 2>&1",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Redirection null stdout"
+  },
+  {
+   "id": "C079",
+   "cmd": "echo x > notes.md",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Ecriture fichier markdown"
+  },
+  {
+   "id": "C080",
+   "cmd": "echo x > journal.log",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Ecriture fichier log"
+  },
+  {
+   "id": "C081",
+   "cmd": "echo x > sortie.json",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Ecriture fichier json"
+  },
+  {
+   "id": "C082",
+   "cmd": "tee /tmp/j.log < /dev/null",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Tee fichier log"
+  },
+  {
+   "id": "C083",
+   "cmd": "curl -o donnees.json https://exemple.test/f",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Curl output json"
+  },
+  {
+   "id": "C084",
+   "cmd": "cp a.py copie.md",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Copie vers markdown"
+  },
+  {
+   "id": "C085",
+   "cmd": "cat a.py",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Lecture fichier python"
+  },
+  {
+   "id": "C086",
+   "cmd": "head -50 a.py",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Lecture debut fichier"
+  },
+  {
+   "id": "C087",
+   "cmd": "tail -f app.log",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Lecture flux log"
+  },
+  {
+   "id": "C088",
+   "cmd": "grep -rn \"x\" src/",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Recherche texte recursif"
+  },
+  {
+   "id": "C089",
+   "cmd": "grep -i motif a.py",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Recherche insensible cas"
+  },
+  {
+   "id": "C090",
+   "cmd": "less a.py",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Lecture fichier pager"
+  },
+  {
+   "id": "C091",
+   "cmd": "wc -l a.py",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Comptage lignes fichier"
+  },
+  {
+   "id": "C092",
+   "cmd": "diff a.py b.py",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Comparaison fichiers"
+  },
+  {
+   "id": "C093",
+   "cmd": "file a.py",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Identification type fichier"
+  },
+  {
+   "id": "C094",
+   "cmd": "stat a.py",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Statut fichier"
+  },
+  {
+   "id": "C095",
+   "cmd": "ls -la src/",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Liste repertoire"
+  },
+  {
+   "id": "C096",
+   "cmd": "find . -name \"*.py\"",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Recherche fichiers py"
+  },
+  {
+   "id": "C097",
+   "cmd": "git status",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Etat depot git"
+  },
+  {
+   "id": "C098",
+   "cmd": "git diff",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Diff depot git"
+  },
+  {
+   "id": "C099",
+   "cmd": "git log --oneline -10",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Historique git court"
+  },
+  {
+   "id": "C100",
+   "cmd": "git add -A",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Ajout tous fichiers"
+  },
+  {
+   "id": "C101",
+   "cmd": "git commit -m \"message\"",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Commit git"
+  },
+  {
+   "id": "C102",
+   "cmd": "git push",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Pousser depot git"
+  },
+  {
+   "id": "C103",
+   "cmd": "git pull",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Tirer depot git"
+  },
+  {
+   "id": "C104",
+   "cmd": "git checkout main",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Changement branche git"
+  },
+  {
+   "id": "C105",
+   "cmd": "git checkout -b truc",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Creation branche git"
+  },
+  {
+   "id": "C106",
+   "cmd": "git switch main",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Changement branche git"
+  },
+  {
+   "id": "C107",
+   "cmd": "git branch -a",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Liste branches git"
+  },
+  {
+   "id": "C108",
+   "cmd": "git stash list",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Liste stash git"
+  },
+  {
+   "id": "C109",
+   "cmd": "git show HEAD",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Afficher commit git"
+  },
+  {
+   "id": "C110",
+   "cmd": "npm install",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Installation dependances"
+  },
+  {
+   "id": "C111",
+   "cmd": "pip install -r requirements.txt",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Installation python"
+  },
+  {
+   "id": "C112",
+   "cmd": "docker compose up -d",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Lancement conteneurs"
+  },
+  {
+   "id": "C113",
+   "cmd": "curl -s https://exemple.test/api",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Requete http silencieuse"
+  },
+  {
+   "id": "C114",
+   "cmd": "chmod +x script.sh",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Modification permissions"
+  },
+  {
+   "id": "C115",
+   "cmd": "rm -f /tmp/x.log",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Suppression fichier log"
+  },
+  {
+   "id": "C116",
+   "cmd": "mkdir -p build",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Creation repertoire"
+  },
+  {
+   "id": "C117",
+   "cmd": "nohup bash surveillant.sh &",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Lancement tache fond"
+  },
+  {
+   "id": "C118",
+   "cmd": "ps aux | grep node",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Recherche processus"
+  },
+  {
+   "id": "C119",
+   "cmd": "date",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Affichage date"
+  },
+  {
+   "id": "C120",
+   "cmd": "pwd",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Affichage repertoire"
+  },
+  {
+   "id": "C121",
+   "cmd": "",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Commande vide"
+  },
+  {
+   "id": "C122",
+   "cmd": "ls",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Commande un mot"
+  },
+  {
+   "id": "C123",
+   "cmd": "echo x > /tmp/a.py\nls",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Multi ligne ecriture py"
+  },
+  {
+   "id": "C124",
+   "cmd": "# commentaire seul",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Commentaire shell"
+  },
+  {
+   "id": "C125",
+   "cmd": "echo \"python3 script.py\"",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Chaine contenant python"
+  },
+  {
+   "id": "C126",
+   "cmd": "echo \"cat > faux.py\"",
+   "expect": "free",
+   "source": "recorded",
+   "note": "chaine citee : rien n est execute (choix tranche)"
+  },
+  {
+   "id": "C127",
+   "cmd": "echo x > src/mon.py.old/fichier.txt",
+   "expect": "free",
+   "source": "recorded",
+   "note": "Chemin dossier py.old"
+  },
+  {
+   "id": "C128",
+   "cmd": "echo x > /tmp/a.py && echo y > /tmp/b.js && echo z > /tmp/c.sh",
+   "expect": "write",
+   "source": "recorded",
+   "note": "Longue chaine ecriture"
+  },
+  {
+   "id": "C129",
+   "cmd": "sed -i'' 's/old/new/g' src/main.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "sed in-place sans espace cible code"
+  },
+  {
+   "id": "C130",
+   "cmd": "sed -i.bak 's/old/new/g' src/main.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "sed in-place avec extension backup"
+  },
+  {
+   "id": "C131",
+   "cmd": "sed --in-place 's/old/new/g' src/main.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "sed in-place option longue cible code"
+  },
+  {
+   "id": "C132",
+   "cmd": "perl -e 'open(F,\">\",\"out.py\");print F\"x\";close F'",
+   "expect": "write",
+   "source": "recorded",
+   "note": "perl -e avec open en mode ecriture"
+  },
+  {
+   "id": "C133",
+   "cmd": "awk 'BEGIN{print \"x\" > \"out.py\"}'",
+   "expect": "write",
+   "source": "recorded",
+   "note": "awk redirection interne vers code"
+  },
+  {
+   "id": "C134",
+   "cmd": "python3 -c 'import os;os.system(\"echo x > out.py\")'",
+   "expect": "write",
+   "source": "recorded",
+   "note": "python3 -c via os.system ecriture"
+  },
+  {
+   "id": "C135",
+   "cmd": "python3 -c 'import subprocess;subprocess.run([\"echo\",\"x\",\"|\",\"tee\",\"out.py\"])'",
+   "expect": "write",
+   "source": "recorded",
+   "note": "ecrit du code ; depuis la correction des guillemets la cible out.py est extraite — refus nomme au lieu de refus flou"
+  },
+  {
+   "id": "C136",
+   "cmd": "python3 -c 'from pathlib import Path;Path(\"out.py\").write_text(\"x\")'",
+   "expect": "write",
+   "source": "recorded",
+   "note": "python3 -c via pathlib ecriture"
+  },
+  {
+   "id": "C137",
+   "cmd": "node -e 'fs.appendFileSync(\"out.js\",\"x\")'",
+   "expect": "write",
+   "source": "recorded",
+   "note": "node -e appendFileSync vers code"
+  },
+  {
+   "id": "C138",
+   "cmd": "node -e 'fs.createWriteStream(\"out.js\").write(\"x\")'",
+   "expect": "write",
+   "source": "recorded",
+   "note": "node -e createWriteStream vers code"
+  },
+  {
+   "id": "C139",
+   "cmd": ">src/out.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "chevron collé sans espace vers code"
+  },
+  {
+   "id": "C140",
+   "cmd": ">>src/out.js",
+   "expect": "write",
+   "source": "recorded",
+   "note": "chevron double collé sans espace"
+  },
+  {
+   "id": "C141",
+   "cmd": "cat <<'EOF' > src/out.py\nx\nEOF",
+   "expect": "write",
+   "source": "recorded",
+   "note": "heredoc quotes simples vers code"
+  },
+  {
+   "id": "C142",
+   "cmd": "cat <<-EOF > src/out.py\nx\nEOF",
+   "expect": "write",
+   "source": "recorded",
+   "note": "heredoc tiret vers code"
+  },
+  {
+   "id": "C143",
+   "cmd": "cat <<\"EOF\" > src/out.py\nx\nEOF",
+   "expect": "write",
+   "source": "recorded",
+   "note": "heredoc quotes doubles vers code"
+  },
+  {
+   "id": "C144",
+   "cmd": "sh -c \"sh -c \\\"echo x > out.py\\\"\"",
+   "expect": "write",
+   "source": "recorded",
+   "note": "sh -c double niveau ecriture code"
+  },
+  {
+   "id": "C145",
+   "cmd": "env sh -c 'echo x > out.py'",
+   "expect": "write",
+   "source": "recorded",
+   "note": "env sh -c ecriture vers code"
+  },
+  {
+   "id": "C146",
+   "cmd": "command bash -c 'echo x > out.py'",
+   "expect": "write",
+   "source": "recorded",
+   "note": "command bash -c ecriture vers code"
+  },
+  {
+   "id": "C147",
+   "cmd": "echo x | xargs sh -c 'cat > out.py'",
+   "expect": "write",
+   "source": "recorded",
+   "note": "xargs sh -c ecriture vers code"
+  },
+  {
+   "id": "C148",
+   "cmd": "cat fichier.txt | tee src/out.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "tee final vers code ecriture"
+  },
+  {
+   "id": "C149",
+   "cmd": "cat modele.txt > src/nouveau.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "source texte cible code ecriture"
+  },
+  {
+   "id": "C150",
+   "cmd": "mv readme.md src/main.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "renommage md vers py ecriture code"
+  },
+  {
+   "id": "C151",
+   "cmd": "a && b && echo x > src/out.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "ecriture code en troisieme position"
+  },
+  {
+   "id": "C152",
+   "cmd": "a || echo x > src/out.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "ecriture code apres operateur ou"
+  },
+  {
+   "id": "C153",
+   "cmd": "chmod +x hook.sh && echo x > hook.sh",
+   "expect": "write",
+   "source": "recorded",
+   "note": "chmod puis ecriture meme fichier"
+  },
+  {
+   "id": "C154",
+   "cmd": "curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/index.html",
+   "expect": "free",
+   "source": "recorded",
+   "note": "curl sortie dev null lecture seule"
+  },
+  {
+   "id": "C155",
+   "cmd": "nohup bash surveillant.sh > /tmp/sortie.txt 2>&1 &",
+   "expect": "free",
+   "source": "recorded",
+   "note": "nohup sortie texte pas code"
+  },
+  {
+   "id": "C156",
+   "cmd": "python3 -u agent.py 2>&1 | tee /tmp/journal.log",
+   "expect": "free",
+   "source": "recorded",
+   "note": "tee sortie log pas code"
+  },
+  {
+   "id": "C157",
+   "cmd": "bash script.sh > rapport.md 2>&1",
+   "expect": "free",
+   "source": "recorded",
+   "note": "redirection vers md pas code"
+  },
+  {
+   "id": "C158",
+   "cmd": "pytest -q tests/ | tail -20",
+   "expect": "free",
+   "source": "recorded",
+   "note": "pytest lecture execution test"
+  },
+  {
+   "id": "C159",
+   "cmd": "PYTHONPATH=src python3 -m pytest tests/",
+   "expect": "free",
+   "source": "recorded",
+   "note": "pytest execution test lecture"
+  },
+  {
+   "id": "C160",
+   "cmd": "VAR=1 node serveur.js",
+   "expect": "free",
+   "source": "recorded",
+   "note": "node execution serveur lecture"
+  },
+  {
+   "id": "C161",
+   "cmd": "npx playwright test --project=chromium",
+   "expect": "free",
+   "source": "recorded",
+   "note": "playwright execution test lecture"
+  },
+  {
+   "id": "C162",
+   "cmd": "python3 -m http.server 8000",
+   "expect": "free",
+   "source": "recorded",
+   "note": "serveur http execution lecture"
+  },
+  {
+   "id": "C163",
+   "cmd": "python3 -m venv .venv",
+   "expect": "free",
+   "source": "recorded",
+   "note": "venv creation environnement"
+  },
+  {
+   "id": "C164",
+   "cmd": "source .venv/bin/activate",
+   "expect": "free",
+   "source": "recorded",
+   "note": "activation environnement lecture"
+  },
+  {
+   "id": "C165",
+   "cmd": "docker run --rm -v \"$PWD:/app\" image sh -c \"npm test\"",
+   "expect": "free",
+   "source": "recorded",
+   "note": "docker sh -c test pas ecriture"
+  },
+  {
+   "id": "C166",
+   "cmd": "ssh serveur 'ls -la'",
+   "expect": "free",
+   "source": "recorded",
+   "note": "ssh commande distante lecture"
+  },
+  {
+   "id": "C167",
+   "cmd": "git diff -- src/a.py",
+   "expect": "free",
+   "source": "recorded",
+   "note": "git diff lecture historique"
+  },
+  {
+   "id": "C168",
+   "cmd": "git log -p src/a.py",
+   "expect": "free",
+   "source": "recorded",
+   "note": "git log lecture historique"
+  },
+  {
+   "id": "C169",
+   "cmd": "git show HEAD:src/a.py",
+   "expect": "free",
+   "source": "recorded",
+   "note": "git show lecture contenu"
+  },
+  {
+   "id": "C170",
+   "cmd": "git blame src/a.py",
+   "expect": "free",
+   "source": "recorded",
+   "note": "git blame lecture historique"
+  },
+  {
+   "id": "C171",
+   "cmd": "git grep motif",
+   "expect": "free",
+   "source": "recorded",
+   "note": "git grep lecture recherche"
+  },
+  {
+   "id": "C172",
+   "cmd": "sed -n '10,20p' src/a.py",
+   "expect": "free",
+   "source": "recorded",
+   "note": "sed sans i lecture ligne seule"
+  },
+  {
+   "id": "C173",
+   "cmd": "awk '{print $1}' src/a.py",
+   "expect": "free",
+   "source": "recorded",
+   "note": "awk sans redirection lecture"
+  },
+  {
+   "id": "C174",
+   "cmd": "perl -ne 'print' src/a.py",
+   "expect": "free",
+   "source": "recorded",
+   "note": "perl sans i ni open lecture"
+  },
+  {
+   "id": "C175",
+   "cmd": "sort src/liste.txt > src/trie.txt",
+   "expect": "free",
+   "source": "recorded",
+   "note": "sort trie texte pas code"
+  },
+  {
+   "id": "C176",
+   "cmd": "jq '.' donnees.json > sortie.json",
+   "expect": "free",
+   "source": "recorded",
+   "note": "jq sortie json pas code"
+  },
+  {
+   "id": "C177",
+   "cmd": "echo \"$(cat src/a.py)\"",
+   "expect": "free",
+   "source": "recorded",
+   "note": "substitution commande lecture"
+  },
+  {
+   "id": "C178",
+   "cmd": "test -f src/a.py && echo present",
+   "expect": "free",
+   "source": "recorded",
+   "note": "test fichier existence lecture"
+  },
+  {
+   "id": "C179",
+   "cmd": "[ -f src/a.py ] || echo absent",
+   "expect": "free",
+   "source": "recorded",
+   "note": "test fichier existence lecture"
+  },
+  {
+   "id": "C180",
+   "cmd": "while read l; do echo \"$l\"; done < src/a.py",
+   "expect": "free",
+   "source": "recorded",
+   "note": "boucle lecture fichier"
+  },
+  {
+   "id": "C181",
+   "cmd": "for f in *.py; do wc -l \"$f\"; done",
+   "expect": "free",
+   "source": "recorded",
+   "note": "boucle lecture comptage lignes"
+  },
+  {
+   "id": "C182",
+   "cmd": "open src/a.py",
+   "expect": "free",
+   "source": "recorded",
+   "note": "open macos editeur pas ecriture"
+  },
+  {
+   "id": "C183",
+   "cmd": "code src/a.py",
+   "expect": "free",
+   "source": "recorded",
+   "note": "code editeur pas ecriture agent"
+  },
+  {
+   "id": "C184",
+   "cmd": "vim src/a.py",
+   "expect": "free",
+   "source": "recorded",
+   "note": "vim editeur pas ecriture agent"
+  },
+  {
+   "id": "C185",
+   "cmd": "touch src/nouveau.py",
+   "expect": "free",
+   "source": "recorded",
+   "note": "touch cree fichier vide pas code"
+  },
+  {
+   "id": "C186",
+   "cmd": "echo x > src/out.py ;",
+   "expect": "write",
+   "source": "recorded",
+   "note": "point virgule final ecriture code"
+  },
+  {
+   "id": "C187",
+   "cmd": "echo x  >  src/out.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "espaces multiples ecriture code"
+  },
+  {
+   "id": "C188",
+   "cmd": "curl http://site.com/file?x>y > out.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "url parametre gt ecriture code"
+  },
+  {
+   "id": "C189",
+   "cmd": "echo 'a > b.py'",
+   "expect": "free",
+   "source": "recorded",
+   "note": "chaine citee : rien n est execute (choix tranche)"
+  },
+  {
+   "id": "C190",
+   "cmd": "claude-local -p \"to_roman(n:int)->str\"",
+   "expect": "free",
+   "source": "recorded",
+   "note": "delegation locale : le > de la consigne n est pas une redirection"
+  },
+  {
+   "id": "C191",
+   "cmd": "claude -p \"to_roman(n:int)->str\"",
+   "expect": "free",
+   "source": "recorded",
+   "note": "ecart voulu du 25/09 : faux refus de l ancien leve"
+  },
+  {
+   "id": "C192",
+   "cmd": "claude-local -p \"x\" > sortie.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "redirection vers du code : toujours vue malgre la delegation"
+  },
+  {
+   "id": "R01",
+   "cmd": "python3 - <<'EOF' # depouillement-manuel: mesurer les refus reels du garde-fou pour le banc de faux refus\nimport json,collections,os,re\np=os.path.expanduser('~/.guard/decisions.jsonl')\nc=collections.Counter(); dc=collections.Counter(); first=None\nfor l in open(p,errors='replace'):\n    try: d=json.loads(l)\n    except: continue\n    first=first or d['horodatage']\n    dc[d['decision']]+=1\n    if d['decision']!='allow' and d['decision']!='autorise':\n        r=re.sub(r'/[^ ]+','<chemin>',d.get('raison') or '')[:70]\n        c[(d['outil'],r)]+=1\nprint(first, dc)\nfor k,v in c.most_common(12): print(v,k)\nEOF",
+   "expect": "free",
+   "source": "recorded refusal",
+   "note": "depouillement python par heredoc, n ecrit que du texte"
+  },
+  {
+   "id": "R02",
+   "cmd": "python3 -c \"\nimport shlex\nfor s in ['echo x 2>&1 >out.py', 'cat f>>a.py', 'echo \\$n \\${x}/a.py', 'find . -name \\\"*.py\\\" -print0', 'x &>/dev/null', 'cmd >| f.py', 'a=1 b=\\$(c) env X=2 tee -a lib/u.py', 'curl -oout.py http://h/x', 'sed -i.bak s/a/b/ f.py', 'echo a>&2']:\n    l=shlex.shlex(s,posix=True,punctuation_chars=True); print(list(l))\n\"",
+   "expect": "free",
+   "source": "recorded refusal",
+   "note": "python -c qui cite des noms de fichiers dans une liste"
+  },
+  {
+   "id": "R03",
+   "cmd": "cd ~/work/demo/briefs && python3 - <<'EOF'\np='shell_targets.md'; s=open(p).read()\na='sinon, pour le PREMIER s de nonopt[:-1] classe \"code\"'\nb='sinon, SEULEMENT si dest finit par \"/\" ou si dest.rsplit(\"/\", 1)[-1] ne contient aucun \".\", pour le PREMIER s de nonopt[:-1] classe \"code\"'\nc='ET V(\"cp -r src/ dst/\") == F ET'\nd='ET V(\"cp -r src/ dst/\") == F ET V(\"cp a.py copie.md\") == F ET'\nassert s.count(a)==1 and s.count(c)==1\nopen(p,'w').write(s.replace(a,b).replace(c,d))\np='shell_rules.md'; s=open(p).read()\na='    Un des RUN_SIGNS est dans code -> pour chaque s de literals : results.append(judge_command(s, config, depth + 1, max_depth)).'\nb='    Un des RUN_SIGNS est dans code -> pour chaque s de literals : results.append(judge_command(s, config, depth + 1, max_depth)) ; puis, pour chaque s de literals classe \"code\" : results.append({\"verdict\": \"write\", \"targets\": [s], \"reason\": \"inline code\"}).'\nc='ET J(\"rm -rf build && cp -r src dst\") == F'\nd='ET J(\"rm -rf build && cp -r src dst\") == F ET J(\\'python3 -c \\\\\\'import subprocess;subprocess.run([\"tee\",\"out.py\"])\\\\\\'\\') == (\"write\", [\"out.py\"])'\nassert s.count(a)==1 and s.count(c)==1\nopen(p,'w').write(s.replace(a,b).replace(c,d))\nEOF\ngrep -n 'subprocess.run' shell_rules.md | cut -c1-200",
+   "expect": "free",
+   "source": "recorded refusal",
+   "note": "python qui ecrit un texte contenant un nom .py",
+   "known_limit": "le code en ligne n est juge que sur ses litteraux"
+  },
+  {
+   "id": "T01",
+   "cmd": "echo delegate-tool.py; cat > x.py <<'EOF'\nprint(1)\nEOF",
+   "expect": "write",
+   "source": "gap case",
+   "note": "cite l outil puis ecrit par heredoc"
+  },
+  {
+   "id": "T02",
+   "cmd": "python3 ~/bin/delegate-tool.py code --out a.py > b.py",
+   "expect": "write",
+   "source": "gap case",
+   "note": "outil de delegation mais sortie redirigee vers du code"
+  },
+  {
+   "id": "T03",
+   "cmd": "# delegate-tool.py\ncat > x.py <<EOF\nx\nEOF",
+   "expect": "write",
+   "source": "gap case",
+   "note": "outil nomme dans un commentaire"
+  },
+  {
+   "id": "T04",
+   "cmd": "python3 ~/bin/delegate-tool.py code \"consigne\" && echo ok > z.py",
+   "expect": "write",
+   "source": "gap case",
+   "note": "delegation suivie d une ecriture"
+  },
+  {
+   "id": "T05",
+   "cmd": "grep -n delegate-tool.py notes.md",
+   "expect": "free",
+   "source": "gap case",
+   "note": "citer l outil sans l appeler"
+  },
+  {
+   "id": "T06",
+   "cmd": "python3 ~/bin/delegate-tool.py code --out a.py \"consigne\"",
+   "expect": "free",
+   "source": "gap case",
+   "note": "la delegation elle-meme"
+  },
+  {
+   "id": "H01",
+   "cmd": "python3 - <<'EOF'\nopen('a.py','w').write('x')\nEOF",
+   "expect": "write",
+   "source": "recorded",
+   "note": "heredoc ou -c qui ecrit par un chemin non litteral"
+  },
+  {
+   "id": "H02",
+   "cmd": "python3 - <<'EOF'\np='a.py'; open(p,'w').write('x')\nEOF",
+   "expect": "write",
+   "source": "recorded",
+   "note": "heredoc ou -c qui ecrit par un chemin non litteral"
+  },
+  {
+   "id": "H03",
+   "cmd": "python3 - <<'EOF'\np='a'+'.py'; open(p,'w').write('x')\nEOF",
+   "expect": "write",
+   "source": "recorded",
+   "note": "heredoc ou -c qui ecrit par un chemin non litteral"
+  },
+  {
+   "id": "H04",
+   "cmd": "python3 - x.py <<'EOF'\nimport sys; open(sys.argv[1],'w').write('x')\nEOF",
+   "expect": "write",
+   "source": "recorded",
+   "note": "heredoc ou -c qui ecrit par un chemin non litteral"
+  },
+  {
+   "id": "H05",
+   "cmd": "F=a.py python3 - <<'EOF'\nimport os; open(os.environ['F'],'w').write('x')\nEOF",
+   "expect": "unknown",
+   "source": "recorded",
+   "note": "heredoc ou -c qui ecrit par un chemin non litteral ; os.environ non lu par le juge, cible inconnue refusee"
+  },
+  {
+   "id": "H06",
+   "cmd": "python3 - <<'EOF'\nn='a'; open(f'{n}.py','w').write('x')\nEOF",
+   "expect": "write",
+   "source": "recorded",
+   "note": "heredoc ou -c qui ecrit par un chemin non litteral"
+  },
+  {
+   "id": "H07",
+   "cmd": "python3 - <<'EOF'\nfrom pathlib import Path; Path('d').joinpath('a' + '.p' + 'y').write_text('x')\nEOF",
+   "expect": "write",
+   "source": "recorded",
+   "note": "heredoc ou -c qui ecrit par un chemin non litteral"
+  },
+  {
+   "id": "H08",
+   "cmd": "F=a.py; python3 - \"$F\" <<'EOF'\nimport sys; open(sys.argv[1],'w').write('x')\nEOF",
+   "expect": "write",
+   "source": "recorded",
+   "note": "heredoc ou -c qui ecrit par un chemin non litteral ; $F resolu jusqu a sys.argv, ecriture de a.py prouvee"
+  },
+  {
+   "id": "H09",
+   "cmd": "python3 - <<'EOF'\np='PLAN.md'; s=open(p).read(); open(p,'w').write(s)\nEOF",
+   "expect": "free",
+   "source": "recorded",
+   "note": "heredoc ou -c qui ecrit par un chemin non litteral"
+  },
+  {
+   "id": "H10",
+   "cmd": "python3 -c \"import sys; open(sys.argv[1],'w').write('x')\" a.py",
+   "expect": "write",
+   "source": "recorded",
+   "note": "heredoc ou -c qui ecrit par un chemin non litteral"
+  },
+  {
+   "id": "H11",
+   "cmd": "python3 - <<'EOF'\nimport json; json.dump({}, open('out.json','w'))\nEOF",
+   "expect": "free",
+   "source": "recorded",
+   "note": "heredoc ou -c qui ecrit par un chemin non litteral"
+  }
+ ]
+}

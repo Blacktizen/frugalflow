@@ -1,0 +1,36 @@
+{
+  "schema_version": "1",
+  "models": [
+    {
+      "model": "qwen3.8-27b",
+      "engine": "engine-a",
+      "prescribed": {"temperature": 1.0, "top_p": 0.95, "top_k": 20, "min_p": 0, "presence_penalty": 1.5},
+      "measured": [
+        {"date": "2026-09-17", "what": "throughput with a 262144 token window", "value": "0.7 tokens/s; about 45 times faster at 65536", "proof": "timed delegation runs, same prompt, two window sizes"}
+      ],
+      "pitfalls": [
+        {"date": "2026-09-17", "symptom": "every delegation ends with code 0 and writes nothing", "remedy": "size the window to the task, measure throughput before judging the model", "proof": "delegation log: empty outputs at 262144, full outputs at 65536"},
+        {"date": "2026-09-19", "symptom": "typographic quotes and invisible characters eaten or mangled in the returned code", "remedy": "send the instruction in a file with plain ASCII punctuation, never on the command line", "proof": "refused and replayed instructions in the guard log"}
+      ]
+    },
+    {
+      "model": "any",
+      "engine": "lmstudio",
+      "prescribed": {},
+      "measured": [],
+      "pitfalls": [
+        {"date": "2026-09-12", "symptom": "the server answers with the model already loaded, whatever model the request names", "remedy": "read the model field of the RESPONSE, never trust the request", "proof": "request for model A answered by model B, response field shows B"},
+        {"date": "2026-09-12", "symptom": "the command line listing shows models that are not loaded", "remedy": "ask the server: GET /api/v0/models, state field", "proof": "listing and server state compared on the same machine"}
+      ]
+    },
+    {
+      "model": "deepseek-v4-pro",
+      "engine": "deepseek-api",
+      "prescribed": {},
+      "measured": [],
+      "pitfalls": [
+        {"date": "2026-10-02", "symptom": "the response echoes the requested model name: nothing proves which model really answered", "remedy": "run a discriminating probe before a benchmark that depends on the model", "proof": "input token counts differ between two model names on the same prompt"}
+      ]
+    }
+  ]
+}

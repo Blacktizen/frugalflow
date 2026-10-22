@@ -1,0 +1,29 @@
+NATURE: creation
+PRODUIT: controle
+
+Write a command-line program prog.py that reads a directory and prints one integer.
+
+The program takes a directory path as argv[1] and prints one integer on stdout: the total size in bytes of the files it keeps.
+
+Before returning, include a self-test (`python3 prog.py --selftest`): run each case in a subprocess, print one line per test starting with PASS or FAIL, and exit with a non-zero exit status as soon as one case fails.
+
+THE QUANTITY the cases measure: the total size in bytes printed on stdout.
+THE FILTER THAT the program applies to what it reads: it keeps only the files whose name ends in `.log` and ignores every other file.
+TESTS: 2
+Copy verbatim the two fixtures below.
+
+FORBIDDEN: printing anything other than the single integer.
+The program code is pure ASCII.
+Write nothing after the code block.
+
+```
+a.log
+b.txt
+c.log
+d.md
+```
+
+```
+x.log
+y.log
+```

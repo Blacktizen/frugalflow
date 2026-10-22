@@ -1,0 +1,15 @@
+#!/bin/sh
+# Installed by public/bin/install_hooks.py from public/hooks/pre-commit.
+# Edit the template, never the copy: install_hooks.py --check reports any drift.
+R="$(git rev-parse --show-toplevel)"
+rc=0
+BIN="$(git diff --cached --name-only --diff-filter=ACM | grep '^public/bin/[^/]*\.py$')"
+if [ -n "$BIN" ]; then
+  (cd "$R" && python3 public/bin/notice_check.py $BIN) || rc=1
+fi
+PUB="$(git diff --cached --name-only --diff-filter=ACM | grep '^public/')"
+if [ -n "$PUB" ]; then
+  (cd "$R" && python3 public/bin/anon_check.py --scan $PUB) || rc=1
+  (cd "$R" && python3 public/bin/lang_check.py --root public --words public/config/lang_words.json) || rc=1
+fi
+exit $rc

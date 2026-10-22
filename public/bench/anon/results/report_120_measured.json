@@ -1,0 +1,210 @@
+{
+  "C0": {
+    "n_leaks": 80,
+    "detected": 0,
+    "delivered": 80,
+    "delivered_pct": 100.0,
+    "delivered_wilson95": [
+      95.4,
+      100.0
+    ],
+    "n_decoys": 40,
+    "fp": 0,
+    "fp_pct": 0.0,
+    "secs": 0.0,
+    "by_type": {
+      "private_name": [
+        0,
+        10
+      ],
+      "user_path": [
+        0,
+        10
+      ],
+      "email": [
+        0,
+        10
+      ],
+      "private_ip": [
+        0,
+        10
+      ],
+      "api_key": [
+        0,
+        10
+      ],
+      "token": [
+        0,
+        10
+      ],
+      "hostname": [
+        0,
+        10
+      ],
+      "third_party_ref": [
+        0,
+        10
+      ]
+    },
+    "hard": [
+      0,
+      20
+    ]
+  },
+  "C1": {
+    "n_leaks": 80,
+    "detected": 46,
+    "delivered": 34,
+    "delivered_pct": 42.5,
+    "delivered_wilson95": [
+      32.3,
+      53.4
+    ],
+    "n_decoys": 40,
+    "fp": 2,
+    "fp_pct": 5.0,
+    "secs": 415.2681381702423,
+    "by_type": {
+      "private_name": [
+        10,
+        10
+      ],
+      "user_path": [
+        10,
+        10
+      ],
+      "email": [
+        10,
+        10
+      ],
+      "private_ip": [
+        0,
+        10
+      ],
+      "api_key": [
+        2,
+        10
+      ],
+      "token": [
+        0,
+        10
+      ],
+      "hostname": [
+        7,
+        10
+      ],
+      "third_party_ref": [
+        7,
+        10
+      ]
+    },
+    "hard": [
+      15,
+      20
+    ]
+  },
+  "C2": {
+    "n_leaks": 80,
+    "detected": 67,
+    "delivered": 13,
+    "delivered_pct": 16.2,
+    "delivered_wilson95": [
+      9.7,
+      25.8
+    ],
+    "n_decoys": 40,
+    "fp": 0,
+    "fp_pct": 0.0,
+    "secs": 10.5041823387146,
+    "by_type": {
+      "private_name": [
+        6,
+        10
+      ],
+      "user_path": [
+        8,
+        10
+      ],
+      "email": [
+        8,
+        10
+      ],
+      "private_ip": [
+        10,
+        10
+      ],
+      "api_key": [
+        7,
+        10
+      ],
+      "token": [
+        8,
+        10
+      ],
+      "hostname": [
+        10,
+        10
+      ],
+      "third_party_ref": [
+        10,
+        10
+      ]
+    },
+    "hard": [
+      8,
+      20
+    ]
+  },
+  "C3": {
+    "n_leaks": 80,
+    "detected": 77,
+    "delivered": 3,
+    "delivered_pct": 3.8,
+    "delivered_wilson95": [
+      1.3,
+      10.5
+    ],
+    "n_decoys": 40,
+    "fp": 2,
+    "fp_pct": 5.0,
+    "secs": 425.7723205089569,
+    "by_type": {
+      "private_name": [
+        10,
+        10
+      ],
+      "user_path": [
+        10,
+        10
+      ],
+      "email": [
+        10,
+        10
+      ],
+      "private_ip": [
+        10,
+        10
+      ],
+      "api_key": [
+        9,
+        10
+      ],
+      "token": [
+        8,
+        10
+      ],
+      "hostname": [
+        10,
+        10
+      ],
+      "third_party_ref": [
+        10,
+        10
+      ]
+    },
+    "hard": [
+      17,
+      20
+    ]
+  }
+}

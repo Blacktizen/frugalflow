@@ -1,0 +1,122 @@
+[
+ {
+  "name": "add",
+  "good": "a + b",
+  "bad": "a - b",
+  "desc": "returns a + b for two integers"
+ },
+ {
+  "name": "sub",
+  "good": "a - b",
+  "bad": "b - a",
+  "desc": "returns a - b for two integers"
+ },
+ {
+  "name": "mul",
+  "good": "a * b",
+  "bad": "a + b",
+  "desc": "returns a * b for two integers"
+ },
+ {
+  "name": "maxv",
+  "good": "max(a, b)",
+  "bad": "min(a, b)",
+  "desc": "returns max(a, b) for two integers"
+ },
+ {
+  "name": "minv",
+  "good": "min(a, b)",
+  "bad": "max(a, b)",
+  "desc": "returns min(a, b) for two integers"
+ },
+ {
+  "name": "absdiff",
+  "good": "abs(a - b)",
+  "bad": "a - b",
+  "desc": "returns abs(a - b) for two integers"
+ },
+ {
+  "name": "fdiv",
+  "good": "a // b",
+  "bad": "a % b",
+  "desc": "returns a // b for two integers"
+ },
+ {
+  "name": "mod",
+  "good": "a % b",
+  "bad": "a // b",
+  "desc": "returns a % b for two integers"
+ },
+ {
+  "name": "power",
+  "good": "a ** b",
+  "bad": "a * b",
+  "desc": "returns a ** b for two integers"
+ },
+ {
+  "name": "third",
+  "good": "(a + b) // 2",
+  "bad": "(a + b) // 3",
+  "desc": "returns (a + b) // 2 for two integers"
+ },
+ {
+  "name": "gcdv",
+  "good": "__import__('math').gcd(a, b)",
+  "bad": "a * b",
+  "desc": "returns __import__('math').gcd(a, b) for two integers"
+ },
+ {
+  "name": "lcmv",
+  "good": "a * b // __import__('math').gcd(a, b)",
+  "bad": "a * b",
+  "desc": "returns a * b // __import__('math').gcd(a, b) for two integers"
+ },
+ {
+  "name": "sumsq",
+  "good": "a * a + b * b",
+  "bad": "(a + b) ** 2",
+  "desc": "returns a * a + b * b for two integers"
+ },
+ {
+  "name": "clampv",
+  "good": "max(0, min(a, b))",
+  "bad": "max(a, b)",
+  "desc": "returns max(0, min(a, b)) for two integers"
+ },
+ {
+  "name": "diffsq",
+  "good": "a * a - b * b",
+  "bad": "a * a + b * b",
+  "desc": "returns a * a - b * b for two integers"
+ },
+ {
+  "name": "digits",
+  "good": "len(str(a)) + len(str(b))",
+  "bad": "len(str(a + b))",
+  "desc": "returns len(str(a)) + len(str(b)) for two integers"
+ },
+ {
+  "name": "parity",
+  "good": "(a + b) % 2",
+  "bad": "(a + b) % 3",
+  "desc": "returns (a + b) % 2 for two integers"
+ },
+ {
+  "name": "cmpv",
+  "good": "(a > b) - (a < b)",
+  "bad": "(a > b)",
+  "desc": "returns (a > b) - (a < b) for two integers"
+ },
+ {
+  "name": "tripleadd",
+  "good": "a + b + 1",
+  "bad": "a + b",
+  "desc": "returns a + b + 1 for two integers"
+ },
+ {
+  "name": "avgfloor",
+  "good": "(a + b) // 2",
+  "bad": "(a - b) // 2",
+  "desc": "returns (a + b) // 2 for two integers"
+ }
+]

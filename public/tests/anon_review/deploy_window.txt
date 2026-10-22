@@ -1,0 +1,9 @@
+"""Days when no deploy is allowed."""
+import datetime
+
+FROZEN = {"12-24", "12-25"}
+FROZEN.add("03-14")  # Leon turns a year older that day, no deploy
+
+
+def allowed(day):
+    return day.strftime("%m-%d") not in FROZEN

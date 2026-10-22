@@ -1,0 +1,167 @@
+{
+  "schema_version": "1",
+  "rules": {
+    "E1": {
+      "trust": "private",
+      "refused": "NATURE: retouche: fix the csv parser so it skips empty rows.\nThe original program is attached below.\n",
+      "fixed": "NATURE: retouche: fix the csv parser so it skips empty rows.\nThe original program is attached below.\n```\nimport csv\nimport sys\n\ndef main(path):\n    with open(path, newline='', encoding='utf-8') as handle:\n        reader = csv.reader(handle)\n        total = 0\n        for row in reader:\n            if not row:\n                continue\n            if all(cell.strip() == '' for cell in row):\n                continue\n            total = total + 1\n    print(total)\n\n\n\n\n\n\n\n\n```\n",
+      "limit": "It only counts lines inside a fenced block, so a retouche brief that pastes the original file as plain prose is never caught."
+    },
+    "E2": {
+      "trust": "private",
+      "refused": "NATURE: creation\nWrite one new file: a small program that counts the words in a text file.\n",
+      "fixed": "NATURE: creation\nWrite one new file: a small program that counts the words in a text file.\nFORBIDDEN: touching any other file.\n",
+      "limit": "It only looks for the word FORBIDDEN, INTERDIT or the no-entry sign, so a brief that bans a gesture in other wording slips through."
+    },
+    "E3": {
+      "trust": "private",
+      "refused": "NATURE: creation\nPRODUIT: controle\nThe program must include a self-test, and the self-test must pass.\n",
+      "fixed": "NATURE: creation\nPRODUIT: controle\nThe program must include a self-test, and the self-test must pass.\nTHE FILTER THAT the checking program applies keeps the exit codes and ignores the log lines.\n",
+      "limit": "It only checks that the phrase the filter appears, so it cannot tell whether the stated filter is actually true."
+    },
+    "E4": {
+      "trust": "private",
+      "refused": "NATURE: creation\nPRODUIT: controle\nEach test case must fail when the parser is broken.\n",
+      "fixed": "NATURE: creation\nPRODUIT: controle\nEach test case must fail when the parser is broken.\nTHE QUANTITY each test must move is the number of parsed lines, in the up direction.\n",
+      "limit": "It only wants the words grandeur or the quantity, so a named quantity that is not the one the checker measures still passes."
+    },
+    "E5": {
+      "trust": "private",
+      "refused": "Write one new file: a csv parser that counts the rows.\n",
+      "fixed": "NATURE: creation\nWrite one new file: a csv parser that counts the rows.\n",
+      "limit": "It only greps for the word nature:, so a brief that states the task type without that exact token is the only thing it misses."
+    },
+    "E6": {
+      "trust": "private",
+      "refused": "NATURE: creation\nPRODUIT: controle\nWrite one program: a csv parser that counts the rows.\n",
+      "fixed": "NATURE: creation\nPRODUIT: controle\nWrite one program: a csv parser that counts the rows.\nFORBIDDEN: accented byte literals in the code; the file is utf-8.\n",
+      "limit": "It only greps for the phrase accented byte or pure ascii, so a brief that forbids non-ascii in other wording passes."
+    },
+    "E7": {
+      "trust": "private",
+      "refused": "NATURE: creation\nPRODUIT: controle\nWrite one program: a csv parser that counts the rows.\n",
+      "fixed": "NATURE: creation\nPRODUIT: controle\nWrite one program: a csv parser that counts the rows.\nWrite nothing after the code block, not a word, not a line.\n",
+      "limit": "It only greps for the phrase after the code block, so a brief that stops writing after the block using other wording is missed."
+    },
+    "E8": {
+      "trust": "untrusted_third_party",
+      "refused": "NATURE: creation\nPRODUIT: controle\nCopy the sample file from the /home/ folder to the working folder.\n",
+      "fixed": "NATURE: creation\nPRODUIT: controle\nCopy the sample file from the sample folder to the working folder.\n",
+      "limit": "It only bans the three home-path spellings, so a real path in a different form (drive letter, tilde, relative) is not caught."
+    },
+    "E9": {
+      "trust": "private",
+      "refused": "NATURE: creation\nPRODUIT: controle\nThe verify step is: --verify \"python3 check.py result.txt\"\n",
+      "fixed": "NATURE: creation\nPRODUIT: controle\nThe verify step is: --verify \"python3 check.py $AI_DELEGATE_OUT\"\n",
+      "limit": "It only checks the --verify line, so a verify-like check written on some other flag is not inspected."
+    },
+    "E10": {
+      "trust": "private",
+      "refused": "NATURE: creation\nPRODUIT: controle\nThe program must run a self-test before it is sent.\n",
+      "fixed": "NATURE: creation\nPRODUIT: controle\nThe program must run a self-test before it is sent.\nEach case runs in a subprocess and the self-test exits with a non-zero exit code as soon as one case fails.\n",
+      "limit": "It only requires the words subprocess and exit code, so a self-test that mentions both but pipes output and exits zero is not caught."
+    },
+    "E11": {
+      "trust": "private",
+      "refused": "NATURE: creation\nPRODUIT: controle\nEach test case must fail when the parser is broken.\n",
+      "fixed": "NATURE: creation\nPRODUIT: controle\nEPREUVES: 4\nEach test case must fail when the parser is broken.\n",
+      "limit": "It only reads the declared count, so a brief that declares a low number but ships more cases is not caught."
+    },
+    "E12": {
+      "trust": "private",
+      "refused": "NATURE: creation\nPRODUIT: controle\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\nThe parser reads row %d and keeps it.\n",
+      "fixed": "NATURE: creation\nPRODUIT: controle\nWrite one new file: a csv parser that counts the rows.\n",
+      "limit": "It only counts lines, so a one-line brief stuffed with a huge inline data blob is not caught."
+    },
+    "E13": {
+      "trust": "private",
+      "refused": "NATURE: creation\nPRODUIT: controle\nRead the threshold value from config.json and use it.\n",
+      "fixed": "NATURE: creation\nPRODUIT: controle\nRead the threshold value from config.json and use it.\nEXACT LOCATION: the value lives at the settings.threshold path, do not look anywhere else.\n",
+      "limit": "It only greps for the words exact location, so a stated path that is simply wrong is not caught."
+    },
+    "E15": {
+      "trust": "private",
+      "refused": "NATURE: creation\nPRODUIT: visible\nWrite a banner text for the product page.\n",
+      "fixed": "NATURE: creation\nPRODUIT: visible\nWrite a banner text for the product page.\nFORBIDDEN CLAIM: never say you rank first; the argument must rest on the raw count.\n",
+      "limit": "It only greps for the words forbidden claim, so a banned sentence phrased differently is not named and not caught."
+    },
+    "E16": {
+      "trust": "private",
+      "refused": "NATURE: creation\nPRODUIT: visible\nWrite an html template for the page.\n",
+      "fixed": "NATURE: creation\nPRODUIT: visible\nWrite an html template for the page.\nVISIBLE STRINGS VERBATIM: give every string the reader sees, one per line, correctly accented.\n",
+      "limit": "It only greps for the words visible strings verbatim, so it cannot verify that every listed string is actually present."
+    },
+    "E18": {
+      "trust": "private",
+      "refused": "NATURE: creation\nPRODUIT: texte\nThe checker uses a list of forbidden words.\n",
+      "fixed": "NATURE: creation\nPRODUIT: texte\nThe checker uses a list of forbidden words.\nForbidden words are matched as a whole word, never as a substring.\n",
+      "limit": "It only greps for the words whole word, so it cannot verify that the forbidden list itself is word-bounded."
+    },
+    "E20": {
+      "trust": "private",
+      "refused": "NATURE: creation\nWrite one new file: a csv parser that counts the rows.\n",
+      "fixed": "NATURE: creation\nPRODUIT: controle\nWrite one new file: a csv parser that counts the rows.\n",
+      "limit": "It only greps for the token produit: or product:, so a brief that names the product type in prose without that token is the gap."
+    },
+    "E21": {
+      "trust": "private",
+      "refused": "NATURE: creation\nPRODUIT: controle\nThe red fixture has three rows with growing counts.\n",
+      "fixed": "NATURE: creation\nPRODUIT: controle\nThe red fixture is given in a delimited block, to copy as is.\n",
+      "limit": "It only greps for the words to copy as is, so a fixture that is given verbatim but with a silent typo is not caught."
+    },
+    "E22": {
+      "trust": "private",
+      "refused": "NATURE: creation\nPRODUIT: controle\nCut the text at the anchor that names the section.\n",
+      "fixed": "NATURE: creation\nPRODUIT: controle\nCut the text at the anchor that names the section.\nGive the cut anchor without accent and without special characters; it must be unique in the file.\n",
+      "limit": "It only greps for the words without accent, so an accent-free anchor that is not unique in the file is not caught."
+    },
+    "E23": {
+      "trust": "private",
+      "refused": "NATURE: creation\nPRODUIT: controle\nThe program must print only the failures of the self-test.\n",
+      "fixed": "NATURE: creation\nPRODUIT: controle\nThe self-test prints one line per test, each starting with PASS or FAIL.\n",
+      "limit": "It only greps for two phrases, so it cannot verify that the output is really one line per test when it is run."
+    },
+    "E24": {
+      "trust": "private",
+      "refused": "NATURE: creation\nPRODUIT: controle\nThe program exits with a non-zero exit code on error.\n",
+      "fixed": "NATURE: creation\nPRODUIT: controle\nThe program exits with a non-zero exit code on error.\nEvery exit code has its test.\n",
+      "limit": "It only greps for the sentence every exit code has its test, so a missing test that produces a given code is not caught."
+    },
+    "E25": {
+      "trust": "private",
+      "refused": "NATURE: creation\nPRODUIT: controle\nEach test case is bounded by a 5 second timeout.\n",
+      "fixed": "NATURE: creation\nPRODUIT: controle\nEach test case is bounded by a 5 second timeout.\nThe time budget is: the slowed cases times the delay per case, checked under the timeout.\n",
+      "limit": "It only greps for the words time budget, so a time budget that is written down but arithmetically wrong is not caught."
+    },
+    "E26": {
+      "trust": "private",
+      "refused": "NATURE: creation\nPRODUIT: controle\nThe tool inserts the line into the template with str.replace.\n",
+      "fixed": "NATURE: creation\nPRODUIT: controle\nThe tool inserts the line into the template with str.replace.\nState the final indentation of the produced line.\n",
+      "limit": "It only greps for the words final indentation, so it cannot verify that the stated indentation is actually correct."
+    },
+    "E27": {
+      "trust": "private",
+      "refused": "NATURE: creation\nPRODUIT: controle\nThe tool breaks the file then restore the original and reruns the program.\n",
+      "fixed": "NATURE: creation\nPRODUIT: controle\nThe tool breaks the file then restore the original and reruns the program.\nEach rerun sets PYTHONPYCACHEPREFIX to a fresh temporary directory.\n",
+      "limit": "It only greps for the word PYTHONPYCACHEPREFIX, so a rerun that gets a fresh cache by some other means is not inspected."
+    },
+    "F1": {
+      "trust": "private",
+      "refused": "Write one new file: a csv parser that counts the rows.\nNATURE: creation\n",
+      "fixed": "NATURE: creation\nWrite one new file: a csv parser that counts the rows.\n",
+      "limit": "It only looks at the start of the brief, so a brief whose first line is the nature line but whose body is cut off is the gap."
+    },
+    "F2": {
+      "trust": "private",
+      "refused": "NATURE: creation\nPRODUIT: controle\nThe program prints the string \u2019hello\u2019 with typographic quotes.\n",
+      "fixed": "NATURE: creation\nPRODUIT: controle\nThe program prints the string 'hello' with straight quotes.\n",
+      "limit": "It only bans the listed characters, so a look-alike unicode character outside that set (say a fullwidth quote) passes."
+    },
+    "E35": {
+      "trust": "private",
+      "refused": "NATURE: creation\nPRODUIT: texte\nRead every python file in the folder ~/project/bin and return a table: file, main block yes or no.\n",
+      "fixed": "NATURE: creation\nPRODUIT: texte\nRead every python file in the folder ~/project/bin and return a table: file, main block yes or no.\nThe material is in this file: the four sources follow below.\n",
+      "limit": "It only greps for the sentence the material is in this file, so a brief that says it and still pastes nothing is not caught."
+    }
+  }
+}

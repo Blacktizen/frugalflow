@@ -1,0 +1,11 @@
+def merge(base, override):
+    """Return a new dict deep-merging override into base."""
+    result = dict(base)
+    for key, value in override.items():
+        if value is None:
+            result.pop(key, None)
+        elif key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = merge(result[key], value)
+        else:
+            result[key] = value
+    return result

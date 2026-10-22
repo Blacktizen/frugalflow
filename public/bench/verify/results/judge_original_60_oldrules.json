@@ -1,0 +1,605 @@
+{
+  "n_candidates": 20,
+  "commands": [
+    {
+      "id": "h00",
+      "label": "hollow",
+      "note": "bare true",
+      "cmd": "true",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": 20,
+      "vacuous": true
+    },
+    {
+      "id": "h01",
+      "label": "hollow",
+      "note": "colon",
+      "cmd": ":",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": 20,
+      "vacuous": true
+    },
+    {
+      "id": "h02",
+      "label": "hollow",
+      "note": "echo",
+      "cmd": "echo ok",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": 20,
+      "vacuous": true
+    },
+    {
+      "id": "h03",
+      "label": "hollow",
+      "note": "printf",
+      "cmd": "printf 'done\\n'",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": 20,
+      "vacuous": true
+    },
+    {
+      "id": "h04",
+      "label": "hollow",
+      "note": "ls",
+      "cmd": "ls \"$FRUGALFLOW_CANDIDATE\"",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": 20,
+      "vacuous": true
+    },
+    {
+      "id": "h05",
+      "label": "hollow",
+      "note": "test -f",
+      "cmd": "test -f \"$FRUGALFLOW_CANDIDATE\"",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": 20,
+      "vacuous": true
+    },
+    {
+      "id": "h06",
+      "label": "hollow",
+      "note": "cat",
+      "cmd": "cat \"$FRUGALFLOW_CANDIDATE\"",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": 20,
+      "vacuous": true
+    },
+    {
+      "id": "h07",
+      "label": "hollow",
+      "note": "grep -q",
+      "cmd": "grep -q def \"$FRUGALFLOW_CANDIDATE\"",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": 20,
+      "vacuous": true
+    },
+    {
+      "id": "h08",
+      "label": "hollow",
+      "note": "python -c pass",
+      "cmd": "python3 -c pass",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": 20,
+      "vacuous": true
+    },
+    {
+      "id": "h09",
+      "label": "hollow",
+      "note": "help flag",
+      "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" --help",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": 0,
+      "vacuous": false
+    },
+    {
+      "id": "h10",
+      "label": "hollow",
+      "note": "version flag",
+      "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" --version",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": 0,
+      "vacuous": false
+    },
+    {
+      "id": "h11",
+      "label": "hollow",
+      "note": "node check",
+      "cmd": "node --check \"$FRUGALFLOW_CANDIDATE\"",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": 0,
+      "vacuous": false
+    },
+    {
+      "id": "h12",
+      "label": "hollow",
+      "note": "bash -n",
+      "cmd": "bash -n \"$FRUGALFLOW_CANDIDATE\"",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": 0,
+      "vacuous": false
+    },
+    {
+      "id": "h13",
+      "label": "hollow",
+      "note": "wc",
+      "cmd": "wc -l \"$FRUGALFLOW_CANDIDATE\"",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": 20,
+      "vacuous": true
+    },
+    {
+      "id": "h14",
+      "label": "hollow",
+      "note": "head",
+      "cmd": "head -5 \"$FRUGALFLOW_CANDIDATE\"",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": 20,
+      "vacuous": true
+    },
+    {
+      "id": "h15",
+      "label": "hollow",
+      "note": "stat",
+      "cmd": "stat \"$FRUGALFLOW_CANDIDATE\"",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": 20,
+      "vacuous": true
+    },
+    {
+      "id": "h16",
+      "label": "hollow",
+      "note": "file",
+      "cmd": "file \"$FRUGALFLOW_CANDIDATE\"",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": 20,
+      "vacuous": true
+    },
+    {
+      "id": "h17",
+      "label": "hollow",
+      "note": "py_compile",
+      "cmd": "python3 -m py_compile \"$FRUGALFLOW_CANDIDATE\"",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": 20,
+      "vacuous": true
+    },
+    {
+      "id": "h18",
+      "label": "hollow",
+      "note": "ast.parse",
+      "cmd": "python3 -c 'import ast,sys;ast.parse(open(sys.argv[1]).read())' \"$FRUGALFLOW_CANDIDATE\"",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": 20,
+      "vacuous": true
+    },
+    {
+      "id": "h19",
+      "label": "hollow",
+      "note": "ruff",
+      "cmd": "ruff check \"$FRUGALFLOW_CANDIDATE\"",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": 0,
+      "vacuous": false
+    },
+    {
+      "id": "h20",
+      "label": "hollow",
+      "note": "mypy",
+      "cmd": "mypy \"$FRUGALFLOW_CANDIDATE\"",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": 0,
+      "vacuous": false
+    },
+    {
+      "id": "h21",
+      "label": "hollow",
+      "note": "test -s and echo",
+      "cmd": "test -s \"$FRUGALFLOW_CANDIDATE\" && echo ok",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": 20,
+      "vacuous": true
+    },
+    {
+      "id": "h22",
+      "label": "hollow",
+      "note": "two inert",
+      "cmd": "ls -l \"$FRUGALFLOW_CANDIDATE\" && wc -c \"$FRUGALFLOW_CANDIDATE\"",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": 20,
+      "vacuous": true
+    },
+    {
+      "id": "h23",
+      "label": "hollow",
+      "note": "grep -c",
+      "cmd": "grep -c def \"$FRUGALFLOW_CANDIDATE\"",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": 20,
+      "vacuous": true
+    },
+    {
+      "id": "h24",
+      "label": "hollow",
+      "note": "help camouflaged",
+      "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" --help && echo done",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": 0,
+      "vacuous": false
+    },
+    {
+      "id": "h25",
+      "label": "hollow",
+      "note": "run swallowed by || true",
+      "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 2 3 || true",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": 20,
+      "vacuous": true
+    },
+    {
+      "id": "h26",
+      "label": "hollow",
+      "note": "run then true",
+      "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 2 3; true",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": 20,
+      "vacuous": true
+    },
+    {
+      "id": "h27",
+      "label": "hollow",
+      "note": "exit status printed not tested",
+      "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 2 3 > /dev/null 2>&1; echo $?",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": 20,
+      "vacuous": true
+    },
+    {
+      "id": "h28",
+      "label": "hollow",
+      "note": "any output",
+      "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 2 3 | grep -q .",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": 20,
+      "vacuous": true
+    },
+    {
+      "id": "h29",
+      "label": "hollow",
+      "note": "shellcheck",
+      "cmd": "shellcheck \"$FRUGALFLOW_CANDIDATE\"",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": 0,
+      "vacuous": false
+    },
+    {
+      "id": "r00",
+      "label": "real",
+      "note": "autotest",
+      "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" --autotest",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r01",
+      "label": "real",
+      "note": "autotest twice",
+      "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" --autotest && python3 \"$FRUGALFLOW_CANDIDATE\" --autotest",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r02",
+      "label": "real",
+      "note": "pipe grep exact",
+      "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 2 3 | grep -q '^5$'",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r03",
+      "label": "real",
+      "note": "pipe grep -x",
+      "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 7 2 | grep -qx 9",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r04",
+      "label": "real",
+      "note": "test equality",
+      "cmd": "test \"$(python3 \"$FRUGALFLOW_CANDIDATE\" 2 3)\" = 5",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r05",
+      "label": "real",
+      "note": "bracket equality",
+      "cmd": "[ \"$(python3 \"$FRUGALFLOW_CANDIDATE\" 10 5)\" = 15 ]",
+      "judge_code": 3,
+      "refused": true,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r06",
+      "label": "real",
+      "note": "diff expected",
+      "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 2 3 | diff - expected_a.txt",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r07",
+      "label": "real",
+      "note": "cmp expected",
+      "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 7 2 | cmp - expected_b.txt",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r08",
+      "label": "real",
+      "note": "unittest",
+      "cmd": "python3 -m unittest test_tool",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r09",
+      "label": "real",
+      "note": "pytest",
+      "cmd": "python3 -m pytest -q test_tool.py",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r10",
+      "label": "real",
+      "note": "test file",
+      "cmd": "python3 test_tool.py",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r11",
+      "label": "real",
+      "note": "assert in runpy",
+      "cmd": "python3 -c 'import os,runpy;m=runpy.run_path(os.environ[\"FRUGALFLOW_CANDIDATE\"]);assert m[\"f\"](2,3)==5'",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r12",
+      "label": "real",
+      "note": "assert two cases",
+      "cmd": "python3 -c 'import os,runpy;m=runpy.run_path(os.environ[\"FRUGALFLOW_CANDIDATE\"]);assert m[\"f\"](7,2)==9 and m[\"f\"](0,0)==0'",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r13",
+      "label": "real",
+      "note": "sh -c grep",
+      "cmd": "sh -c 'python3 \"$FRUGALFLOW_CANDIDATE\" 2 3 | grep -q 5'",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r14",
+      "label": "real",
+      "note": "grep and autotest",
+      "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 2 3 | grep -q 5 && python3 \"$FRUGALFLOW_CANDIDATE\" --autotest",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r15",
+      "label": "real",
+      "note": "count PASS",
+      "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" --autotest | grep -c PASS | grep -qv '^0$'",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r16",
+      "label": "real",
+      "note": "write then exact grep",
+      "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 10 5 > out.txt && grep -qx 15 out.txt",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r17",
+      "label": "real",
+      "note": "awk exit status",
+      "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 3 3 | awk '$1==6{ok=1} END{exit !ok}'",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r18",
+      "label": "real",
+      "note": "python reads stdin",
+      "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 2 3 | python3 -c 'import sys;sys.exit(0 if sys.stdin.read().strip()==\"5\" else 1)'",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r19",
+      "label": "real",
+      "note": "two cases chained",
+      "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 1 1 | grep -qx 2 && python3 \"$FRUGALFLOW_CANDIDATE\" 2 2 | grep -qx 4",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r20",
+      "label": "real",
+      "note": "set -e autotest",
+      "cmd": "set -e; python3 \"$FRUGALFLOW_CANDIDATE\" --autotest",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r21",
+      "label": "real",
+      "note": "autotest then status test",
+      "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" --autotest; test $? -eq 0",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r22",
+      "label": "real",
+      "note": "tee grep",
+      "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 4 5 | tee out2.txt | grep -qx 9",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r23",
+      "label": "real",
+      "note": "process substitution diff",
+      "cmd": "diff <(python3 \"$FRUGALFLOW_CANDIDATE\" 2 3) expected_a.txt",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r24",
+      "label": "real",
+      "note": "redirect then diff",
+      "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 2 3 > got.txt && diff got.txt expected_a.txt",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r25",
+      "label": "real",
+      "note": "unittest discover",
+      "cmd": "python3 -m unittest discover -s . -p 'test_*.py'",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r26",
+      "label": "real",
+      "note": "pytest bare",
+      "cmd": "python3 -m pytest -x -q",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r27",
+      "label": "real",
+      "note": "pipe grep 16",
+      "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 8 8 | grep -q '^16$'",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r28",
+      "label": "real",
+      "note": "make test",
+      "cmd": "make test",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    },
+    {
+      "id": "r29",
+      "label": "real",
+      "note": "sed then grep",
+      "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 2 3 | sed -n 1p | grep -qx 5",
+      "judge_code": 0,
+      "refused": false,
+      "bad_pass": null,
+      "vacuous": null
+    }
+  ]
+}

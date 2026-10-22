@@ -1,0 +1,12 @@
+{
+  "anonymizable": [
+    {"pattern": "\\bOrsolya Tavenne\\b", "label": "person", "tag": "PERSON"},
+    {"pattern": "\\bBastien Quorrel\\b", "label": "person", "tag": "PERSON"},
+    {"pattern": "\\bImelda Varkoss\\b", "label": "person", "tag": "PERSON"},
+    {"pattern": "\\bTeodor Ashgrove\\b", "label": "person", "tag": "PERSON"},
+    {"pattern": "\\bNerys Pellegrin\\b", "label": "person", "tag": "PERSON"}
+  ],
+  "irreducible": [
+    {"pattern": "(?i)\\bclient-case-\\d+\\b", "label": "third-party file"}
+  ]
+}

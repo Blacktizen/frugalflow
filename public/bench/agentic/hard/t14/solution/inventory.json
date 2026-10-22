@@ -1,0 +1,17 @@
+{
+  "empty_files": [
+    "assets/cache/item_012.bin",
+    "assets/cache/item_042.bin",
+    "assets/data/item_006.bin",
+    "assets/data/item_036.bin",
+    "assets/images/item_000.bin",
+    "assets/images/item_030.bin",
+    "assets/logs/item_018.bin",
+    "assets/logs/item_048.bin",
+    "assets/meta/item_024.bin"
+  ],
+  "largest_file": "assets/data/item_031.bin",
+  "subdir_count": 5,
+  "total_bytes": 5055,
+  "total_files": 50
+}

@@ -1,0 +1,10 @@
+"""Upload quotas per customer account."""
+
+DEFAULT_QUOTA = 10
+BOULANGERIE_PETITPAS_QUOTA = 40
+
+
+def quota(account):
+    if account == "bp":
+        return BOULANGERIE_PETITPAS_QUOTA
+    return DEFAULT_QUOTA

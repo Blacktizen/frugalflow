@@ -1,0 +1,22 @@
+{
+  "runs": 90,
+  "errors": 0,
+  "structure_changed": 0,
+  "lines_total": 720,
+  "C0": {
+    "exact": 230,
+    "typo_only": 490,
+    "other": 0,
+    "damaged_pct": 68.06
+  },
+  "C1": {
+    "exact": 720,
+    "typo_only": 0,
+    "other": 0,
+    "damaged_pct": 0.0
+  },
+  "background_touched": 0,
+  "good_lines_damaged": 0,
+  "fidelite_changed_runs": 80,
+  "fidelite_errors": 0
+}

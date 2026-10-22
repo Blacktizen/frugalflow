@@ -1,0 +1,9 @@
+"""Small statistics helpers."""
+
+
+def mean(values):
+    return sum(values) / len(values) if values else 0.0
+
+
+def spread(values):
+    return max(values) - min(values) if values else 0.0

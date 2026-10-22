@@ -1,0 +1,13 @@
+{
+  "busiest_service": "cache-1",
+  "distinct_error_codes": 4,
+  "distinct_services": 8,
+  "level_counts": {
+    "DEBUG": 261,
+    "ERROR": 506,
+    "INFO": 1086,
+    "WARN": 647
+  },
+  "total_lines": 2500,
+  "warn_timeouts": 156
+}

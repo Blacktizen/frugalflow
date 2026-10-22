@@ -1,0 +1,11 @@
+{
+  "duplicate_content_groups": 9,
+  "extensions": [
+    "csv",
+    "json",
+    "txt"
+  ],
+  "largest_file": "store/config/entry_34.txt",
+  "total_bytes": 1814,
+  "total_files": 48
+}

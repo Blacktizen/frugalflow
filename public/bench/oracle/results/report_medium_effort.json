@@ -1,0 +1,110 @@
+{
+  "C0": {
+    "n": 60,
+    "announced_green": 60,
+    "announced_red": 0,
+    "announced_none": 0,
+    "false_green": 1,
+    "false_green_pct": 1.7,
+    "passed": 59,
+    "passed_pct": 98.3,
+    "tokens": 75488
+  },
+  "C1": {
+    "n": 60,
+    "resolved": 60,
+    "resolved_pct": 100.0,
+    "unresolved": 0,
+    "attempts": 62,
+    "tokens": 90087
+  },
+  "overhead_ratio": 1.19,
+  "tokens_per_solved_c0": 1279.5,
+  "tokens_per_solved_c1": 1501.5,
+  "by_task": [
+    {
+      "task": "t01",
+      "n": 5,
+      "c0_passed": 5,
+      "c0_false_green": 0,
+      "c1_resolved": 5
+    },
+    {
+      "task": "t02",
+      "n": 5,
+      "c0_passed": 5,
+      "c0_false_green": 0,
+      "c1_resolved": 5
+    },
+    {
+      "task": "t03",
+      "n": 5,
+      "c0_passed": 5,
+      "c0_false_green": 0,
+      "c1_resolved": 5
+    },
+    {
+      "task": "t04",
+      "n": 5,
+      "c0_passed": 5,
+      "c0_false_green": 0,
+      "c1_resolved": 5
+    },
+    {
+      "task": "t05",
+      "n": 5,
+      "c0_passed": 5,
+      "c0_false_green": 0,
+      "c1_resolved": 5
+    },
+    {
+      "task": "t06",
+      "n": 5,
+      "c0_passed": 5,
+      "c0_false_green": 0,
+      "c1_resolved": 5
+    },
+    {
+      "task": "t07",
+      "n": 5,
+      "c0_passed": 5,
+      "c0_false_green": 0,
+      "c1_resolved": 5
+    },
+    {
+      "task": "t08",
+      "n": 5,
+      "c0_passed": 5,
+      "c0_false_green": 0,
+      "c1_resolved": 5
+    },
+    {
+      "task": "t17",
+      "n": 5,
+      "c0_passed": 5,
+      "c0_false_green": 0,
+      "c1_resolved": 5
+    },
+    {
+      "task": "t18",
+      "n": 5,
+      "c0_passed": 5,
+      "c0_false_green": 0,
+      "c1_resolved": 5
+    },
+    {
+      "task": "t19",
+      "n": 5,
+      "c0_passed": 4,
+      "c0_false_green": 1,
+      "c1_resolved": 5
+    },
+    {
+      "task": "t20",
+      "n": 5,
+      "c0_passed": 5,
+      "c0_false_green": 0,
+      "c1_resolved": 5
+    }
+  ]
+}

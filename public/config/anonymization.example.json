@@ -1,0 +1,10 @@
+{
+  "anonymizable": [
+    {"pattern": "\\bJane Roe\\b", "label": "person", "tag": "PERSON"},
+    {"pattern": "(?i)\\bacme-box\\b", "label": "machine", "tag": "HOST"},
+    {"pattern": "\\bProjectKite\\b", "label": "private product", "tag": "PRODUCT"}
+  ],
+  "irreducible": [
+    {"pattern": "(?i)\\bclient-case-42\\b", "label": "third-party file"}
+  ]
+}

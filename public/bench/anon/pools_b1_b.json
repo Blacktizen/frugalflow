@@ -1,0 +1,496 @@
+{
+ "note": "Neutral fabricated data. The section sign is removed by the generator before writing a file; it keeps this pool from tripping the secret and anonymisation scans itself.",
+ "leaks": [
+  {
+   "id": "n1b",
+   "type": "private_name",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "Wilmar Doucette"
+   ],
+   "label": "OWNER"
+  },
+  {
+   "id": "n2b",
+   "type": "private_name",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "maintainer: Ottilie Brandreth"
+   ],
+   "label": "NOTE"
+  },
+  {
+   "id": "n3b",
+   "type": "private_name",
+   "where": "code",
+   "form": "case",
+   "parts": [
+    "CASIMIR LENOBLE"
+   ],
+   "label": "AUTHOR"
+  },
+  {
+   "id": "n4b",
+   "type": "private_name",
+   "where": "code",
+   "form": "split",
+   "parts": [
+    "Philippa",
+    "Hallward"
+   ],
+   "label": "PERSON"
+  },
+  {
+   "id": "n5b",
+   "type": "private_name",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "reviewed by Anselm Rousseaux last spring"
+   ],
+   "label": "NOTE"
+  },
+  {
+   "id": "p1b",
+   "type": "user_path",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "/Us§ers/clenoble/projects/app"
+   ],
+   "label": "ROOT"
+  },
+  {
+   "id": "p2b",
+   "type": "user_path",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "/ho§me/phallward/.config/tool"
+   ],
+   "label": "CONF"
+  },
+  {
+   "id": "p3b",
+   "type": "user_path",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "C:\\Us§ers\\obrandreth\\Documents\\export"
+   ],
+   "label": "OUT"
+  },
+  {
+   "id": "p4b",
+   "type": "user_path",
+   "where": "code",
+   "form": "case",
+   "parts": [
+    "/US§ERS/clenoble/data/raw"
+   ],
+   "label": "DATA"
+  },
+  {
+   "id": "p5b",
+   "type": "user_path",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "cwd was /Us§ers/wdoucette/work when this ran"
+   ],
+   "label": "NOTE"
+  },
+  {
+   "id": "e1b",
+   "type": "email",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "iris.molnar@§eastbrook-demo.test"
+   ],
+   "label": "CONTACT"
+  },
+  {
+   "id": "e2b",
+   "type": "email",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "h.santoro@§fernhill-demo.test"
+   ],
+   "label": "SENDER"
+  },
+  {
+   "id": "e3b",
+   "type": "email",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "ask petra.vance@§quarry-demo.test about the export"
+   ],
+   "label": "NOTE"
+  },
+  {
+   "id": "e4b",
+   "type": "email",
+   "where": "code",
+   "form": "encoded",
+   "parts": [
+    "owen.tiller@§saltmarsh-demo.test"
+   ],
+   "label": "CONTACT_B64"
+  },
+  {
+   "id": "e5b",
+   "type": "email",
+   "where": "code",
+   "form": "case",
+   "parts": [
+    "IRIS.MOLNAR@§EASTBROOK-DEMO.TEST"
+   ],
+   "label": "REPLY_TO"
+  },
+  {
+   "id": "i1b",
+   "type": "private_ip",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "10.§21.8.3"
+   ],
+   "label": "DB_HOST"
+  },
+  {
+   "id": "i2b",
+   "type": "private_ip",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "192.168.§9.41"
+   ],
+   "label": "NAS"
+  },
+  {
+   "id": "i3b",
+   "type": "private_ip",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "172.16.§3.66"
+   ],
+   "label": "CACHE"
+  },
+  {
+   "id": "i4b",
+   "type": "private_ip",
+   "where": "comment",
+   "form": "plain",
+   "parts": [
+    "staging used to answer on 10.§2.9.30"
+   ],
+   "label": "NOTE"
+  },
+  {
+   "id": "i5b",
+   "type": "private_ip",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "192.168.§77.8"
+   ],
+   "label": "GATEWAY"
+  },
+  {
+   "id": "k1b",
+   "type": "api_key",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "AKIA§VCYA0R5QSG7EI9UM"
+   ],
+   "label": "AWS_ACCESS_KEY_ID"
+  },
+  {
+   "id": "k2b",
+   "type": "api_key",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "sk-§live-2mF6rVw0EeB5tS1cG8aD4jI7"
+   ],
+   "label": "API_KEY"
+  },
+  {
+   "id": "k3b",
+   "type": "api_key",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "sk_li§ve_84Me2Ex5lEcPDsv5H1kWmBuY6bGxR0Qz"
+   ],
+   "label": "PAYMENT_KEY"
+  },
+  {
+   "id": "k4b",
+   "type": "api_key",
+   "where": "code",
+   "form": "split",
+   "parts": [
+    "AKIA§VCYA0R5QS",
+    "G7EI9UM"
+   ],
+   "label": "KEY_PART"
+  },
+  {
+   "id": "k5b",
+   "type": "api_key",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "AIz§aXfI-2aCx5QtSi7EkW9wMcP1jB4lDmO6hL0b"
+   ],
+   "label": "MAPS_KEY"
+  },
+  {
+   "id": "t1b",
+   "type": "token",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "gh§p_W0cP5tVe2QiY7uEj1BkD4zJm9MqF6bU8vCnP"
+   ],
+   "label": "GITHUB_TOKEN"
+  },
+  {
+   "id": "t2b",
+   "type": "token",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "Bearer ey§JhbGciOiJIUzI1NiJ9.eyJ§zdWIiOiJ1c2VyLTQyIiwicm9sZSI6ImFkbWluIn0.zpn_C2mP5tV0"
+   ],
+   "label": "AUTH"
+  },
+  {
+   "id": "t3b",
+   "type": "token",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "xox§b-456789012345-4567890123456-FiHkJmLoNqPsRuTwVyXaZcBe"
+   ],
+   "label": "CHAT_TOKEN"
+  },
+  {
+   "id": "t4b",
+   "type": "token",
+   "where": "code",
+   "form": "encoded",
+   "parts": [
+    "gh§p_E7rV2tCc5QwY0uWj1BiD4zJk9MqF6bK8vSnP"
+   ],
+   "label": "TOKEN_B64"
+  },
+  {
+   "id": "t5b",
+   "type": "token",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "glp§at-Vt0Cc5QrU2EaW7uB1jDi"
+   ],
+   "label": "CI_TOKEN"
+  },
+  {
+   "id": "h1b",
+   "type": "hostname",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "build-31§.corp§.internal"
+   ],
+   "label": "BUILD_HOST"
+  },
+  {
+   "id": "h2b",
+   "type": "hostname",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "DESKTOP-§3ZP8R5T"
+   ],
+   "label": "MACHINE"
+  },
+  {
+   "id": "h3b",
+   "type": "hostname",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "nas-cellar.§lan"
+   ],
+   "label": "STORAGE"
+  },
+  {
+   "id": "h4b",
+   "type": "hostname",
+   "where": "comment",
+   "form": "plain",
+   "parts": [
+    "ssh to gate-09.§intra before the sync"
+   ],
+   "label": "NOTE"
+  },
+  {
+   "id": "h5b",
+   "type": "hostname",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "pi-shed.tail4c7e.§ts.net"
+   ],
+   "label": "NODE"
+  },
+  {
+   "id": "r1b",
+   "type": "third_party_ref",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "client-case-§9314"
+   ],
+   "label": "TICKET"
+  },
+  {
+   "id": "r2b",
+   "type": "third_party_ref",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "client-case-§265"
+   ],
+   "label": "REF"
+  },
+  {
+   "id": "r3b",
+   "type": "third_party_ref",
+   "where": "code",
+   "form": "case",
+   "parts": [
+    "CLIENT-CASE-§6072"
+   ],
+   "label": "DOSSIER"
+  },
+  {
+   "id": "r4b",
+   "type": "third_party_ref",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "see client-case-§1189, not for sharing"
+   ],
+   "label": "NOTE"
+  },
+  {
+   "id": "r5b",
+   "type": "third_party_ref",
+   "where": "code",
+   "form": "plain",
+   "parts": [
+    "input comes from client-case-§455"
+   ],
+   "label": "NOTE"
+  }
+ ],
+ "decoys": [
+  "write to help@example.net for access requests",
+  "the vendor guide prints the secret key as wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+  "the reserved block 198.51.100.7 is used in network tutorials",
+  "another reserved address, 203.0.113.9, appears in the manual",
+  "home folders such as /ho§me/<user> differ by system",
+  "a short script reads os.environ.get(\"HOME\") and nothing else",
+  "Carol and Dave exchange keys in the protocol diagram",
+  "set token to <your-token-here> before the first call",
+  "the cache listens on 0.0.0.0 inside the container",
+  "call the endpoint https://api.example.com/v1/items for the list",
+  "the id looks like ticket-1234 in the public tracker",
+  "the node name is worker-a in the sample cluster",
+  "version 10.2.1 added a new flag",
+  "use the placeholder user@example.com in the form",
+  "the file is saved under ~/notes in the usual way",
+  "the prefix sk-xxxx marks a key in the vendor guide, followed by random characters",
+  "the label alpha-team is a made-up group in the example",
+  "see section 4.2 for the list of ports: 80, 443 and 8080",
+  "the date 2026-03-04 and the time 10:11:12 are fixed in the sample",
+  "Erin and Frank appear in the training story"
+ ],
+ "filler": {
+  "py": [
+   "import os",
+   "import sys",
+   "",
+   "def load(path):",
+   "    with open(path) as f:",
+   "        return f.read()",
+   "",
+   "def total(values):",
+   "    return sum(values)",
+   "",
+   "class Counter:",
+   "    def __init__(self):",
+   "        self.n = 0",
+   "",
+   "    def bump(self):",
+   "        self.n += 1",
+   "        return self.n",
+   "",
+   "def main():",
+   "    print(total([1, 2, 3]))"
+  ],
+  "md": [
+   "# Notes",
+   "",
+   "This page explains how the export job is organised.",
+   "",
+   "## Steps",
+   "",
+   "1. Read the input folder.",
+   "2. Normalise each record.",
+   "3. Write the summary table.",
+   "",
+   "## Limits",
+   "",
+   "The job handles about ten thousand rows per minute.",
+   "Anything larger should be split first.",
+   "",
+   "## Next",
+   "",
+   "Add a retry after a failed write."
+  ],
+  "json": [
+   "\"version\": 3",
+   "\"retries\": 5",
+   "\"timeout_s\": 30",
+   "\"mode\": \"batch\"",
+   "\"verbose\": false",
+   "\"batch_size\": 200",
+   "\"format\": \"csv\"",
+   "\"region\": \"north\"",
+   "\"level\": \"info\"",
+   "\"limit\": 1000"
+  ],
+  "log": [
+   "INFO job started",
+   "INFO read 200 rows",
+   "INFO normalised 200 rows",
+   "WARN row 17 had an empty field",
+   "INFO wrote summary table",
+   "INFO read 200 rows",
+   "INFO normalised 198 rows",
+   "INFO wrote summary table",
+   "INFO job finished in 12 s"
+  ]
+ }
+}

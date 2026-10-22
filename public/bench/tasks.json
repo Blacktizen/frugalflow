@@ -1,0 +1,25 @@
+{
+  "schema_version": "1",
+  "tasks": [
+    {"id": "t01", "title": "Fix median in stats.py", "kind": "code"},
+    {"id": "t02", "title": "Fix title_case in text.py", "kind": "code"},
+    {"id": "t03", "title": "Fix format_duration in timefmt.py", "kind": "code"},
+    {"id": "t04", "title": "Fix is_valid_identifier in validate.py", "kind": "code"},
+    {"id": "t05", "title": "Fix remove_duplicates in lists.py", "kind": "code"},
+    {"id": "t06", "title": "Fix to_csv_row in csvtools.py", "kind": "code"},
+    {"id": "t07", "title": "Fix parse_key_values in kv.py", "kind": "code"},
+    {"id": "t08", "title": "Implement apply_discount in pricing.py", "kind": "code"},
+    {"id": "t09", "title": "Summarize an HTTP access log", "kind": "logs"},
+    {"id": "t10", "title": "Summarize a service log", "kind": "logs"},
+    {"id": "t11", "title": "Summarize a batch job log", "kind": "logs"},
+    {"id": "t12", "title": "Summarize an event log", "kind": "logs"},
+    {"id": "t13", "title": "Inventory a source tree", "kind": "inventory"},
+    {"id": "t14", "title": "Inventory assets: empty files and sizes", "kind": "inventory"},
+    {"id": "t15", "title": "Inventory a project: lines and TODOs", "kind": "inventory"},
+    {"id": "t16", "title": "Inventory a store: duplicates and extensions", "kind": "inventory"},
+    {"id": "t17", "title": "Write unit tests for calc.py", "kind": "tests"},
+    {"id": "t18", "title": "Write unit tests for strings.py", "kind": "tests"},
+    {"id": "t19", "title": "Write unit tests for parsing.py", "kind": "tests"},
+    {"id": "t20", "title": "Write unit tests for stats.py", "kind": "tests"}
+  ]
+}

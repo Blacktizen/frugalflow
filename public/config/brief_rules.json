@@ -1,0 +1,253 @@
+{
+  "schema_version": "1",
+  "about": "Rules a delegation brief must satisfy before it is sent to a model. Each rule was born from a real, dated failure. The brief is matched after normalisation: lower case, accents stripped. Write every pattern in lower case without accents. A rule proposed by the community carries the failure that gave birth to it and its false refusal rate on public/data/brief_cases.json.",
+  "limits": {
+    "max_tests_per_task": 5,
+    "max_brief_lines": 400
+  },
+  "rules": [
+    {
+      "id": "E1",
+      "title": "An edit task does not carry the original file",
+      "born_from": {"date": "2026-09-04", "incident": "A prose-only task asked to fix a program without attaching it: the model rewrote a whole different program and the result was thrown away. The first version of this rule guessed the nature of the task from keywords and fired on the sentence that said the opposite."},
+      "fix": "A task declared NATURE: retouche (edit) must carry the FULL content of the original file in a fenced code block of at least 20 lines.",
+      "trigger": {"regex": "nature:\\s*(retouche|edit\\b)"},
+      "requirement": {"type": "code_block_min_lines", "lines": 20},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "E2",
+      "title": "No gesture is forbidden, only the symptom is described",
+      "born_from": {"date": "2026-09-04", "incident": "The brief said 'remove a backslash'. The model fixed the symptom with a script that crashed and left an empty file."},
+      "fix": "Add a line that starts with the no-entry sign, or that contains the word INTERDIT or FORBIDDEN, forbidding the dangerous GESTURE instead of describing the defect.",
+      "trigger": {},
+      "requirement": {"type": "regex_all", "patterns": ["(?m)^\\s*⛔|interdit|forbidden"]},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "E3",
+      "title": "The FILTER applied by the checking program is not stated",
+      "born_from": {"date": "2026-09-05", "incident": "The fixtures used names without a slash, which the checked program ignores. The tests came out green while measuring nothing."},
+      "fix": "Add a section LE FILTRE QUE (THE FILTER THAT) the checking program applies: what it keeps and what it ignores.",
+      "trigger": {"regex": "epreuve|autotest|fixture|cas de test|test case|self-test"},
+      "requirement": {"type": "regex_all", "patterns": ["le filtre que|the filter (that|which)"]},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "E4",
+      "title": "The quantity a test must move is not named",
+      "born_from": {"date": "2026-09-05", "incident": "A test shrank bytes without changing the NUMBER OF LINES, while the checked program only counts lines. The delegate answered FAIL, and it was right."},
+      "fix": "Name the quantity (GRANDEUR) each test must move, and in which direction.",
+      "trigger": {"regex": "epreuve|autotest|fixture|cas de test|test case|self-test"},
+      "requirement": {"type": "regex_all", "patterns": ["grandeur|the quantity"]},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "E5",
+      "title": "The nature of the task is not declared",
+      "born_from": {"date": "2026-09-04", "incident": "A delegated task is a CREATION, never an edit: on an edit the model failed twice in a row. The first version guessed from keywords and fired on the very precaution it asks for."},
+      "fix": "Write a line NATURE: creation, or NATURE: retouche with its reason. The nature of a task is declared, never guessed.",
+      "trigger": {},
+      "requirement": {"type": "regex_all", "patterns": ["nature:"]},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "E6",
+      "title": "Accented byte literals are not forbidden",
+      "born_from": {"date": "2026-09-05", "incident": "A delegate wrote accented characters as byte literals, which broke the rendering of the produced file."},
+      "fix": "Add: writing accented characters as byte literals is forbidden (octets accentues), the file is utf-8. A brief whose code is declared pure ASCII also passes.",
+      "trigger": {"regex": "program|module|script|\\.py"},
+      "requirement": {"type": "regex_all", "patterns": ["octets accentues|accented byte|(code|fichier|file)[^\\n]{0,40}(ascii pur|pure ascii|ascii only)"]},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "E7",
+      "title": "Writing after the code block is not forbidden",
+      "born_from": {"date": "2026-09-05", "incident": "A delegate wrote comments AFTER the code block, which broke the extraction of the produced file."},
+      "fix": "Add: write nothing after the code block (apres le bloc), not a word, not a line.",
+      "trigger": {"regex": "program|module|script|\\.py"},
+      "requirement": {"type": "regex_all", "patterns": ["apres le bloc|after the code block"]},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "E8",
+      "title": "A real home path is sent to an untrusted third party",
+      "born_from": {"date": "2026-09-05", "incident": "The leak barrier refused a send to a third-party model because of a user path. A brief naming real paths reveals the layout of the machine."},
+      "fix": "Remove every home path from the brief, or anonymise it before sending.",
+      "trigger": {"trust": "untrusted_third_party"},
+      "requirement": {"type": "regex_none", "patterns": ["/[u]sers/", "(?<![\\w.])/home/", "c:[\\\\/]users[\\\\/]"]},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "E9",
+      "title": "The --verify command names the final target, which does not exist yet",
+      "born_from": {"date": "2026-09-05", "incident": "The --verify command named the final file, absent when the check runs: the check failed for reasons unrelated to the product. Revised on 2026-09-26: a line that only QUOTES the --verify option no longer fires, only a --verify followed by a quoted command."},
+      "fix": "In the --verify command, name the candidate through the environment variable given by the delegation tool, in double quotes (\"$AI_DELEGATE_OUT\" or \"$FRUGALFLOW_CANDIDATE\").",
+      "trigger": {"regex": "--verify(?:\\s+|=)(?:[\"'$./~]|(?:python3?|bash|sh|node|cd|pytest|make|npm|ruby|perl|uv|go|cargo|deno|php|java)\\b|[\\w-]+\\s+\\S*[./])"},
+      "requirement": {"type": "each_line", "if": "--verify(?:\\s+|=)(?:[\"'$./~]|(?:python3?|bash|sh|node|cd|pytest|make|npm|ruby|perl|uv|go|cargo|deno|php|java)\\b|[\\w-]+\\s+\\S*[./])", "then": "ai_delegate_out|frugalflow_candidate"},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "E10",
+      "title": "The self-test may print FAILURE and exit 0",
+      "born_from": {"date": "2026-08-26", "incident": "A returned module re-ran itself without arguments, swallowed its output in a pipe and exited 0: zero tests run, --verify passed."},
+      "fix": "Require that the self-test runs each case in a subprocess (sous-processus) and exits with a non-zero exit code (code de sortie) as soon as one case fails.",
+      "trigger": {"regex": "epreuve|autotest|fixture|cas de test|test case|self-test"},
+      "requirement": {"type": "regex_all", "patterns": ["sous-processus|subprocess", "code de sortie|ne sort jamais 0|exit code|exit status"]},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "E11",
+      "title": "Too many tests in one task",
+      "born_from": {"date": "2026-09-05", "incident": "A brief with 8 tests sent to a local model: 10 minutes without a byte, task killed. Measured on 2026-08-26: 15 tests = 27 min without output; 5 tests = 1 min 50, self-test 5/5."},
+      "fix": "Declare the count with a line EPREUVES: <n> (or TESTS: <n>), and SPLIT the task into modules when n exceeds the limit.",
+      "trigger": {"regex": "epreuve|autotest|fixture|cas de test|test case|self-test"},
+      "requirement": {"type": "declared_at_most", "key": "epreuves:|^\\s*tests:", "limit": "max_tests_per_task"},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "E12",
+      "title": "Brief too long",
+      "born_from": {"date": "2026-09-05", "incident": "Two briefs of 220 and 287 lines written the same evening, against a limit of 140 in the settings. The first returned nothing in 10 minutes."},
+      "fix": "Shorten the brief, or move bulky data into a file the program reads instead of copying it into the brief.",
+      "trigger": {},
+      "requirement": {"type": "lines_at_most", "limit": "max_brief_lines"},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "E13",
+      "title": "A value read from a settings file without its exact location",
+      "born_from": {"date": "2026-09-05", "incident": "The brief named two thresholds to read from a JSON file without saying WHERE they live. Two models out of three looked for them at the root instead of under their parent key: usage refusal, module unusable. The three samples still printed 5 PASS / 0 FAIL; only a --verify on real material caught it."},
+      "fix": "Write EMPLACEMENT EXACT (EXACT LOCATION) followed by the full access path of the value, and forbid looking anywhere else.",
+      "trigger": {"any": ["--reglages", "config.json", "fichier de reglages", "--settings", "settings file"], "regex": "^(?=[\\s\\S]*((?<!\\w)config\\.json|--reglages|fichier de reglages|--settings|settings file))[\\s\\S]*?((seuil|plafond|valeur|cle|champ|parametre|threshold|limit|value|key|field)s?\\b[^\\n]{0,150}(reglages|config\\.json|settings)|\\b(lit|lire|lus?|lues?|charge|ouvre|reads?|loads?)\\b[^\\n]{0,60}(reglages|config\\.json|settings))"},
+      "requirement": {"type": "regex_all", "patterns": ["emplacement exact|exact location"]},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "E15",
+      "title": "The claim the displayed data contradicts is not forbidden",
+      "born_from": {"date": "2026-09-06", "incident": "A banner said '18 competitors rank above you' over a table where the recipient had the BEST rating. The number mixed volume and rank; a reader comparing both concludes the tool is wrong."},
+      "fix": "Add a section AFFIRMATION INTERDITE (FORBIDDEN CLAIM) naming the sentence never to produce, and the quantity the argument must rest on instead.",
+      "trigger": {"any": ["accroche", "bandeau", "texte commercial", "email", "mail", "prospect", "verdict affiche", "verdict visible", "verdict commercial", "phrase de verdict", "banner", "headline"], "regex": "(produit|product):\\s*(visible|texte|text)"},
+      "requirement": {"type": "regex_all", "patterns": ["affirmation interdite|forbidden claim"]},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "E16",
+      "title": "Visible strings are not given verbatim and accented",
+      "born_from": {"date": "2026-09-06", "incident": "A template came out on-brand but WITHOUT ACCENTS and with 4.9 instead of the local 4,9. The brief itself was written without accents: the delegate copied what it saw, and invented a footer sentence nobody asked for."},
+      "fix": "Add a section CHAINES VISIBLES VERBATIM (VISIBLE STRINGS VERBATIM) giving, one per line and correctly accented, EVERY string the final reader will see, and forbid inventing any other. State the number format.",
+      "trigger": {"any": ["html", "gabarit", "affiche", "visuel", "accroche", "email", "mail", "plaquette", "template", "brochure"], "regex": "(produit|product):\\s*(visible|texte|text)"},
+      "requirement": {"type": "regex_all", "patterns": ["chaines visibles verbatim|visible strings verbatim"]},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "E18",
+      "title": "A list of forbidden words without word boundaries",
+      "born_from": {"date": "2026-09-06", "incident": "A test forbade short pronouns; the check looked for SUBSTRINGS and refused a correct sentence because an ordinary word contained one of them. Three failed delegations in a row, target unchanged."},
+      "fix": "Say that forbidden words are matched as a WHOLE WORD (mot entier), never as a substring, and give the example that stings.",
+      "trigger": {"any": ["mots interdits", "mot interdit", "liste noire", "formules de vendeur", "forbidden words", "banned words"]},
+      "requirement": {"type": "regex_all", "patterns": ["mot entier|whole word"]},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "E20",
+      "title": "The NATURE OF THE PRODUCT is not declared",
+      "born_from": {"date": "2026-09-06", "incident": "Brand and tone rules fired on the SUBJECT of the task: a checking program that no customer reads was asked for a tone section and verbatim visible strings. Filler without purpose is exactly what makes people bypass a guard."},
+      "fix": "Add a line PRODUIT: visible (a customer sees it), PRODUIT: texte (commercial text) or PRODUIT: controle (it only judges, nobody reads it). PRODUCT: is accepted too.",
+      "trigger": {},
+      "requirement": {"type": "regex_all", "patterns": ["produit:|product:"]},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "E21",
+      "title": "A test fixture is DESCRIBED instead of given verbatim",
+      "born_from": {"date": "2026-09-06", "incident": "The brief described in prose the HTML of the red test ('three rows whose counts grow 11, 114, 228...'). Three attempts, silent self-test failure, target unchanged. A seven-point description gives an unexpected indent; the twenty exact lines pass."},
+      "fix": "Give the EXACT content of each fixture in a delimited block, a recopier tel quel (to copy as is). Never describe a fixture in prose.",
+      "trigger": {"regex": "epreuve|autotest|fixture|cas de test|test case|self-test"},
+      "requirement": {"type": "regex_all", "patterns": ["a recopier tel quel|to copy as is|copy verbatim"]},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "E22",
+      "title": "A cut anchor contains an accented character",
+      "born_from": {"date": "2026-09-06", "incident": "A tool had to cut at a heading containing an accented phrase, given WITH its accent. Three attempts, test 5 failed: the delegate missed the anchor and kept the previous section. Revised on 2026-09-26: the bare verb 'decoupe' no longer fires."},
+      "fix": "Give every search or cut anchor as a substring WITHOUT ACCENT (sans accent) and without special characters, and say it must be unique in the file.",
+      "trigger": {"any": ["ancre", "chaine", "coupe", "anchor"], "regex": "ancres? (de |d |pour (la |une )?)(recherche|decoupe|coupe|couper|chercher)|(cut|split|search|find)[^\\n]{0,30}anchor|anchors? (to|for) (search|cut|split)|(de|jusqu a|qui contient) la chaine|coupe[rs]?\\s+(a|au|avant|apres|jusqu)\\s+(?!\\d)|balise[^\\n]{0,40}(contenant|qui contient)"},
+      "requirement": {"type": "regex_all", "patterns": ["sans accent|without accent"]},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "E23",
+      "title": "The self-test is not required to print ONE LINE PER TEST",
+      "born_from": {"date": "2026-09-12", "incident": "A returned module printed ONLY the failures. The 5 tests passed, the output was empty and the code 0: indistinguishable from a self-test that runs nothing."},
+      "fix": "Require in words one line per test (une ligne par epreuve) starting with PASS or FAIL, and forbid silence on success.",
+      "trigger": {"regex": "epreuve|autotest|fixture|cas de test|test case|self-test"},
+      "requirement": {"type": "regex_all", "patterns": ["une ligne par epreuve|one line per test", "pass ou fail|pass or fail"]},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "E24",
+      "title": "An exit code of the contract has no test that produces it",
+      "born_from": {"date": "2026-09-18", "incident": "The contract had three exit codes (0, 3, 10) and a 'reference only -> 0' branch no test produced: self-test 5/5, and the first real call exited 10 instead of 0. Caught by a real call, not by the self-test. Revised on 2026-09-26: the template line about reading the subprocess exit code no longer fires."},
+      "fix": "For each exit code and each branch of the contract, one test that produces it. Write the sentence: chaque code de sortie a son epreuve (every exit code has its test).",
+      "trigger": {"any": ["code de sortie", "exit code"], "regex": "code de sortie(?! du sous-processus)|exit code(?! of the subprocess)"},
+      "requirement": {"type": "regex_all", "patterns": ["chaque code de sortie a son epreuve|every exit code has its test"]},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "E25",
+      "title": "A test bounded by a delay without a computed time budget",
+      "born_from": {"date": "2026-09-19", "incident": "A test bounded each query by 5 s with signal.alarm and the subprocess by 120 s, over 300 queries of which about 60 were slowed down: 300 s needed for 120 allowed. Attempt rejected. The arithmetic had never been done. Revised on 2026-09-26: a production timeout no longer fires, only a timeout on a line about tests."},
+      "fix": "When a test depends on a delay (signal.alarm, timeout), write the time budget (budget de temps): slowed cases x delay per case, and check it fits under the timeout.",
+      "trigger": {"any": ["signal.alarm", "timeout"], "regex": "signal\\.alarm|(epreuve|autotest|cas lent|par cas|par requete|__file__|test case|per case)[^\\n]*timeout|timeout[^\\n]*(epreuve|autotest|cas lent|par cas|par requete|__file__|test case|per case)"},
+      "requirement": {"type": "regex_all", "patterns": ["budget de temps|time budget"]},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "E26",
+      "title": "A line inserted in a template without its final indentation",
+      "born_from": {"date": "2026-09-19", "incident": "A fixture line already indented by 8 spaces was substituted with str.replace into a marker already indented by 8 spaces: 16 spaces, 'unindent does not match'. Attempt rejected."},
+      "fix": "When a fixture is built by substitution (str.replace) in a template, state the final indentation (indentation finale) of the produced line and whether the given line carries its own.",
+      "trigger": {"any": ["str.replace"]},
+      "requirement": {"type": "regex_all", "patterns": ["indentation finale|final indentation"]},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "E27",
+      "title": "A tool edits a Python source then reruns it without isolating the bytecode cache",
+      "born_from": {"date": "2026-09-23", "incident": "A same-size break (<= into >=) restored byte for byte within the same second: Python reused a stale .pyc (same date, same size in its header) and ran the BROKEN code over the healthy source. False red after restore; the other way round, the same defect hides a break. Revised on 2026-09-26: a function named restore or 'git restore' no longer fires."},
+      "fix": "When the tool writes into a Python source then reruns Python (break, restore, replay), each rerun gets a fresh bytecode cache: PYTHONPYCACHEPREFIX pointing to a new temporary directory. Write the word PYTHONPYCACHEPREFIX.",
+      "trigger": {"any": ["restaure", "restore", "reecrit original"], "regex": "restaure|reecrit original|(?<![.\"\\w])(?<!git )restore(?!\\s*\\()"},
+      "requirement": {"type": "regex_all", "patterns": ["pythonpycacheprefix"]},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "F1",
+      "title": "The brief does not open on its NATURE: line",
+      "born_from": {"date": "2026-09-19", "incident": "Briefs typed inline in a shell command broke on an apostrophe and left truncated; the frame then required every brief to be a file whose first non-blank line declares NATURE:, so the reader and the checks know what kind of task starts here."},
+      "fix": "Make the first non-blank line of the brief NATURE: creation (or NATURE: retouche with its reason). Start from the brief template.",
+      "trigger": {},
+      "requirement": {"type": "regex_all", "patterns": ["^\\s*nature:"]},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "F2",
+      "title": "Typographic quotes, invisible characters or CRLF in the brief",
+      "born_from": {"date": "2026-08-27", "incident": "Typographic quotes copied by the model into code left a string unclosed, or made an anchor miss the file (ANCHOR NOT FOUND). Non-breaking spaces, a BOM or CRLF pass unseen and break equality. On 2026-09-19 an editor turned an escape sequence written in a brief into a real typographic quote."},
+      "fix": "Replace typographic quotes by straight ones, non-breaking spaces by ordinary spaces, remove zero-width characters and the BOM, save with Unix line endings. To name such a character in a brief, write its code point in letters (U+2019).",
+      "trigger": {},
+      "requirement": {"type": "regex_none", "patterns": ["[\u2018\u2019\u201c\u201d\u00a0\u202f\u200b\u200c\u200d\ufeff\r]"]},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 63, "bench": "public/data/brief_cases.json", "measured": "2026-09-26"}
+    },
+    {
+      "id": "E35",
+      "title": "A text-only delegate is told to read the disk",
+      "born_from": {"date": "2026-10-09", "incident": "A survey of entry points was sent to the text-only delegation tool with the order to read the files of two folders; the model answered that it had no disk access. Two turns lost; the rule lived in the brief template with no mechanical check."},
+      "fix": "The delegate is TEXT ONLY: put the material INSIDE the brief and write the sentence the material is in this file (la matiere est dans ce fichier). To read the disk, use a tool-using agent instead.",
+      "trigger": {"any": ["lis", "relis", "ouvre", "parcours", "lecture", "dossier", "read", "open", "scan"], "regex": "(^|\\n)\\s*(-\\s*)?(tu\\s+)?(lis|relis|ouvre|parcours)\\b[^\\n]{0,80}(/[u]sers/|~/|dossier|fichiers? (\\*|`))|outils? de lecture|dossiers? a lire|(^|\\n)\\s*(-\\s*)?(read|open|scan)\\b[^\\n]{0,60}(/[u]sers/|~/|folder|director)"},
+      "requirement": {"type": "regex_all", "patterns": ["la matiere est dans ce fichier|the material is in this file"]},
+      "false_refusal_rate": {"refused_honest": 0, "honest": 65, "bench": "public/data/brief_cases.json", "measured": "2026-10-09"}
+    }
+  ]
+}

@@ -1,0 +1,290 @@
+2026-01-01 00:00:00 INFO checked upstream and got ERROR response code 0
+2026-01-01 00:00:01 INFO checked upstream and got ERROR response code 1
+2026-01-01 00:00:17 INFO checked upstream and got ERROR response code 2
+2026-01-01 00:00:21 INFO checked upstream and got ERROR response code 3
+2026-01-01 00:00:46 INFO checked upstream and got ERROR response code 4
+2026-01-01 00:00:59 INFO checked upstream and got ERROR response code 5
+2026-01-01 00:01:04 INFO checked upstream and got ERROR response code 6
+2026-01-01 00:01:26 INFO checked upstream and got ERROR response code 7
+2026-01-01 00:01:28 INFO checked upstream and got ERROR response code 8
+2026-01-01 00:01:33 INFO checked upstream and got ERROR response code 9
+2026-01-01 00:01:37 INFO routine message 10
+2026-01-01 00:01:55 INFO routine message 11
+2026-01-01 00:02:03 INFO routine message 12
+2026-01-01 00:02:26 INFO routine message 13
+2026-01-01 00:02:51 INFO routine message 14
+2026-01-01 00:02:56 INFO routine message 15
+2026-01-01 00:03:01 INFO routine message 16
+2026-01-01 00:03:25 INFO routine message 17
+2026-01-01 00:03:27 INFO routine message 18
+2026-01-01 00:03:49 INFO routine message 19
+2026-01-01 00:03:51 INFO routine message 20
+2026-01-01 00:03:56 INFO routine message 21
+2026-01-01 00:04:04 INFO routine message 22
+2026-01-01 00:04:22 INFO routine message 23
+2026-01-01 00:04:46 INFO routine message 24
+2026-01-01 00:05:01 INFO routine message 25
+2026-01-01 00:05:18 INFO routine message 26
+2026-01-01 00:05:32 INFO routine message 27
+2026-01-01 00:05:39 INFO routine message 28
+2026-01-01 00:05:58 INFO routine message 29
+2026-01-01 00:06:01 INFO routine message 30
+2026-01-01 00:06:05 INFO routine message 31
+2026-01-01 00:06:06 INFO routine message 32
+2026-01-01 00:06:31 INFO routine message 33
+2026-01-01 00:07:00 INFO routine message 34
+2026-01-01 00:07:13 INFO routine message 35
+2026-01-01 00:07:24 INFO routine message 36
+2026-01-01 00:07:31 INFO routine message 37
+2026-01-01 00:07:38 INFO routine message 38
+2026-01-01 00:07:49 INFO routine message 39
+2026-01-01 00:08:02 INFO routine message 40
+2026-01-01 00:08:14 INFO routine message 41
+2026-01-01 00:08:34 INFO routine message 42
+2026-01-01 00:08:42 INFO routine message 43
+2026-01-01 00:08:49 INFO routine message 44
+2026-01-01 00:09:13 INFO routine message 45
+2026-01-01 00:09:20 INFO routine message 46
+2026-01-01 00:09:34 INFO routine message 47
+2026-01-01 00:09:53 INFO routine message 48
+2026-01-01 00:10:15 INFO routine message 49
+2026-01-01 00:10:33 WARN cache saw ERROR marker 0
+2026-01-01 00:10:35 WARN cache saw ERROR marker 1
+2026-01-01 00:10:37 WARN cache saw ERROR marker 2
+2026-01-01 00:11:04 WARN cache saw ERROR marker 3
+2026-01-01 00:11:10 WARN cache saw ERROR marker 4
+2026-01-01 00:11:22 WARN routine message 5
+2026-01-01 00:11:27 WARN routine message 6
+2026-01-01 00:11:34 WARN routine message 7
+2026-01-01 00:11:39 WARN routine message 8
+2026-01-01 00:12:06 WARN routine message 9
+2026-01-01 00:12:32 WARN routine message 10
+2026-01-01 00:12:45 WARN routine message 11
+2026-01-01 00:12:46 WARN routine message 12
+2026-01-01 00:12:49 WARN routine message 13
+2026-01-01 00:13:13 WARN routine message 14
+2026-01-01 00:13:30 WARN routine message 15
+2026-01-01 00:13:58 WARN routine message 16
+2026-01-01 00:14:13 WARN routine message 17
+2026-01-01 00:14:34 WARN routine message 18
+2026-01-01 00:15:00 WARN routine message 19
+2026-01-01 00:15:07 WARN routine message 20
+2026-01-01 00:15:14 WARN routine message 21
+2026-01-01 00:15:40 WARN routine message 22
+2026-01-01 00:15:54 WARN routine message 23
+2026-01-01 00:16:18 WARN routine message 24
+2026-01-01 00:16:30 WARN routine message 25
+2026-01-01 00:16:37 WARN routine message 26
+2026-01-01 00:16:48 WARN routine message 27
+2026-01-01 00:17:09 WARN routine message 28
+2026-01-01 00:17:36 WARN routine message 29
+2026-01-01 00:17:44 WARN routine message 30
+2026-01-01 00:18:00 WARN routine message 31
+2026-01-01 00:18:02 WARN routine message 32
+2026-01-01 00:18:11 WARN routine message 33
+2026-01-01 00:18:22 WARN routine message 34
+2026-01-01 00:18:32 WARN routine message 35
+2026-01-01 00:18:43 WARN routine message 36
+2026-01-01 00:19:02 WARN routine message 37
+2026-01-01 00:19:15 WARN routine message 38
+2026-01-01 00:19:31 WARN routine message 39
+2026-01-01 00:19:52 WARN routine message 40
+2026-01-01 00:20:13 WARN routine message 41
+2026-01-01 00:20:40 WARN routine message 42
+2026-01-01 00:20:51 WARN routine message 43
+2026-01-01 00:20:58 WARN routine message 44
+2026-01-01 00:21:22 ERROR task 0 failed
+Traceback (most recent call last):
+  File "/app/worker.py", line 12, in run
+    result = process(task)
+  File "/app/errors.py", line 30, in process
+    raise RuntimeError("ERROR: unable to process")
+RuntimeError: ERROR: unable to process
+2026-01-01 00:21:26 ERROR task 1 failed
+Traceback (most recent call last):
+  File "/app/worker.py", line 12, in run
+    result = process(task)
+  File "/app/errors.py", line 30, in process
+    raise RuntimeError("ERROR: unable to process")
+RuntimeError: ERROR: unable to process
+2026-01-01 00:21:52 ERROR task 2 failed
+Traceback (most recent call last):
+  File "/app/worker.py", line 12, in run
+    result = process(task)
+  File "/app/errors.py", line 30, in process
+    raise RuntimeError("ERROR: unable to process")
+RuntimeError: ERROR: unable to process
+2026-01-01 00:22:17 ERROR task 3 failed
+Traceback (most recent call last):
+  File "/app/worker.py", line 12, in run
+    result = process(task)
+  File "/app/errors.py", line 30, in process
+    raise RuntimeError("ERROR: unable to process")
+RuntimeError: ERROR: unable to process
+2026-01-01 00:22:27 ERROR task 4 failed
+Traceback (most recent call last):
+  File "/app/worker.py", line 12, in run
+    result = process(task)
+  File "/app/errors.py", line 30, in process
+    raise RuntimeError("ERROR: unable to process")
+RuntimeError: ERROR: unable to process
+2026-01-01 00:22:56 ERROR task 5 failed
+Traceback (most recent call last):
+  File "/app/worker.py", line 12, in run
+    result = process(task)
+  File "/app/errors.py", line 30, in process
+    raise RuntimeError("ERROR: unable to process")
+RuntimeError: ERROR: unable to process
+2026-01-01 00:23:02 ERROR task 6 failed
+Traceback (most recent call last):
+  File "/app/worker.py", line 12, in run
+    result = process(task)
+  File "/app/errors.py", line 30, in process
+    raise RuntimeError("ERROR: unable to process")
+RuntimeError: ERROR: unable to process
+2026-01-01 00:23:20 ERROR task 7 failed
+Traceback (most recent call last):
+  File "/app/worker.py", line 12, in run
+    result = process(task)
+  File "/app/errors.py", line 30, in process
+    raise RuntimeError("ERROR: unable to process")
+RuntimeError: ERROR: unable to process
+2026-01-01 00:23:40 ERROR task 8 failed
+Traceback (most recent call last):
+  File "/app/worker.py", line 12, in run
+    result = process(task)
+  File "/app/errors.py", line 30, in process
+    raise RuntimeError("ERROR: unable to process")
+RuntimeError: ERROR: unable to process
+2026-01-01 00:24:10 ERROR task 9 failed
+Traceback (most recent call last):
+  File "/app/worker.py", line 12, in run
+    result = process(task)
+  File "/app/errors.py", line 30, in process
+    raise RuntimeError("ERROR: unable to process")
+RuntimeError: ERROR: unable to process
+2026-01-01 00:24:28 ERROR task 10 failed
+Traceback (most recent call last):
+  File "/app/worker.py", line 12, in run
+    result = process(task)
+  File "/app/errors.py", line 30, in process
+    raise RuntimeError("ERROR: unable to process")
+RuntimeError: ERROR: unable to process
+2026-01-01 00:24:55 ERROR task 11 failed
+Traceback (most recent call last):
+  File "/app/worker.py", line 12, in run
+    result = process(task)
+  File "/app/errors.py", line 30, in process
+    raise RuntimeError("ERROR: unable to process")
+RuntimeError: ERROR: unable to process
+2026-01-01 00:25:17 ERROR task 12 failed
+Traceback (most recent call last):
+  File "/app/worker.py", line 12, in run
+    result = process(task)
+  File "/app/errors.py", line 30, in process
+    raise RuntimeError("ERROR: unable to process")
+RuntimeError: ERROR: unable to process
+2026-01-01 00:25:27 ERROR task 13 failed
+Traceback (most recent call last):
+  File "/app/worker.py", line 12, in run
+    result = process(task)
+  File "/app/errors.py", line 30, in process
+    raise RuntimeError("ERROR: unable to process")
+RuntimeError: ERROR: unable to process
+2026-01-01 00:25:30 ERROR task 14 failed
+Traceback (most recent call last):
+  File "/app/worker.py", line 12, in run
+    result = process(task)
+  File "/app/errors.py", line 30, in process
+    raise RuntimeError("ERROR: unable to process")
+RuntimeError: ERROR: unable to process
+2026-01-01 00:25:36 ERROR generic failure 15
+2026-01-01 00:25:43 ERROR generic failure 16
+2026-01-01 00:25:44 ERROR generic failure 17
+2026-01-01 00:26:14 ERROR generic failure 18
+2026-01-01 00:26:40 ERROR generic failure 19
+2026-01-01 00:27:00 ERROR generic failure 20
+2026-01-01 00:27:12 ERROR generic failure 21
+2026-01-01 00:27:35 ERROR generic failure 22
+2026-01-01 00:27:39 ERROR generic failure 23
+2026-01-01 00:28:01 ERROR generic failure 24
+2026-01-01 00:28:14 ERROR generic failure 25
+2026-01-01 00:28:24 ERROR generic failure 26
+2026-01-01 00:28:54 ERROR generic failure 27
+2026-01-01 00:29:04 ERROR generic failure 28
+2026-01-01 00:29:25 ERROR generic failure 29
+2026-01-01 00:29:52 ERROR generic failure 30
+2026-01-01 00:30:21 ERROR generic failure 31
+2026-01-01 00:30:28 ERROR generic failure 32
+2026-01-01 00:30:32 ERROR generic failure 33
+2026-01-01 00:30:47 ERROR generic failure 34
+2026-01-01 00:30:54 ERROR generic failure 35
+2026-01-01 00:31:20 ERROR generic failure 36
+2026-01-01 00:31:31 ERROR generic failure 37
+2026-01-01 00:31:46 ERROR generic failure 38
+2026-01-01 00:31:59 ERROR generic failure 39
+2026-01-01 00:32:25 ERROR generic failure 40
+2026-01-01 00:32:27 ERROR generic failure 41
+2026-01-01 00:32:45 ERROR generic failure 42
+2026-01-01 00:33:08 ERROR generic failure 43
+2026-01-01 00:33:12 ERROR generic failure 44
+2026-01-01 00:33:21 ERROR generic failure 45
+2026-01-01 00:33:25 ERROR generic failure 46
+2026-01-01 00:33:53 ERROR generic failure 47
+2026-01-01 00:34:14 ERROR generic failure 48
+2026-01-01 00:34:18 ERROR generic failure 49
+2026-01-01 00:34:25 ERROR generic failure 50
+2026-01-01 00:34:32 ERROR generic failure 51
+2026-01-01 00:34:43 ERROR generic failure 52
+2026-01-01 00:34:49 ERROR generic failure 53
+2026-01-01 00:35:12 ERROR generic failure 54
+2026-01-01 00:35:40 DEBUG debug state 0
+2026-01-01 00:35:45 DEBUG debug state 1
+2026-01-01 00:36:01 DEBUG debug state 2
+2026-01-01 00:36:03 DEBUG debug state 3
+2026-01-01 00:36:19 DEBUG debug state 4
+2026-01-01 00:36:39 DEBUG debug state 5
+2026-01-01 00:37:05 DEBUG debug state 6
+2026-01-01 00:37:22 DEBUG debug state 7
+2026-01-01 00:37:31 DEBUG debug state 8
+2026-01-01 00:37:59 DEBUG debug state 9
+2026-01-01 00:38:11 DEBUG debug state 10
+2026-01-01 00:38:31 DEBUG debug state 11
+2026-01-01 00:38:47 DEBUG debug state 12
+2026-01-01 00:39:08 DEBUG debug state 13
+2026-01-01 00:39:27 DEBUG debug state 14
+2026-01-01 00:39:29 DEBUG debug state 15
+2026-01-01 00:39:57 DEBUG debug state 16
+2026-01-01 00:40:01 DEBUG debug state 17
+2026-01-01 00:40:17 DEBUG debug state 18
+2026-01-01 00:40:22 DEBUG debug state 19
+2026-01-01 00:40:48 DEBUG debug state 20
+2026-01-01 00:41:12 DEBUG debug state 21
+2026-01-01 00:41:32 DEBUG debug state 22
+2026-01-01 00:41:55 DEBUG debug state 23
+2026-01-01 00:42:11 DEBUG debug state 24
+2026-01-01 00:42:38 DEBUG debug state 25
+2026-01-01 00:43:03 DEBUG debug state 26
+2026-01-01 00:43:04 DEBUG debug state 27
+2026-01-01 00:43:13 DEBUG debug state 28
+2026-01-01 00:43:29 DEBUG debug state 29
+2026-01-01 00:43:54 DEBUG debug state 30
+2026-01-01 00:44:20 DEBUG debug state 31
+2026-01-01 00:44:36 DEBUG debug state 32
+2026-01-01 00:44:48 DEBUG debug state 33
+2026-01-01 00:44:56 DEBUG debug state 34
+2026-01-01 00:44:57 DEBUG debug state 35
+2026-01-01 00:45:01 DEBUG debug state 36
+2026-01-01 00:45:14 DEBUG debug state 37
+2026-01-01 00:45:33 DEBUG debug state 38
+2026-01-01 00:45:43 DEBUG debug state 39
+2026-01-01 00:45:58 DEBUG debug state 40
+2026-01-01 00:46:04 DEBUG debug state 41
+2026-01-01 00:46:06 DEBUG debug state 42
+2026-01-01 00:46:11 DEBUG debug state 43
+2026-01-01 00:46:15 DEBUG debug state 44
+2026-01-01 00:46:34 DEBUG debug state 45
+2026-01-01 00:47:02 DEBUG debug state 46
+2026-01-01 00:47:22 DEBUG debug state 47
+2026-01-01 00:47:24 DEBUG debug state 48
+2026-01-01 00:47:54 DEBUG debug state 49

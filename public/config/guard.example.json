@@ -1,0 +1,10 @@
+{
+  "code_extensions": [".py", ".sh", ".js", ".ts"],
+  "delegation_logs": ["delegations.jsonl"],
+  "audit_log": "audit.jsonl",
+  "line_threshold": 15,
+  "receipt_minutes": 60,
+  "delegate_tools": ["delegate.py"],
+  "fix_hint": "Delegate it: python3 bin/delegate.py --role code --file task.md --out <file>.",
+  "checks": ["quarantine_read", "intake", "digest"]
+}

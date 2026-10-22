@@ -1,0 +1,362 @@
+[
+ {
+  "id": "h00",
+  "cmd": "true",
+  "label": "hollow",
+  "note": "bare true"
+ },
+ {
+  "id": "h01",
+  "cmd": ":",
+  "label": "hollow",
+  "note": "colon"
+ },
+ {
+  "id": "h02",
+  "cmd": "echo ok",
+  "label": "hollow",
+  "note": "echo"
+ },
+ {
+  "id": "h03",
+  "cmd": "printf 'done\\n'",
+  "label": "hollow",
+  "note": "printf"
+ },
+ {
+  "id": "h04",
+  "cmd": "ls \"$FRUGALFLOW_CANDIDATE\"",
+  "label": "hollow",
+  "note": "ls"
+ },
+ {
+  "id": "h05",
+  "cmd": "test -f \"$FRUGALFLOW_CANDIDATE\"",
+  "label": "hollow",
+  "note": "test -f"
+ },
+ {
+  "id": "h06",
+  "cmd": "cat \"$FRUGALFLOW_CANDIDATE\"",
+  "label": "hollow",
+  "note": "cat"
+ },
+ {
+  "id": "h07",
+  "cmd": "grep -q def \"$FRUGALFLOW_CANDIDATE\"",
+  "label": "hollow",
+  "note": "grep -q"
+ },
+ {
+  "id": "h08",
+  "cmd": "python3 -c pass",
+  "label": "hollow",
+  "note": "python -c pass"
+ },
+ {
+  "id": "h09",
+  "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" --help",
+  "label": "hollow",
+  "note": "help flag"
+ },
+ {
+  "id": "h10",
+  "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" --version",
+  "label": "hollow",
+  "note": "version flag"
+ },
+ {
+  "id": "h11",
+  "cmd": "node --check \"$FRUGALFLOW_CANDIDATE\"",
+  "label": "hollow",
+  "note": "node check"
+ },
+ {
+  "id": "h12",
+  "cmd": "bash -n \"$FRUGALFLOW_CANDIDATE\"",
+  "label": "hollow",
+  "note": "bash -n"
+ },
+ {
+  "id": "h13",
+  "cmd": "wc -l \"$FRUGALFLOW_CANDIDATE\"",
+  "label": "hollow",
+  "note": "wc"
+ },
+ {
+  "id": "h14",
+  "cmd": "head -5 \"$FRUGALFLOW_CANDIDATE\"",
+  "label": "hollow",
+  "note": "head"
+ },
+ {
+  "id": "h15",
+  "cmd": "stat \"$FRUGALFLOW_CANDIDATE\"",
+  "label": "hollow",
+  "note": "stat"
+ },
+ {
+  "id": "h16",
+  "cmd": "file \"$FRUGALFLOW_CANDIDATE\"",
+  "label": "hollow",
+  "note": "file"
+ },
+ {
+  "id": "h17",
+  "cmd": "python3 -m py_compile \"$FRUGALFLOW_CANDIDATE\"",
+  "label": "hollow",
+  "note": "py_compile"
+ },
+ {
+  "id": "h18",
+  "cmd": "python3 -c 'import ast,sys;ast.parse(open(sys.argv[1]).read())' \"$FRUGALFLOW_CANDIDATE\"",
+  "label": "hollow",
+  "note": "ast.parse"
+ },
+ {
+  "id": "h19",
+  "cmd": "ruff check \"$FRUGALFLOW_CANDIDATE\"",
+  "label": "hollow",
+  "note": "ruff"
+ },
+ {
+  "id": "h20",
+  "cmd": "mypy \"$FRUGALFLOW_CANDIDATE\"",
+  "label": "hollow",
+  "note": "mypy"
+ },
+ {
+  "id": "h21",
+  "cmd": "test -s \"$FRUGALFLOW_CANDIDATE\" && echo ok",
+  "label": "hollow",
+  "note": "test -s and echo"
+ },
+ {
+  "id": "h22",
+  "cmd": "ls -l \"$FRUGALFLOW_CANDIDATE\" && wc -c \"$FRUGALFLOW_CANDIDATE\"",
+  "label": "hollow",
+  "note": "two inert"
+ },
+ {
+  "id": "h23",
+  "cmd": "grep -c def \"$FRUGALFLOW_CANDIDATE\"",
+  "label": "hollow",
+  "note": "grep -c"
+ },
+ {
+  "id": "h24",
+  "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" --help && echo done",
+  "label": "hollow",
+  "note": "help camouflaged"
+ },
+ {
+  "id": "h25",
+  "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 2 3 || true",
+  "label": "hollow",
+  "note": "run swallowed by || true"
+ },
+ {
+  "id": "h26",
+  "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 2 3; true",
+  "label": "hollow",
+  "note": "run then true"
+ },
+ {
+  "id": "h27",
+  "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 2 3 > /dev/null 2>&1; echo $?",
+  "label": "hollow",
+  "note": "exit status printed not tested"
+ },
+ {
+  "id": "h28",
+  "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 2 3 | grep -q .",
+  "label": "hollow",
+  "note": "any output"
+ },
+ {
+  "id": "h29",
+  "cmd": "shellcheck \"$FRUGALFLOW_CANDIDATE\"",
+  "label": "hollow",
+  "note": "shellcheck"
+ },
+ {
+  "id": "r00",
+  "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" --autotest",
+  "label": "real",
+  "note": "autotest"
+ },
+ {
+  "id": "r01",
+  "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" --autotest && python3 \"$FRUGALFLOW_CANDIDATE\" --autotest",
+  "label": "real",
+  "note": "autotest twice"
+ },
+ {
+  "id": "r02",
+  "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 2 3 | grep -q '^5$'",
+  "label": "real",
+  "note": "pipe grep exact"
+ },
+ {
+  "id": "r03",
+  "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 7 2 | grep -qx 9",
+  "label": "real",
+  "note": "pipe grep -x"
+ },
+ {
+  "id": "r04",
+  "cmd": "test \"$(python3 \"$FRUGALFLOW_CANDIDATE\" 2 3)\" = 5",
+  "label": "real",
+  "note": "test equality"
+ },
+ {
+  "id": "r05",
+  "cmd": "[ \"$(python3 \"$FRUGALFLOW_CANDIDATE\" 10 5)\" = 15 ]",
+  "label": "real",
+  "note": "bracket equality"
+ },
+ {
+  "id": "r06",
+  "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 2 3 | diff - expected_a.txt",
+  "label": "real",
+  "note": "diff expected"
+ },
+ {
+  "id": "r07",
+  "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 7 2 | cmp - expected_b.txt",
+  "label": "real",
+  "note": "cmp expected"
+ },
+ {
+  "id": "r08",
+  "cmd": "python3 -m unittest test_tool",
+  "label": "real",
+  "note": "unittest"
+ },
+ {
+  "id": "r09",
+  "cmd": "python3 -m pytest -q test_tool.py",
+  "label": "real",
+  "note": "pytest"
+ },
+ {
+  "id": "r10",
+  "cmd": "python3 test_tool.py",
+  "label": "real",
+  "note": "test file"
+ },
+ {
+  "id": "r11",
+  "cmd": "python3 -c 'import os,runpy;m=runpy.run_path(os.environ[\"FRUGALFLOW_CANDIDATE\"]);assert m[\"f\"](2,3)==5'",
+  "label": "real",
+  "note": "assert in runpy"
+ },
+ {
+  "id": "r12",
+  "cmd": "python3 -c 'import os,runpy;m=runpy.run_path(os.environ[\"FRUGALFLOW_CANDIDATE\"]);assert m[\"f\"](7,2)==9 and m[\"f\"](0,0)==0'",
+  "label": "real",
+  "note": "assert two cases"
+ },
+ {
+  "id": "r13",
+  "cmd": "sh -c 'python3 \"$FRUGALFLOW_CANDIDATE\" 2 3 | grep -q 5'",
+  "label": "real",
+  "note": "sh -c grep"
+ },
+ {
+  "id": "r14",
+  "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 2 3 | grep -q 5 && python3 \"$FRUGALFLOW_CANDIDATE\" --autotest",
+  "label": "real",
+  "note": "grep and autotest"
+ },
+ {
+  "id": "r15",
+  "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" --autotest | grep -c PASS | grep -qv '^0$'",
+  "label": "real",
+  "note": "count PASS"
+ },
+ {
+  "id": "r16",
+  "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 10 5 > out.txt && grep -qx 15 out.txt",
+  "label": "real",
+  "note": "write then exact grep"
+ },
+ {
+  "id": "r17",
+  "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 3 3 | awk '$1==6{ok=1} END{exit !ok}'",
+  "label": "real",
+  "note": "awk exit status"
+ },
+ {
+  "id": "r18",
+  "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 2 3 | python3 -c 'import sys;sys.exit(0 if sys.stdin.read().strip()==\"5\" else 1)'",
+  "label": "real",
+  "note": "python reads stdin"
+ },
+ {
+  "id": "r19",
+  "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 1 1 | grep -qx 2 && python3 \"$FRUGALFLOW_CANDIDATE\" 2 2 | grep -qx 4",
+  "label": "real",
+  "note": "two cases chained"
+ },
+ {
+  "id": "r20",
+  "cmd": "set -e; python3 \"$FRUGALFLOW_CANDIDATE\" --autotest",
+  "label": "real",
+  "note": "set -e autotest"
+ },
+ {
+  "id": "r21",
+  "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" --autotest; test $? -eq 0",
+  "label": "real",
+  "note": "autotest then status test"
+ },
+ {
+  "id": "r22",
+  "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 4 5 | tee out2.txt | grep -qx 9",
+  "label": "real",
+  "note": "tee grep"
+ },
+ {
+  "id": "r23",
+  "cmd": "diff <(python3 \"$FRUGALFLOW_CANDIDATE\" 2 3) expected_a.txt",
+  "label": "real",
+  "note": "process substitution diff"
+ },
+ {
+  "id": "r24",
+  "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 2 3 > got.txt && diff got.txt expected_a.txt",
+  "label": "real",
+  "note": "redirect then diff"
+ },
+ {
+  "id": "r25",
+  "cmd": "python3 -m unittest discover -s . -p 'test_*.py'",
+  "label": "real",
+  "note": "unittest discover"
+ },
+ {
+  "id": "r26",
+  "cmd": "python3 -m pytest -x -q",
+  "label": "real",
+  "note": "pytest bare"
+ },
+ {
+  "id": "r27",
+  "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 8 8 | grep -q '^16$'",
+  "label": "real",
+  "note": "pipe grep 16"
+ },
+ {
+  "id": "r28",
+  "cmd": "make test",
+  "label": "real",
+  "note": "make test"
+ },
+ {
+  "id": "r29",
+  "cmd": "python3 \"$FRUGALFLOW_CANDIDATE\" 2 3 | sed -n 1p | grep -qx 5",
+  "label": "real",
+  "note": "sed then grep"
+ }
+]

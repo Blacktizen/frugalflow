@@ -1,0 +1,5551 @@
+{
+ "about": "Attacks on the shell side of the delegation guard, written before each fix. expect deny = a hole that must stay closed; expect allow = a false refusal that was lifted. old = the verdict before the fix. Replayed by tests/guard_probes.py with GUARD_PROBES_DATA pointing here; one fresh FRUGALFLOW_HOME per probe, no receipt. Paths are neutral. Shell expansion, shell keywords, brace lists and sed scripts are judged; the last probes carry a fresh receipt for lib/a.py: a receipt covers only its exact file, an unreadable target is refused.",
+ "settings": {
+  "code_extensions": [
+   ".py",
+   ".sh",
+   ".js",
+   ".ts"
+  ],
+  "line_threshold": 3,
+  "receipt_minutes": 60,
+  "delegate_tools": [],
+  "fix_hint": "delegate it.",
+  "delegation_logs": [
+   "delegations.jsonl"
+  ],
+  "audit_log": "audit.jsonl"
+ },
+ "probes": [
+  {
+   "id": 1,
+   "name": "group-1 python3 -c \"open(mode='w', file='notes.md').write(",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"open(mode='w', file='notes.md').write('x')\""
+    }
+   }
+  },
+  {
+   "id": 2,
+   "name": "group-1 python3 -c \"print(open(file='a.py').read())\"",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"print(open(file='a.py').read())\""
+    }
+   }
+  },
+  {
+   "id": 3,
+   "name": "group-2 case-1",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cd ~/proj/bin && python3 -c \"\nimport gate_facts as g, send_rules as s\nA,I=g.operator_rules()\nt,tab,c,r=s.outbound(open('../../bin/anonymizer.py').read(),'untrusted_third_party',A,I); print('anonymizer.py', t is None, r)\nt,tab,c,r=s.outbound(open('../../PLAN.md').read(),'untrusted_third_party',A,I); print('restore exact:', s.inbound(t,tab)==open('../../PLAN.md').read())\""
+    }
+   }
+  },
+  {
+   "id": 4,
+   "name": "group-2 case-2",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"\nimport shlex\nfor s in ['echo x 2>&1 >out.py', 'cat f>>a.py', 'echo \\$n \\${x}/a.py', 'find . -name \\\"*.py\\\" -print0', 'x &>/dev/null', 'cmd >| f.py', 'a=1 b=\\$(c) env X=2 tee -a lib/u.py', 'curl -oout.py http://h/x', 'sed -i.bak s/a/b/ f.py', 'echo a>&2']:\n    l=shlex.shlex(s,posix=True,punctuation_chars=True); print(list(l))\n\""
+    }
+   }
+  },
+  {
+   "id": 5,
+   "name": "group-2 oracle:VRAI#0",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c '\nimport gate_facts as g, send_rules as s\nA,I=g.operator_rules()\nt,tab,c,r=s.outbound(open('\"'\"'../../bin/anonymizer.py'\"'\"').read(),'\"'\"'untrusted_third_party'\"'\"',A,I); print('\"'\"'anonymizer.py'\"'\"', t is None, r)\nt,tab,c,r=s.outbound(open('\"'\"'../../PLAN.md'\"'\"').read(),'\"'\"'untrusted_third_party'\"'\"',A,I); print('\"'\"'restore exact:'\"'\"', s.inbound(t,tab)==open('\"'\"'../../PLAN.md'\"'\"').read())'"
+    }
+   }
+  },
+  {
+   "id": 6,
+   "name": "group-2 oracle:VRAI#1",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c '\nimport shlex\nfor s in ['\"'\"'echo x 2>&1 >out.py'\"'\"', '\"'\"'cat f>>a.py'\"'\"', '\"'\"'echo \\$n \\${x}/a.py'\"'\"', '\"'\"'find . -name \"*.py\" -print0'\"'\"', '\"'\"'x &>/dev/null'\"'\"', '\"'\"'cmd >| f.py'\"'\"', '\"'\"'a=1 b=\\$(c) env X=2 tee -a lib/u.py'\"'\"', '\"'\"'curl -oout.py http://h/x'\"'\"', '\"'\"'sed -i.bak s/a/b/ f.py'\"'\"', '\"'\"'echo a>&2'\"'\"']:\n    l=shlex.shlex(s,posix=True,punctuation_chars=True); print(list(l))\n'"
+    }
+   }
+  },
+  {
+   "id": 7,
+   "name": "group-2 oracle:VRAI#2",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'print(open('\"'\"'a.py'\"'\"', '\"'\"'r'\"'\"', 1, '\"'\"'utf-8'\"'\"').read())'"
+    }
+   }
+  },
+  {
+   "id": 8,
+   "name": "group-2 oracle:VRAI#3",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import sys\nprint(sys.argv)'"
+    }
+   }
+  },
+  {
+   "id": 9,
+   "name": "group-2 oracle:VRAI#4",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import os\nprint(os.listdir('\"'\"'.'\"'\"'))'"
+    }
+   }
+  },
+  {
+   "id": 10,
+   "name": "group-2 oracle:VRAI#5",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'from pathlib import Path\nprint(Path('\"'\"'a.py'\"'\"').read_text())'"
+    }
+   }
+  },
+  {
+   "id": 11,
+   "name": "group-2 oracle:VRAI#6",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import os\nprint(os.path.exists('\"'\"'a.py'\"'\"'))'"
+    }
+   }
+  },
+  {
+   "id": 12,
+   "name": "group-2 oracle:VRAI#7",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import os\nprint(os.listdir('\"'\"'.'\"'\"'))'"
+    }
+   }
+  },
+  {
+   "id": 13,
+   "name": "group-2 oracle:VRAI#8",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import glob\nprint(glob.glob('\"'\"'*.py'\"'\"'))'"
+    }
+   }
+  },
+  {
+   "id": 14,
+   "name": "group-2 oracle:VRAI#9",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import os\nprint(os.stat('\"'\"'a.py'\"'\"').st_size)'"
+    }
+   }
+  },
+  {
+   "id": 15,
+   "name": "group-2 oracle:VRAI#10",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'print(open('\"'\"'a.txt'\"'\"').read().replace('\"'\"'a'\"'\"', '\"'\"'b'\"'\"'))'"
+    }
+   }
+  },
+  {
+   "id": 16,
+   "name": "group-2 oracle:VRAI#11",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'print('\"'\"'a-b'\"'\"'.replace('\"'\"'-'\"'\"', '\"'\"'_'\"'\"'))'"
+    }
+   }
+  },
+  {
+   "id": 17,
+   "name": "group-2 oracle:VRAI#12",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import sys\nprint(sys.argv[0].replace('\"'\"'.py'\"'\"', '\"'\"''\"'\"'))'"
+    }
+   }
+  },
+  {
+   "id": 18,
+   "name": "group-17 case-3",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cd ~/proj/notes && python3 - <<'EOF'\np='shell_targets.md'; s=open(p).read()\na='else, for the FIRST s of nonopt[:-1] class \"code\"'\nb='else, ONLY if dest ends with \"/\" or if dest.rsplit(\"/\", 1)[-1] contains no \".\", for the FIRST s of nonopt[:-1] class \"code\"'\nc='AND V(\"cp -r src/ dst/\") == F ET'\nd='AND V(\"cp -r src/ dst/\") == F AND V(\"cp a.py copy.md\") == F ET'\nassert s.count(a)==1 and s.count(c)==1\nopen(p,'w').write(s.replace(a,b).replace(c,d))\np='shell_rules.md'; s=open(p).read()\na='    One of RUN_SIGNS is in code -> for each s of literals : results.append(judge_command(s, config, depth + 1, max_depth)).'\nb='    One of RUN_SIGNS is in code -> for each s of literals : results.append(judge_command(s, config, depth + 1, max_depth)) ; then, for each s of literals class \"code\" : results.append({\"verdict\": \"write\", \"targets\": [s], \"reason\": \"inline code\"}).'\nc='AND J(\"rm -rf build && cp -r src dst\") == F'\nd='AND J(\"rm -rf build && cp -r src dst\") == F AND J(\\'python3 -c \\\\\\'import subprocess;subprocess.run([\"tee\",\"out.py\"])\\\\\\'\\') == (\"write\", [\"out.py\"])'\nassert s.count(a)==1 and s.count(c)==1\nopen(p,'w').write(s.replace(a,b).replace(c,d))\nEOF\ngrep -n 'subprocess.run' shell_rules.md | cut -c1-200"
+    }
+   }
+  },
+  {
+   "id": 19,
+   "name": "group-17 case-4",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cd /tmp/work/rivals && for d in */; do echo \"## $d $(find $d -type f -not -path '*/.git/*' -not -path '*/node_modules/*' \\( -name '*.py' -o -name '*.ts' -o -name '*.js' -o -name '*.mjs' -o -name '*.sh' -o -name '*.md' -o -name '*.json' \\) -not -name 'package-lock.json' -print0 | xargs -0 cat 2>/dev/null | wc -c) bytes text\"; done; echo; find delegate-local -maxdepth 2 -not -path '*/.git*' | head -40; find houtini-lm/src -type f | head; ls claude-mem; ls pal-mcp-server/tools | head -40"
+    }
+   }
+  },
+  {
+   "id": 20,
+   "name": "group-17 case-5",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cd ~/proj/guard && for f in guard.py.before-fix guard.py; do printf '%s' '{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"printf x | tee /tmp/probe_hole.py # delegate-tool.py\"}}' | python3 $f hook 2>/dev/null | grep -q '\"deny\"' && echo \"$f : DENIED\" || echo \"$f : LET THROUGH\"; done"
+    }
+   }
+  },
+  {
+   "id": 21,
+   "name": "group-17 python3 - <<'EOF' | import json | json.dump({'target':",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nimport json\njson.dump({'target': 'lib/a.py'}, open('res.json', 'w'))\nEOF"
+    }
+   }
+  },
+  {
+   "id": 22,
+   "name": "group-17 python3 - <<'EOF' | open('notes.md', 'w').write('see",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nopen('notes.md', 'w').write('see bin/x.py')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 23,
+   "name": "group-17 find . -name '*.py' 2>/dev/null | head",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "find . -name '*.py' 2>/dev/null | head"
+    }
+   }
+  },
+  {
+   "id": 24,
+   "name": "group-17x find . -name '*.py' -exec grep -l foo {} +",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "find . -name '*.py' -exec grep -l foo {} +"
+    }
+   }
+  },
+  {
+   "id": 25,
+   "name": "group-17x find . -name '*.py' | xargs wc -l",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "find . -name '*.py' | xargs wc -l"
+    }
+   }
+  },
+  {
+   "id": 26,
+   "name": "group-17x find . -type f -exec cat {} \\;",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "find . -type f -exec cat {} \\;"
+    }
+   }
+  },
+  {
+   "id": 27,
+   "name": "group-17x find . -name '*.py' -print0 | xargs -0 grep -n TOD",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "find . -name '*.py' -print0 | xargs -0 grep -n TODO"
+    }
+   }
+  },
+  {
+   "id": 28,
+   "name": "group-1w python3 -c \"open('out.md','w').write(open('a.py').",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"open('out.md','w').write(open('a.py').read())\""
+    }
+   }
+  },
+  {
+   "id": 29,
+   "name": "group-1w python3 - <<'EOF' | import json | d=json.load(open('c.",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nimport json\nd=json.load(open('c.json'))\nd['x']='lib/a.py'\njson.dump(d, open('c.json','w'), indent=1)\nEOF"
+    }
+   }
+  },
+  {
+   "id": 30,
+   "name": "group-1w python3 - <<'EOF' | with open('r.txt','w') as f: |    ",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nwith open('r.txt','w') as f:\n    f.write('bin/x.py ok')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 31,
+   "name": "group-1w python3 - <<'EOF' | p='a.md' | s=open(p).read() | open(p",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\np='a.md'\ns=open(p).read()\nopen(p,'w').write(s.replace('x.py','y.py'))\nEOF"
+    }
+   }
+  },
+  {
+   "id": 32,
+   "name": "group-1w cat <<EOF > notes.md | home is $HOME | EOF",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cat <<EOF > notes.md\nhome is $HOME\nEOF"
+    }
+   }
+  },
+  {
+   "id": 33,
+   "name": "group-1w python3 - <<'EOF' | print('$HOME `x`') | EOF",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nprint('$HOME `x`')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 34,
+   "name": "group-1w python3 -c 'import sys; print(sys.argv)' \"$HOME\"",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import sys; print(sys.argv)' \"$HOME\""
+    }
+   }
+  },
+  {
+   "id": 35,
+   "name": "group-17k for f in *.py; do wc -l $f; done",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "for f in *.py; do wc -l $f; done"
+    }
+   }
+  },
+  {
+   "id": 36,
+   "name": "group-17k if true; then echo \"x.py\"; fi",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "if true; then echo \"x.py\"; fi"
+    }
+   }
+  },
+  {
+   "id": 37,
+   "name": "group-17k for d in */; do echo \"## $d $(find $d -name '*.py'",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "for d in */; do echo \"## $d $(find $d -name '*.py' | wc -l)\"; done"
+    }
+   }
+  },
+  {
+   "id": 38,
+   "name": "group-3 tee log-$n.txt </dev/null",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "tee log-$n.txt </dev/null"
+    }
+   }
+  },
+  {
+   "id": 39,
+   "name": "group-3 echo x > \"$D/notes.md\"",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo x > \"$D/notes.md\""
+    }
+   }
+  },
+  {
+   "id": 40,
+   "name": "group-3 python3 x > log-$n.txt 2>&1",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 x > log-$n.txt 2>&1"
+    }
+   }
+  },
+  {
+   "id": 41,
+   "name": "group-3 sed -i '' 's/a `b` c/d/' notes.md",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sed -i '' 's/a `b` c/d/' notes.md"
+    }
+   }
+  },
+  {
+   "id": 42,
+   "name": "group-3 sed -i '' '/houtini-lm, `src\\/context-overflow.ts`",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sed -i '' '/houtini-lm, `src\\/context-overflow.ts`/d' CREDITS.md"
+    }
+   }
+  },
+  {
+   "id": 43,
+   "name": "group-3 cat a > *.txt",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cat a > *.txt"
+    }
+   }
+  },
+  {
+   "id": 44,
+   "name": "group-3 echo x > $(date +%s).md",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo x > $(date +%s).md"
+    }
+   }
+  },
+  {
+   "id": 45,
+   "name": "group-3 sed -n p a.py",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sed -n p a.py"
+    }
+   }
+  },
+  {
+   "id": 46,
+   "name": "group-1 python3 -c \"open(mode='w', file='a.py')\"",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"open(mode='w', file='a.py')\""
+    }
+   }
+  },
+  {
+   "id": 47,
+   "name": "group-1 python3 -c \"open(file='a.py', mode='w').write('x')",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"open(file='a.py', mode='w').write('x')\""
+    }
+   }
+  },
+  {
+   "id": 48,
+   "name": "group-1 python3 -c \"open(mode='a', file='lib/b.py').write(",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"open(mode='a', file='lib/b.py').write('x')\""
+    }
+   }
+  },
+  {
+   "id": 49,
+   "name": "group-1 python3 -c \"f='a.py'; open(mode='w', file=f).write",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"f='a.py'; open(mode='w', file=f).write('x')\""
+    }
+   }
+  },
+  {
+   "id": 50,
+   "name": "group-1 python3 -c \"open(*['a.py', 'w']).write('x')\"",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"open(*['a.py', 'w']).write('x')\""
+    }
+   }
+  },
+  {
+   "id": 51,
+   "name": "group-1 python3 -c \"open(**{'file': 'a.py', 'mode': 'w'}).",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"open(**{'file': 'a.py', 'mode': 'w'}).write('x')\""
+    }
+   }
+  },
+  {
+   "id": 52,
+   "name": "group-2 oracle:FAUX#0",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import os\nos.execv('\"'\"'/bin/sh'\"'\"', ['\"'\"'sh'\"'\"', '\"'\"'-c'\"'\"', '\"'\"'tee a.py'\"'\"'])'"
+    }
+   }
+  },
+  {
+   "id": 53,
+   "name": "group-2 oracle:FAUX#2",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import platform\nplatform.popen('\"'\"'tee a.py'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 54,
+   "name": "group-2 oracle:FAUX#3",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import pdb\npdb.run(\"open('\"'\"'x.py'\"'\"','\"'\"'w'\"'\"')\")'"
+    }
+   }
+  },
+  {
+   "id": 55,
+   "name": "group-2 oracle:FAUX#5",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'with open('\"'\"'x.py'\"'\"', '\"'\"'w'\"'\"') as f:\n    pass'"
+    }
+   }
+  },
+  {
+   "id": 56,
+   "name": "group-2 oracle:FAUX#6",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import os\nos.open('\"'\"'x.py'\"'\"', os.O_WRONLY)'"
+    }
+   }
+  },
+  {
+   "id": 57,
+   "name": "group-2 oracle:FAUX#7",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'print(open('\"'\"'a.py'\"'\"', '\"'\"'w'\"'\"' if 0 else '\"'\"'r'\"'\"'))'"
+    }
+   }
+  },
+  {
+   "id": 58,
+   "name": "group-2 oracle:FAUX#8",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import urllib.request\nurllib.request.urlretrieve('\"'\"'h'\"'\"', '\"'\"'x.py'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 59,
+   "name": "group-2 oracle:FAUX#9",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'g = lambda: open('\"'\"'x.py'\"'\"', '\"'\"'w'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 60,
+   "name": "group-2 oracle:FAUX#12",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'print(f\"{open('\"'\"'x.py'\"'\"', '\"'\"'w'\"'\"')}\")'"
+    }
+   }
+  },
+  {
+   "id": 61,
+   "name": "group-2 oracle:FAUX#13",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'from os import system as s\ns('\"'\"'tee a.py'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 62,
+   "name": "group-2 oracle:FAUX#14",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'from builtins import open as o\no('\"'\"'x.py'\"'\"', '\"'\"'w'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 63,
+   "name": "group-2 oracle:FAUX#15",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import timeit\ntimeit.timeit(\"open('\"'\"'x.py'\"'\"','\"'\"'w'\"'\"')\")'"
+    }
+   }
+  },
+  {
+   "id": 64,
+   "name": "group-2 oracle:FAUX#16",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'from pathlib import Path\nPath('\"'\"'x.py'\"'\"').open('\"'\"'w'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 65,
+   "name": "group-2 oracle:FAUX#18",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'print(open('\"'\"'x.py'\"'\"', mode='\"'\"'a+'\"'\"'))'"
+    }
+   }
+  },
+  {
+   "id": 66,
+   "name": "group-2 oracle:FAUX#19",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'open('\"'\"'x.py'\"'\"', '\"'\"'w'\"'\"', **k)'"
+    }
+   }
+  },
+  {
+   "id": 67,
+   "name": "group-2 oracle:FAUX#20",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import mytool\nmytool.go(open('\"'\"'a.py'\"'\"').read(), '\"'\"'b.py'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 68,
+   "name": "group-2 oracle:FAUX#22",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import mytool\nprint('\"'\"'a.py'\"'\"', file=mytool.out)'"
+    }
+   }
+  },
+  {
+   "id": 69,
+   "name": "group-2 oracle:FAUX#23",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import mytool\nx = '\"'\"'a.py'\"'\"'\nprint(x)\nmytool.save(x)'"
+    }
+   }
+  },
+  {
+   "id": 70,
+   "name": "group-2 oracle:FAUX#24",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import mytool\nprint(mytool.save('\"'\"'a.py'\"'\"'))'"
+    }
+   }
+  },
+  {
+   "id": 71,
+   "name": "group-2 oracle:FAUX#25",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import os, operator\noperator.methodcaller('\"'\"'system'\"'\"', '\"'\"'tee a.py'\"'\"')(os)'"
+    }
+   }
+  },
+  {
+   "id": 72,
+   "name": "group-2 oracle:FAUX#26",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import os, operator\noperator.attrgetter('\"'\"'system'\"'\"')(os)('\"'\"'tee a.py'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 73,
+   "name": "group-2 oracle:FAUX#27",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import argparse\nargparse.FileType('\"'\"'w'\"'\"')('\"'\"'x.py'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 74,
+   "name": "group-2 oracle:FAUX#28",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import uuid\nuuid._get_command_stdout('\"'\"'tee'\"'\"', '\"'\"'a.py'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 75,
+   "name": "group-2 oracle:FAUX#34",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import os\nos.remove('\"'\"'a.py'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 76,
+   "name": "group-2 oracle:FAUX#35",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import os\nos.unlink('\"'\"'a.py'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 77,
+   "name": "group-2 oracle:FAUX#36",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import os\nos.rename('\"'\"'t'\"'\"', '\"'\"'a.py'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 78,
+   "name": "group-2 oracle:FAUX#37",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import os\nos.replace('\"'\"'t'\"'\"', '\"'\"'a.py'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 79,
+   "name": "group-2 oracle:FAUX#38",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import os\nos.renames('\"'\"'t'\"'\"', '\"'\"'lib/a.py'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 80,
+   "name": "group-2 oracle:FAUX#39",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'from os import remove as r\nr('\"'\"'a.py'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 81,
+   "name": "group-2 oracle:FAUX#40",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'from os import rename\nrename('\"'\"'t'\"'\"', '\"'\"'a.py'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 82,
+   "name": "group-2 oracle:FAUX#41",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'from pathlib import Path\nPath('\"'\"'a.py'\"'\"').unlink()'"
+    }
+   }
+  },
+  {
+   "id": 83,
+   "name": "group-2 oracle:FAUX#42",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'from pathlib import Path\nPath('\"'\"'t'\"'\"').rename('\"'\"'a.py'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 84,
+   "name": "group-2 oracle:FAUX#43",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'from pathlib import Path\nPath('\"'\"'t'\"'\"').replace('\"'\"'a.py'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 85,
+   "name": "group-2 oracle:FAUX#44",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'from pathlib import Path\nPath('\"'\"'a.py'\"'\"').symlink_to('\"'\"'t'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 86,
+   "name": "group-2 oracle:FAUX#45",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'from pathlib import Path\nPath('\"'\"'a.py'\"'\"').hardlink_to('\"'\"'t'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 87,
+   "name": "group-2 oracle:FAUX#46",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import glob, os\n[os.remove(f) for f in glob.glob('\"'\"'*.py'\"'\"')]'"
+    }
+   }
+  },
+  {
+   "id": 88,
+   "name": "group-2 oracle:FAUX#47",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import os\nos.chmod('\"'\"'a.py'\"'\"', 0)'"
+    }
+   }
+  },
+  {
+   "id": 89,
+   "name": "group-2 oracle:FAUX#50",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import os\nos.makedirs('\"'\"'lib/a.py'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 90,
+   "name": "group-2 oracle:FAUX#52",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'from pathlib import Path\nPath('\"'\"'a.py'\"'\"').chmod(0)'"
+    }
+   }
+  },
+  {
+   "id": 91,
+   "name": "group-2 oracle:FAUX#53",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import os as o\no.replace('\"'\"'t'\"'\"', '\"'\"'a.py'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 92,
+   "name": "group-2 oracle:FAUX#54",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'import os\nf = os.replace\nf('\"'\"'t'\"'\"', '\"'\"'a.py'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 93,
+   "name": "group-2 oracle:FAUX#55",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'from os import *\nremove('\"'\"'a.py'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 94,
+   "name": "group-2 oracle:FAUX#56",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'from pathlib import Path\np = Path('\"'\"'t'\"'\"')\np.replace('\"'\"'a.py'\"'\"')'"
+    }
+   }
+  },
+  {
+   "id": 95,
+   "name": "group-2 oracle:FAUX#57",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'from pathlib import Path\nPath('\"'\"'a.py'\"'\"').touch()'"
+    }
+   }
+  },
+  {
+   "id": 96,
+   "name": "group-17 echo x > a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo x > a.py"
+    }
+   }
+  },
+  {
+   "id": 97,
+   "name": "group-17 tee a.py < /dev/null",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "tee a.py < /dev/null"
+    }
+   }
+  },
+  {
+   "id": 98,
+   "name": "group-17 sed -i '' s/a/b/ a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sed -i '' s/a/b/ a.py"
+    }
+   }
+  },
+  {
+   "id": 99,
+   "name": "group-17 cat <<EOF > a.py | print(1) | EOF",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cat <<EOF > a.py\nprint(1)\nEOF"
+    }
+   }
+  },
+  {
+   "id": 100,
+   "name": "group-17 python3 - <<'EOF' | open('a.py', 'w').write('x') | EOF",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nopen('a.py', 'w').write('x')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 101,
+   "name": "group-17 python3 - <<'EOF' | import json | open('lib/a.py', 'w'",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nimport json\nopen('lib/a.py', 'w').write(json.dumps(1))\nEOF"
+    }
+   }
+  },
+  {
+   "id": 102,
+   "name": "group-17 find . -name '*.py' -exec sed -i '' s/a/b/ {} +",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "find . -name '*.py' -exec sed -i '' s/a/b/ {} +"
+    }
+   }
+  },
+  {
+   "id": 103,
+   "name": "group-17 find . -name '*.py' | xargs sed -i '' s/a/b/",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "find . -name '*.py' | xargs sed -i '' s/a/b/"
+    }
+   }
+  },
+  {
+   "id": 104,
+   "name": "group-17 python3 - <<'EOF' | from pathlib import Path | Path('a",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nfrom pathlib import Path\nPath('a.py').write_text('x')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 105,
+   "name": "group-17x find . -exec sed -i s/a/b/ {} \\;",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "find . -exec sed -i s/a/b/ {} \\;"
+    }
+   }
+  },
+  {
+   "id": 106,
+   "name": "group-17x find . -name '*.py' -execdir perl -pi -e s/a/b/ {}",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "find . -name '*.py' -execdir perl -pi -e s/a/b/ {} +"
+    }
+   }
+  },
+  {
+   "id": 107,
+   "name": "group-17x ls *.py | xargs -n1 sed -i s/a/b/",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "ls *.py | xargs -n1 sed -i s/a/b/"
+    }
+   }
+  },
+  {
+   "id": 108,
+   "name": "group-17x find . -name '*.py' -print0 | xargs -0 perl -pi -e",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "find . -name '*.py' -print0 | xargs -0 perl -pi -e 's/a/b/'"
+    }
+   }
+  },
+  {
+   "id": 109,
+   "name": "group-17x echo a.py | xargs tee",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo a.py | xargs tee"
+    }
+   }
+  },
+  {
+   "id": 110,
+   "name": "group-17x find . -name '*.py' -exec cp x {} \\;",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "find . -name '*.py' -exec cp x {} \\;"
+    }
+   }
+  },
+  {
+   "id": 111,
+   "name": "group-17z echo \"$(tee a.py < /dev/null)\"",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"$(tee a.py < /dev/null)\""
+    }
+   }
+  },
+  {
+   "id": 112,
+   "name": "group-17z echo $(cp x lib/a.py)",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo $(cp x lib/a.py)"
+    }
+   }
+  },
+  {
+   "id": 113,
+   "name": "group-17z for d in x; do echo \"$(tee a.py < /dev/null)\"; don",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "for d in x; do echo \"$(tee a.py < /dev/null)\"; done"
+    }
+   }
+  },
+  {
+   "id": 114,
+   "name": "group-17y echo \\\\; tee a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \\\\; tee a.py"
+    }
+   }
+  },
+  {
+   "id": 115,
+   "name": "group-17y echo a\\\\| tee b.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo a\\\\| tee b.py"
+    }
+   }
+  },
+  {
+   "id": 116,
+   "name": "group-17y ls | xargs -n 1 sed -i s/a/b/",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "ls | xargs -n 1 sed -i s/a/b/"
+    }
+   }
+  },
+  {
+   "id": 117,
+   "name": "group-17y ls | xargs -I {} sed -i s/a/b/ {}",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "ls | xargs -I {} sed -i s/a/b/ {}"
+    }
+   }
+  },
+  {
+   "id": 118,
+   "name": "group-17y ls | xargs -P 4 -n 1 tee",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "ls | xargs -P 4 -n 1 tee"
+    }
+   }
+  },
+  {
+   "id": 119,
+   "name": "group-17y xargs -a liste.txt sed -i s/a/b/",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "xargs -a liste.txt sed -i s/a/b/"
+    }
+   }
+  },
+  {
+   "id": 120,
+   "name": "group-17y find . -name x -fprint a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "find . -name x -fprint a.py"
+    }
+   }
+  },
+  {
+   "id": 121,
+   "name": "group-17y find . -fprintf lib/b.py '%p'",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "find . -fprintf lib/b.py '%p'"
+    }
+   }
+  },
+  {
+   "id": 122,
+   "name": "group-17y ls *.py | parallel sed -i s/a/b/",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "ls *.py | parallel sed -i s/a/b/"
+    }
+   }
+  },
+  {
+   "id": 123,
+   "name": "group-17y find . -exec sh -c 'sed -i s/a/b/ \"$1\"' _ {} \\;",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "find . -exec sh -c 'sed -i s/a/b/ \"$1\"' _ {} \\;"
+    }
+   }
+  },
+  {
+   "id": 124,
+   "name": "group-17y find . -type f -exec cat {} \\; -exec sed -i s/a/b/",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "find . -type f -exec cat {} \\; -exec sed -i s/a/b/ {} \\;"
+    }
+   }
+  },
+  {
+   "id": 125,
+   "name": "group-1w python3 - <<'EOF' | p='notes.md' | p='a.py' | open(p,'w'",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\np='notes.md'\np='a.py'\nopen(p,'w').write('x')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 126,
+   "name": "group-1w python3 -c \"import os; x=os; x.replace('t.md','a.p",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"import os; x=os; x.replace('t.md','a.py')\""
+    }
+   }
+  },
+  {
+   "id": 127,
+   "name": "group-1w python3 -c \"from pathlib import Path; Path('t.md')",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"from pathlib import Path; Path('t.md').copy('a.py')\""
+    }
+   }
+  },
+  {
+   "id": 128,
+   "name": "group-1w python3 -c \"from pathlib import Path; Path('t.md')",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"from pathlib import Path; Path('t.md').move('a.py')\""
+    }
+   }
+  },
+  {
+   "id": 129,
+   "name": "group-1w python3 -c \"from pathlib import Path; Path('a.py')",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"from pathlib import Path; Path('a.py').copy_into('lib')\""
+    }
+   }
+  },
+  {
+   "id": 130,
+   "name": "group-1w python3 -c \"import glob; glob.os.replace('t.md','a",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"import glob; glob.os.replace('t.md','a.py')\""
+    }
+   }
+  },
+  {
+   "id": 131,
+   "name": "group-1w python3 -c \"import pathlib; P=pathlib.Path; P.repl",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"import pathlib; P=pathlib.Path; P.replace(P('t.md'),'a.py')\""
+    }
+   }
+  },
+  {
+   "id": 132,
+   "name": "group-1w python3 -c \"import json; json.dump(1, open('a.py',",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"import json; json.dump(1, open('a.py','w'))\""
+    }
+   }
+  },
+  {
+   "id": 133,
+   "name": "group-1w python3 -c \"print('x', file=open('lib/b.py','a'))\"",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"print('x', file=open('lib/b.py','a'))\""
+    }
+   }
+  },
+  {
+   "id": 134,
+   "name": "group-1w python3 - <<'EOF' | for p in ['a.md','b.py']: |     op",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nfor p in ['a.md','b.py']:\n    open(p,'w')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 135,
+   "name": "group-1w python3 - <<'EOF' | def f(p): |     open(p,'w') | f('a.p",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\ndef f(p):\n    open(p,'w')\nf('a.py')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 136,
+   "name": "group-1w python3 - <<'EOF' | (p:='a.py') | open(p,'w') | EOF",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\n(p:='a.py')\nopen(p,'w')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 137,
+   "name": "group-1w python3 - <<'EOF' | p = 'a.md' | p += '.py' | open(p,'w'",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\np = 'a.md'\np += '.py'\nopen(p,'w')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 138,
+   "name": "group-1w python3 - <<'EOF' | p: str = 'a.py' | open(p,'w') | EOF",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\np: str = 'a.py'\nopen(p,'w')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 139,
+   "name": "group-1w python3 - <<'EOF' | p = q = 'a.py' | open(q,'w') | EOF",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\np = q = 'a.py'\nopen(q,'w')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 140,
+   "name": "group-1w python3 - <<'EOF' | p='b.md' | class C: |     p='a.py' |  ",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\np='b.md'\nclass C:\n    p='a.py'\n    open(p,'w')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 141,
+   "name": "group-1w python3 -c \"open('a.md','w'); open('b.py','w+')\"",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"open('a.md','w'); open('b.py','w+')\""
+    }
+   }
+  },
+  {
+   "id": 142,
+   "name": "group-1w python3 -c \"open('a.py','r+')\"",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"open('a.py','r+')\""
+    }
+   }
+  },
+  {
+   "id": 143,
+   "name": "group-1w python3 -c \"open('a.py', mode='w'.upper().lower())",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"open('a.py', mode='w'.upper().lower())\""
+    }
+   }
+  },
+  {
+   "id": 144,
+   "name": "group-1w python3 -c \"open('a.p' + 'y','w')\"",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"open('a.p' + 'y','w')\""
+    }
+   }
+  },
+  {
+   "id": 145,
+   "name": "group-1w python3 - <<'EOF' | s=open('t.md').read() | import os | ",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\ns=open('t.md').read()\nimport os\nos.replace(s, 'a.py')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 146,
+   "name": "group-1w python3 - <<'EOF' | with open('a.py','w') as f: |     ",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nwith open('a.py','w') as f:\n    pass\nEOF"
+    }
+   }
+  },
+  {
+   "id": 147,
+   "name": "group-1w python3 - <<'EOF' | p = 'a.md' | del p | p = 'a.py' | open",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\np = 'a.md'\ndel p\np = 'a.py'\nopen(p, 'w')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 148,
+   "name": "group-1w python3 - <<'EOF' | import sys | open(sys.argv[0].repl",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nimport sys\nopen(sys.argv[0].replace('x','a.py'),'w')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 149,
+   "name": "group-1w python3 - <<'EOF' | s = 'a' | import os | s = os | s.repla",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\ns = 'a'\nimport os\ns = os\ns.replace('t.md', 'a.py')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 150,
+   "name": "group-1w python3 - <<EOF | print(\"$(tee a.py </dev/null)\") | EO",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<EOF\nprint(\"$(tee a.py </dev/null)\")\nEOF"
+    }
+   }
+  },
+  {
+   "id": 151,
+   "name": "group-1w python3 - <<EOF | print('`cp x lib/a.py`') | EOF",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<EOF\nprint('`cp x lib/a.py`')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 152,
+   "name": "group-1w python3 -c \"print('$(tee a.py </dev/null)')\"",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"print('$(tee a.py </dev/null)')\""
+    }
+   }
+  },
+  {
+   "id": 153,
+   "name": "group-1w python3 - <<EOF | open('$F', 'w') | EOF",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<EOF\nopen('$F', 'w')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 154,
+   "name": "group-1w python3 -c \"open('`echo a.py`', 'w')\"",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"open('`echo a.py`', 'w')\""
+    }
+   }
+  },
+  {
+   "id": 155,
+   "name": "group-1w X=\"open('a.py','w')\"; python3 - <<EOF | $X | EOF",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "X=\"open('a.py','w')\"; python3 - <<EOF\n$X\nEOF"
+    }
+   }
+  },
+  {
+   "id": 156,
+   "name": "group-1w X=\"open('a.py','w')\"; python3 -c \"$X\"",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "X=\"open('a.py','w')\"; python3 -c \"$X\""
+    }
+   }
+  },
+  {
+   "id": 157,
+   "name": "group-1w cat <<EOF > notes.md | $(tee a.py </dev/null) | EOF",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cat <<EOF > notes.md\n$(tee a.py </dev/null)\nEOF"
+    }
+   }
+  },
+  {
+   "id": 158,
+   "name": "group-1w python3 -c 'print(1);'\"$X\"",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c 'print(1);'\"$X\""
+    }
+   }
+  },
+  {
+   "id": 159,
+   "name": "group-1w python3 -c \"$X\"'print(1)'",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"$X\"'print(1)'"
+    }
+   }
+  },
+  {
+   "id": 160,
+   "name": "group-1w python3 -c $X",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c $X"
+    }
+   }
+  },
+  {
+   "id": 161,
+   "name": "group-17k for f in a; do tee a.py </dev/null; done",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "for f in a; do tee a.py </dev/null; done"
+    }
+   }
+  },
+  {
+   "id": 162,
+   "name": "group-17k if true; then cp x lib/a.py; fi",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "if true; then cp x lib/a.py; fi"
+    }
+   }
+  },
+  {
+   "id": 163,
+   "name": "group-17k while false; do echo x > a.py; done",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "while false; do echo x > a.py; done"
+    }
+   }
+  },
+  {
+   "id": 164,
+   "name": "group-17k for f in a; do echo \"$(tee a.py </dev/null)\"; done",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "for f in a; do echo \"$(tee a.py </dev/null)\"; done"
+    }
+   }
+  },
+  {
+   "id": 165,
+   "name": "group-17k ! tee a.py </dev/null",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "! tee a.py </dev/null"
+    }
+   }
+  },
+  {
+   "id": 166,
+   "name": "group-17k { cp x a.py; }",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "{ cp x a.py; }"
+    }
+   }
+  },
+  {
+   "id": 167,
+   "name": "group-17k if tee a.py </dev/null; then :; fi",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "if tee a.py </dev/null; then :; fi"
+    }
+   }
+  },
+  {
+   "id": 168,
+   "name": "group-17k for f in a; do echo `cp x a.py`; done",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "for f in a; do echo `cp x a.py`; done"
+    }
+   }
+  },
+  {
+   "id": 169,
+   "name": "group-17k true && { tee b.sh </dev/null; }",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "true && { tee b.sh </dev/null; }"
+    }
+   }
+  },
+  {
+   "id": 170,
+   "name": "group-17k until true; do sed -i s/a/b/ a.py; done",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "until true; do sed -i s/a/b/ a.py; done"
+    }
+   }
+  },
+  {
+   "id": 171,
+   "name": "group-17k if false; then :; elif tee a.py </dev/null; then :",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "if false; then :; elif tee a.py </dev/null; then :; fi"
+    }
+   }
+  },
+  {
+   "id": 172,
+   "name": "group-17k if false; then :; else cp x a.py; fi",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "if false; then :; else cp x a.py; fi"
+    }
+   }
+  },
+  {
+   "id": 173,
+   "name": "group-3 tee $F </dev/null",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "tee $F </dev/null"
+    }
+   }
+  },
+  {
+   "id": 174,
+   "name": "group-3 tee $X.py </dev/null",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "tee $X.py </dev/null"
+    }
+   }
+  },
+  {
+   "id": 175,
+   "name": "group-3 tee $n.p$y </dev/null",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "tee $n.p$y </dev/null"
+    }
+   }
+  },
+  {
+   "id": 176,
+   "name": "group-3 echo x > \"$d/a.py\"",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo x > \"$d/a.py\""
+    }
+   }
+  },
+  {
+   "id": 177,
+   "name": "group-3 echo x > ${X}",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo x > ${X}"
+    }
+   }
+  },
+  {
+   "id": 178,
+   "name": "group-3 sed -i s/a/b/ $F",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sed -i s/a/b/ $F"
+    }
+   }
+  },
+  {
+   "id": 179,
+   "name": "group-3 sed -i -e 's/a/b/' a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sed -i -e 's/a/b/' a.py"
+    }
+   }
+  },
+  {
+   "id": 180,
+   "name": "group-3 sed -i 's/a/b/' a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sed -i 's/a/b/' a.py"
+    }
+   }
+  },
+  {
+   "id": 181,
+   "name": "group-3 sed -i.bak -f script.sed a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sed -i.bak -f script.sed a.py"
+    }
+   }
+  },
+  {
+   "id": 182,
+   "name": "group-3 tee a.{md,py} </dev/null",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "tee a.{md,py} </dev/null"
+    }
+   }
+  },
+  {
+   "id": 183,
+   "name": "group-3 cp x a.{py,}",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cp x a.{py,}"
+    }
+   }
+  },
+  {
+   "id": 184,
+   "name": "group-3 echo x > a.md$X",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo x > a.md$X"
+    }
+   }
+  },
+  {
+   "id": 185,
+   "name": "group-3 cp x \"$D\"",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cp x \"$D\""
+    }
+   }
+  },
+  {
+   "id": 186,
+   "name": "group-3 sed -i '' 's/`x`/y/' a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sed -i '' 's/`x`/y/' a.py"
+    }
+   }
+  },
+  {
+   "id": 187,
+   "name": "group-3 sed -i -e 's/a/b/' -e 's/c/d/' notes.md lib/a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sed -i -e 's/a/b/' -e 's/c/d/' notes.md lib/a.py"
+    }
+   }
+  },
+  {
+   "id": 188,
+   "name": "receipt: unreadable target right after a delegation",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [
+    {
+     "time": "{now}",
+     "status": "success",
+     "model_answered": "probe",
+     "target": "{home}/lib/a.py",
+     "sha256": "x"
+    }
+   ],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "tee $F </dev/null"
+    }
+   }
+  },
+  {
+   "id": 189,
+   "name": "receipt: shell-expanded code right after a delegation",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [
+    {
+     "time": "{now}",
+     "status": "success",
+     "model_answered": "probe",
+     "target": "{home}/lib/a.py",
+     "sha256": "x"
+    }
+   ],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 -c \"$X\""
+    }
+   }
+  },
+  {
+   "id": 190,
+   "name": "receipt: find -exec sed -i right after a delegation",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [
+    {
+     "time": "{now}",
+     "status": "success",
+     "model_answered": "probe",
+     "target": "{home}/lib/a.py",
+     "sha256": "x"
+    }
+   ],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "find . -name '*.py' -exec sed -i s/a/b/ {} +"
+    }
+   }
+  },
+  {
+   "id": 191,
+   "name": "receipt: xargs sed -i right after a delegation",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [
+    {
+     "time": "{now}",
+     "status": "success",
+     "model_answered": "probe",
+     "target": "{home}/lib/a.py",
+     "sha256": "x"
+    }
+   ],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "ls *.py | xargs sed -i s/a/b/"
+    }
+   }
+  },
+  {
+   "id": 192,
+   "name": "receipt: another code file",
+   "old": "deny",
+   "expect": "deny",
+   "files": {},
+   "log": [
+    {
+     "time": "{now}",
+     "status": "success",
+     "model_answered": "probe",
+     "target": "{home}/lib/a.py",
+     "sha256": "x"
+    }
+   ],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cp x {home}/lib/b.py"
+    }
+   }
+  },
+  {
+   "id": 193,
+   "name": "receipt: same base name, bare path",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [
+    {
+     "time": "{now}",
+     "status": "success",
+     "model_answered": "probe",
+     "target": "{home}/lib/a.py",
+     "sha256": "x"
+    }
+   ],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cp x a.py"
+    }
+   }
+  },
+  {
+   "id": 194,
+   "name": "receipt: the exact delegated file",
+   "old": "allow",
+   "expect": "allow",
+   "files": {},
+   "log": [
+    {
+     "time": "{now}",
+     "status": "success",
+     "model_answered": "probe",
+     "target": "{home}/lib/a.py",
+     "sha256": "x"
+    }
+   ],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cp x {home}/lib/a.py"
+    }
+   }
+  },
+  {
+   "id": 195,
+   "name": "awk ls -l *.jsonl | awk '{print $5,$9}'",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "ls -l *.jsonl | awk '{print $5,$9}'"
+    }
+   }
+  },
+  {
+   "id": 196,
+   "name": "awk ls -lt a/*.jsonl | head -6 | awk '{print $5, $NF}'",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "ls -lt a/*.jsonl | head -6 | awk '{print $5, $NF}'"
+    }
+   }
+  },
+  {
+   "id": 197,
+   "name": "awk ls *.log | awk '{system(\"cat \" $9)}'",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "ls *.log | awk '{system(\"cat \" $9)}'"
+    }
+   }
+  },
+  {
+   "id": 198,
+   "name": "awk ls *.log | awk -f prog.awk",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "ls *.log | awk -f prog.awk"
+    }
+   }
+  },
+  {
+   "id": 199,
+   "name": "awk ls *.log | xargs awk '{print $1}'",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "ls *.log | xargs awk '{print $1}'"
+    }
+   }
+  },
+  {
+   "id": 200,
+   "name": "awk for f in *.log; do awk '{print $1}' $f; done",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "for f in *.log; do awk '{print $1}' $f; done"
+    }
+   }
+  },
+  {
+   "id": 201,
+   "name": "awk LC_ALL=C awk '{print $1}' journal.log",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "LC_ALL=C awk '{print $1}' journal.log"
+    }
+   }
+  },
+  {
+   "id": 202,
+   "name": "awk { awk '{print $1}' journal.log; }",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "{ awk '{print $1}' journal.log; }"
+    }
+   }
+  },
+  {
+   "id": 203,
+   "name": "awk ls *.log | awk '{print $1}' journal.log",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "ls *.log | awk '{print $1}' journal.log"
+    }
+   }
+  },
+  {
+   "id": 204,
+   "name": "bounded grep -o 'n. 19[0-9]' big.log | sort -u | tail -3",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "grep -o 'n. 19[0-9]' big.log | sort -u | tail -3"
+    }
+   }
+  },
+  {
+   "id": 205,
+   "name": "bounded cat big.log | awk '{print $1}' | sort | uniq -c | ",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cat big.log | awk '{print $1}' | sort | uniq -c | sort -rn | head -40"
+    }
+   }
+  },
+  {
+   "id": 206,
+   "name": "bounded grep -oh x big.log | sort | uniq -c | wc -l",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "grep -oh x big.log | sort | uniq -c | wc -l"
+    }
+   }
+  },
+  {
+   "id": 207,
+   "name": "bounded grep -oh x big.log | sort -rn | grep -c y",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "grep -oh x big.log | sort -rn | grep -c y"
+    }
+   }
+  },
+  {
+   "id": 208,
+   "name": "bounded cat <<'EOF' note : grep -oh x big.log | sort -rn E",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cat <<'EOF'\nnote : grep -oh x big.log | sort -rn\nEOF"
+    }
+   }
+  },
+  {
+   "id": 209,
+   "name": "bounded grep -oh x big.log | sort | uniq -c | sort -rn",
+   "old": "deny",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "grep -oh x big.log | sort | uniq -c | sort -rn"
+    }
+   }
+  },
+  {
+   "id": 210,
+   "name": "bounded grep -o x big.log | sort | uniq -c | head -500",
+   "old": "deny",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "grep -o x big.log | sort | uniq -c | head -500"
+    }
+   }
+  },
+  {
+   "id": 211,
+   "name": "bounded grep -o x big.log | head -n 5 -n 999",
+   "old": "deny",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "grep -o x big.log | head -n 5 -n 999"
+    }
+   }
+  },
+  {
+   "id": 212,
+   "name": "bounded grep -o x big.log | head -3 & sort -rn big.log",
+   "old": "deny",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "grep -o x big.log | head -3 & sort -rn big.log"
+    }
+   }
+  },
+  {
+   "id": 213,
+   "name": "bounded grep -o x big.log | sort -rn >&2 | head -3",
+   "old": "deny",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "grep -o x big.log | sort -rn >&2 | head -3"
+    }
+   }
+  },
+  {
+   "id": 214,
+   "name": "bounded grep -o x big.log | sort -rn | tee /dev/stderr | h",
+   "old": "deny",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "grep -o x big.log | sort -rn | tee /dev/stderr | head -3"
+    }
+   }
+  },
+  {
+   "id": 215,
+   "name": "bounded bash <<EOF sort -rn big.log EOF",
+   "old": "deny",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "bash <<EOF\nsort -rn big.log\nEOF"
+    }
+   }
+  },
+  {
+   "id": 216,
+   "name": "bounded cat <<'EOF' x EOF sort -rn big.log",
+   "old": "deny",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cat <<'EOF'\nx\nEOF\nsort -rn big.log"
+    }
+   }
+  },
+  {
+   "id": 217,
+   "name": "quotes echo \"n=$(grep -c '\"x' f)\" ",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"n=$(grep -c '\"x' f)\" "
+    }
+   }
+  },
+  {
+   "id": 218,
+   "name": "quotes echo \"$(printf '%s' \"a b\")\"; ls",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"$(printf '%s' \"a b\")\"; ls"
+    }
+   }
+  },
+  {
+   "id": 219,
+   "name": "quotes echo \"${X:-\"def\"}\" ; ls",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"${X:-\"def\"}\" ; ls"
+    }
+   }
+  },
+  {
+   "id": 220,
+   "name": "quotes echo \"a $(echo \"b $(echo 'c\"')\")\" ",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"a $(echo \"b $(echo 'c\"')\")\" "
+    }
+   }
+  },
+  {
+   "id": 221,
+   "name": "quotes echo \"`grep -c '\\\"' f`\" ",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"`grep -c '\\\"' f`\" "
+    }
+   }
+  },
+  {
+   "id": 222,
+   "name": "quotes for f in a b; do echo \"$f $(grep -c '\"2026' \"$f\")\"",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "for f in a b; do echo \"$f $(grep -c '\"2026' \"$f\")\"; done"
+    }
+   }
+  },
+  {
+   "id": 223,
+   "name": "quotes echo \"$(date '+%H\"%M')\" # it's a note",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"$(date '+%H\"%M')\" # it's a note"
+    }
+   }
+  },
+  {
+   "id": 224,
+   "name": "quotes echo \"$((1 + $(wc -l < f)))\" ",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"$((1 + $(wc -l < f)))\" "
+    }
+   }
+  },
+  {
+   "id": 225,
+   "name": "quotes echo \"$(echo '\"' ; echo \" ; tee a.py ; \")\" ",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"$(echo '\"' ; echo \" ; tee a.py ; \")\" "
+    }
+   }
+  },
+  {
+   "id": 226,
+   "name": "quotes echo \"$(echo \" #\"; tee a.py)\" ",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"$(echo \" #\"; tee a.py)\" "
+    }
+   }
+  },
+  {
+   "id": 227,
+   "name": "quotes echo \"$(echo '\"')\" ; tee a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"$(echo '\"')\" ; tee a.py"
+    }
+   }
+  },
+  {
+   "id": 228,
+   "name": "quotes echo \"$(cat f)\" > a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"$(cat f)\" > a.py"
+    }
+   }
+  },
+  {
+   "id": 229,
+   "name": "quotes echo \"$(echo \")\"; tee a.py)\" ",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"$(echo \")\"; tee a.py)\" "
+    }
+   }
+  },
+  {
+   "id": 230,
+   "name": "quotes echo \"$(tee a.py)",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"$(tee a.py)"
+    }
+   }
+  },
+  {
+   "id": 231,
+   "name": "quotes echo \"${X:-$(tee a.py)}\" ",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"${X:-$(tee a.py)}\" "
+    }
+   }
+  },
+  {
+   "id": 232,
+   "name": "quotes echo \"$(echo '\"')\" # x tee a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"$(echo '\"')\" # x\ntee a.py"
+    }
+   }
+  },
+  {
+   "id": 233,
+   "name": "quotes echo \"$(echo \"#\")\"; tee a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"$(echo \"#\")\"; tee a.py"
+    }
+   }
+  },
+  {
+   "id": 234,
+   "name": "quotes echo \"`tee a.py`\" ",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"`tee a.py`\" "
+    }
+   }
+  },
+  {
+   "id": 235,
+   "name": "quotes echo \"$((1 + $(tee a.py)))\" ",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"$((1 + $(tee a.py)))\" "
+    }
+   }
+  },
+  {
+   "id": 236,
+   "name": "quotes echo $((1 + $(tee a.py)))",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo $((1 + $(tee a.py)))"
+    }
+   }
+  },
+  {
+   "id": 237,
+   "name": "quotes echo $(( $(cat f) > 2 )) ; echo \"$(( 1 ))$(tee a.p",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo $(( $(cat f) > 2 )) ; echo \"$(( 1 ))$(tee a.py)\" "
+    }
+   }
+  },
+  {
+   "id": 238,
+   "name": "quotes echo \"$(cat <<X hi X )\" ; ls",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"$(cat <<X\nhi\nX\n)\" ; ls"
+    }
+   }
+  },
+  {
+   "id": 239,
+   "name": "quotes echo \"$(echo \"<<EOF\")\" ; ls",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"$(echo \"<<EOF\")\" ; ls"
+    }
+   }
+  },
+  {
+   "id": 240,
+   "name": "quotes echo \"$(echo \"<<EOF\")\" tee a.py EOF",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"$(echo \"<<EOF\")\"\ntee a.py\nEOF"
+    }
+   }
+  },
+  {
+   "id": 241,
+   "name": "quotes echo \"$(echo \"<<EOF\")\" ; tee a.py EOF",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"$(echo \"<<EOF\")\" ; tee a.py\nEOF"
+    }
+   }
+  },
+  {
+   "id": 242,
+   "name": "quotes echo \"$(echo '\"')\" <<EOF x EOF tee a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"$(echo '\"')\" <<EOF\nx\nEOF\ntee a.py"
+    }
+   }
+  },
+  {
+   "id": 243,
+   "name": "quotes echo \"$(echo \" # \")\" ; tee a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"$(echo \" # \")\" ; tee a.py"
+    }
+   }
+  },
+  {
+   "id": 244,
+   "name": "quotes echo \"$(echo \";\")\" ; tee a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"$(echo \";\")\" ; tee a.py"
+    }
+   }
+  },
+  {
+   "id": 245,
+   "name": "quotes echo \"$(echo \"|\")\" | tee a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"$(echo \"|\")\" | tee a.py"
+    }
+   }
+  },
+  {
+   "id": 246,
+   "name": "quotes cat <<EOF $(tee a.py) EOF",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cat <<EOF\n$(tee a.py)\nEOF"
+    }
+   }
+  },
+  {
+   "id": 247,
+   "name": "quotes echo \"$(cat <<X hi X )\" ; tee a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"$(cat <<X\nhi\nX\n)\" ; tee a.py"
+    }
+   }
+  },
+  {
+   "id": 248,
+   "name": "quotes echo \"`echo \"#\"`\" ; tee a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"`echo \"#\"`\" ; tee a.py"
+    }
+   }
+  },
+  {
+   "id": 249,
+   "name": "quotes echo \"${X:-'}\" ; tee a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"${X:-'}\" ; tee a.py"
+    }
+   }
+  },
+  {
+   "id": 250,
+   "name": "quotes ls # <<EOF tee a.py EOF",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "ls # <<EOF\ntee a.py\nEOF"
+    }
+   }
+  },
+  {
+   "id": 251,
+   "name": "quotes ls ; # x <<EOF tee a.py EOF",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "ls ; # x <<EOF\ntee a.py\nEOF"
+    }
+   }
+  },
+  {
+   "id": 252,
+   "name": "quotes echo \"${X:-\"<<EOF\"}\" tee a.py EOF",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"${X:-\"<<EOF\"}\"\ntee a.py\nEOF"
+    }
+   }
+  },
+  {
+   "id": 253,
+   "name": "quotes echo \"`echo \"<<EOF\"`\" tee a.py EOF",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo \"`echo \"<<EOF\"`\"\ntee a.py\nEOF"
+    }
+   }
+  },
+  {
+   "id": 254,
+   "name": "heredoc git commit -q -F - <<'M' banc 9/1 -> 8/1 - attaque",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit -q -F - <<'M'\nbanc 9/1 -> 8/1\n- attaque : 8 rouges -> 0\n\nCo-Authored-By: X <n@a.b>\nM\ngit log --oneline -1"
+    }
+   }
+  },
+  {
+   "id": 255,
+   "name": "heredoc cat <<'M' a -> b ; x > y.py M",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cat <<'M'\na -> b ; x > y.py\nM"
+    }
+   }
+  },
+  {
+   "id": 256,
+   "name": "heredoc cat <<'M' | head -3 rm -rf / ; tee a.py M",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cat <<'M' | head -3\nrm -rf / ; tee a.py\nM"
+    }
+   }
+  },
+  {
+   "id": 257,
+   "name": "heredoc tee note.md <<'M' $(tee a.py) > b.py M",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "tee note.md <<'M'\n$(tee a.py) > b.py\nM"
+    }
+   }
+  },
+  {
+   "id": 258,
+   "name": "heredoc cat <<'M' && bash tee a.py M",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cat <<'M' && bash\ntee a.py\nM"
+    }
+   }
+  },
+  {
+   "id": 259,
+   "name": "heredoc python3 /dev/stdin <<'M' print(1) M",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 /dev/stdin <<'M'\nprint(1)\nM"
+    }
+   }
+  },
+  {
+   "id": 260,
+   "name": "heredoc bash <<'M' tee a.py M",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "bash <<'M'\ntee a.py\nM"
+    }
+   }
+  },
+  {
+   "id": 261,
+   "name": "heredoc sh -s <<'M' echo x > a.py M",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sh -s <<'M'\necho x > a.py\nM"
+    }
+   }
+  },
+  {
+   "id": 262,
+   "name": "heredoc env bash <<'M' tee a.py M",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "env bash <<'M'\ntee a.py\nM"
+    }
+   }
+  },
+  {
+   "id": 263,
+   "name": "heredoc sudo bash <<'M' tee a.py M",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sudo bash <<'M'\ntee a.py\nM"
+    }
+   }
+  },
+  {
+   "id": 264,
+   "name": "heredoc xargs sh -c <<'M' tee a.py M",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "xargs sh -c <<'M'\ntee a.py\nM"
+    }
+   }
+  },
+  {
+   "id": 265,
+   "name": "heredoc cat > a.py <<'M' x = 1 M",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cat > a.py <<'M'\nx = 1\nM"
+    }
+   }
+  },
+  {
+   "id": 266,
+   "name": "heredoc tee a.py <<'M' x M",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "tee a.py <<'M'\nx\nM"
+    }
+   }
+  },
+  {
+   "id": 267,
+   "name": "heredoc python3 - <<'M' open('a.py', 'w').write('x') M",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'M'\nopen('a.py', 'w').write('x')\nM"
+    }
+   }
+  },
+  {
+   "id": 268,
+   "name": "heredoc python3 <<'M' open('a.py', 'w').write('x') M",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 <<'M'\nopen('a.py', 'w').write('x')\nM"
+    }
+   }
+  },
+  {
+   "id": 269,
+   "name": "heredoc source /dev/stdin <<'M' tee a.py M",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "source /dev/stdin <<'M'\ntee a.py\nM"
+    }
+   }
+  },
+  {
+   "id": 270,
+   "name": "heredoc . /dev/stdin <<'M' tee a.py M",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": ". /dev/stdin <<'M'\ntee a.py\nM"
+    }
+   }
+  },
+  {
+   "id": 271,
+   "name": "heredoc sed -f - f.txt <<'M' w a.py M",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sed -f - f.txt <<'M'\nw a.py\nM"
+    }
+   }
+  },
+  {
+   "id": 272,
+   "name": "heredoc awk -f - f.txt <<'M' {print > \"a.py\"} M",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "awk -f - f.txt <<'M'\n{print > \"a.py\"}\nM"
+    }
+   }
+  },
+  {
+   "id": 273,
+   "name": "heredoc perl <<'M' open(F, '>a.py') M",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "perl <<'M'\nopen(F, '>a.py')\nM"
+    }
+   }
+  },
+  {
+   "id": 274,
+   "name": "heredoc node <<'M' require('fs').writeFileSync('a.py', 'x'",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "node <<'M'\nrequire('fs').writeFileSync('a.py', 'x')\nM"
+    }
+   }
+  },
+  {
+   "id": 275,
+   "name": "heredoc cat <<M $(tee a.py) M",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cat <<M\n$(tee a.py)\nM"
+    }
+   }
+  },
+  {
+   "id": 276,
+   "name": "heredoc git commit -F - <<'M' ; tee a.py x M",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git commit -F - <<'M' ; tee a.py\nx\nM"
+    }
+   }
+  },
+  {
+   "id": 277,
+   "name": "heredoc bash /dev/stdin <<'M' tee a.py M",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "bash /dev/stdin <<'M'\ntee a.py\nM"
+    }
+   }
+  },
+  {
+   "id": 278,
+   "name": "heredoc jq -f /dev/fd/0 x.json <<'M' . M",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "jq -f /dev/fd/0 x.json <<'M'\n.\nM"
+    }
+   }
+  },
+  {
+   "id": 279,
+   "name": "heredoc exec bash <<'M' tee a.py M",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "exec bash <<'M'\ntee a.py\nM"
+    }
+   }
+  },
+  {
+   "id": 280,
+   "name": "heredoc git checkout -- public/data/guard_attacks.json",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git checkout -- public/data/guard_attacks.json"
+    }
+   }
+  },
+  {
+   "id": 281,
+   "name": "heredoc git restore vault/log.md",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git restore vault/log.md"
+    }
+   }
+  },
+  {
+   "id": 282,
+   "name": "heredoc git checkout main",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git checkout main"
+    }
+   }
+  },
+  {
+   "id": 283,
+   "name": "heredoc git checkout -b feature/x",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git checkout -b feature/x"
+    }
+   }
+  },
+  {
+   "id": 284,
+   "name": "heredoc git restore --staged notes.md",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git restore --staged notes.md"
+    }
+   }
+  },
+  {
+   "id": 285,
+   "name": "heredoc git checkout HEAD~1 -- rapports/a.md b.txt",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git checkout HEAD~1 -- rapports/a.md b.txt"
+    }
+   }
+  },
+  {
+   "id": 286,
+   "name": "heredoc git checkout -- a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git checkout -- a.py"
+    }
+   }
+  },
+  {
+   "id": 287,
+   "name": "heredoc git restore a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git restore a.py"
+    }
+   }
+  },
+  {
+   "id": 288,
+   "name": "heredoc git checkout .",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git checkout ."
+    }
+   }
+  },
+  {
+   "id": 289,
+   "name": "heredoc git checkout -- .",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git checkout -- ."
+    }
+   }
+  },
+  {
+   "id": 290,
+   "name": "heredoc git restore .",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git restore ."
+    }
+   }
+  },
+  {
+   "id": 291,
+   "name": "heredoc git checkout src/",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git checkout src/"
+    }
+   }
+  },
+  {
+   "id": 292,
+   "name": "heredoc git checkout HEAD -- src/",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git checkout HEAD -- src/"
+    }
+   }
+  },
+  {
+   "id": 293,
+   "name": "heredoc git restore --source=HEAD~2 lib/",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git restore --source=HEAD~2 lib/"
+    }
+   }
+  },
+  {
+   "id": 294,
+   "name": "heredoc git checkout a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git checkout a.py"
+    }
+   }
+  },
+  {
+   "id": 295,
+   "name": "heredoc git checkout HEAD~1 -- '*.py'",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git checkout HEAD~1 -- '*.py'"
+    }
+   }
+  },
+  {
+   "id": 296,
+   "name": "heredoc git restore $F",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git restore $F"
+    }
+   }
+  },
+  {
+   "id": 297,
+   "name": "heredoc git -C x checkout -- a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git -C x checkout -- a.py"
+    }
+   }
+  },
+  {
+   "id": 298,
+   "name": "heredoc git checkout -p",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "git checkout -p"
+    }
+   }
+  },
+  {
+   "id": 299,
+   "name": "heredoc printf x >| a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "printf x >| a.py"
+    }
+   }
+  },
+  {
+   "id": 300,
+   "name": "heredoc nice -n 5 bash -c \"tee a.py\"",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "nice -n 5 bash -c \"tee a.py\""
+    }
+   }
+  },
+  {
+   "id": 301,
+   "name": "heredoc sudo -u x bash -c \"tee a.py\"",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sudo -u x bash -c \"tee a.py\""
+    }
+   }
+  },
+  {
+   "id": 302,
+   "name": "heredoc sudo -u x bash <<'M' cp x.txt a.py M",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sudo -u x bash <<'M'\ncp x.txt a.py\nM"
+    }
+   }
+  },
+  {
+   "id": 303,
+   "name": "heredoc timeout 5 bash <<'M' tee a.py M",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "timeout 5 bash <<'M'\ntee a.py\nM"
+    }
+   }
+  },
+  {
+   "id": 304,
+   "name": "heredoc sudo --frobnicate tee a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sudo --frobnicate tee a.py"
+    }
+   }
+  },
+  {
+   "id": 305,
+   "name": "heredoc sudo -s <<M tee a.py M",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sudo -s <<M\ntee a.py\nM"
+    }
+   }
+  },
+  {
+   "id": 306,
+   "name": "heredoc command -v python3",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "command -v python3"
+    }
+   }
+  },
+  {
+   "id": 307,
+   "name": "heredoc sudo -u x ls -l",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sudo -u x ls -l"
+    }
+   }
+  },
+  {
+   "id": 308,
+   "name": "heredoc timeout 5 grep -c x f.log",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "timeout 5 grep -c x f.log"
+    }
+   }
+  },
+  {
+   "id": 309,
+   "name": "heredoc wc -l <a.py",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "wc -l <a.py"
+    }
+   }
+  },
+  {
+   "id": 310,
+   "name": "heredoc wc -l < a.py <<< x",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "wc -l < a.py <<< x"
+    }
+   }
+  },
+  {
+   "id": 311,
+   "name": "importlib python3 - <<'EOF' 2>&1 | tail -20 import json, sys",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF' 2>&1 | tail -20\nimport json, sys, importlib.util\nsys.path.insert(0, 'bin')\nB = {x['id']: x for x in json.load(open('rapports/banc-faux-refus/cases.json'))}\ns = importlib.util.spec_from_file_location('ad', 'bin/delegate-tool.py'); m = importlib.util.module_from_spec(s); s.loader.exec_module(m)\nsys.path.insert(0, 'public/bin')\nimport anon_rules, anon_core\nprint([n for n in dir(anon_core) if not n.startswith('_')][:30])\nfor i in ['anonymizer-453c760f', 'anonymizer-5b44a787']:\n    t = B[i]['stdin']\n    print(i, 'service:', m.scan(t + '\\n'))\nEOF\ngrep -n \"def scan\" -A15 bin/delegate-tool.py | head -25"
+    }
+   }
+  },
+  {
+   "id": 312,
+   "name": "importlib python3 - <<'EOF' import importlib.util s = import",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nimport importlib.util\ns = importlib.util.spec_from_file_location('b', 'bin/tool.py')\nm = importlib.util.module_from_spec(s)\ns.loader.exec_module(m)\nprint(m.judge('ls'))\nEOF"
+    }
+   }
+  },
+  {
+   "id": 313,
+   "name": "importlib python3 - <<'EOF' import json, importlib.util s = ",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nimport json, importlib.util\ns = importlib.util.spec_from_file_location('b', 'tool.py')\nm = importlib.util.module_from_spec(s)\ns.loader.exec_module(m)\nprint(json.dumps(m.scan(open('notes.txt').read())))\nEOF"
+    }
+   }
+  },
+  {
+   "id": 314,
+   "name": "importlib python3 - <<'EOF' import importlib.util s = import",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nimport importlib.util\ns = importlib.util.spec_from_file_location('b', 'tool.py')\nm = importlib.util.module_from_spec(s)\ns.loader.exec_module(m)\nprint([n for n in dir(m) if not n.startswith('_')])\nEOF"
+    }
+   }
+  },
+  {
+   "id": 315,
+   "name": "importlib python3 - <<'EOF' import importlib.util s = import",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nimport importlib.util\ns = importlib.util.spec_from_file_location('b', '/usr/lib/python3.12/shutil.py')\nm = importlib.util.module_from_spec(s)\ns.loader.exec_module(m)\nm.copyfile('x.txt', 'a.py')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 316,
+   "name": "importlib python3 - <<'EOF' import importlib.util s = import",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nimport importlib.util\ns = importlib.util.spec_from_file_location('b', 'shutil.py')\nm = importlib.util.module_from_spec(s)\ns.loader.exec_module(m)\nm.copyfile('x.txt', 'y.txt')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 317,
+   "name": "importlib python3 - <<'EOF' import importlib.util s = import",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nimport importlib.util\ns = importlib.util.spec_from_file_location('b', 'tool.py')\nm = importlib.util.module_from_spec(s)\ns.loader.exec_module(m)\nm.save('a.py')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 318,
+   "name": "importlib python3 - <<'EOF' import importlib.util s = import",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nimport importlib.util\ns = importlib.util.spec_from_file_location('b', 'tool.py')\nm = importlib.util.module_from_spec(s)\ns.loader.exec_module(m)\nopen('a.py', 'w').write('x')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 319,
+   "name": "importlib python3 - <<'EOF' import importlib importlib.impor",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nimport importlib\nimportlib.import_module('os').system('tee a.py')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 320,
+   "name": "importlib python3 - <<'EOF' import importlib.util s = import",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nimport importlib.util\ns = importlib.util.spec_from_file_location('b', 'tool.py')\nm = importlib.util.module_from_spec(s)\ns.loader.exec_module(m)\nexec(open('x.py').read())\nEOF"
+    }
+   }
+  },
+  {
+   "id": 321,
+   "name": "importlib python3 - <<'EOF' import importlib.util p = 'to' +",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nimport importlib.util\np = 'to' + 'ol.py'\ns = importlib.util.spec_from_file_location('b', p)\nm = importlib.util.module_from_spec(s)\ns.loader.exec_module(m)\nm.save('a.py')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 322,
+   "name": "importlib python3 - <<'EOF' import importlib.util s = import",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nimport importlib.util\ns = importlib.util.spec_from_file_location('b', 'tool.py')\nm = importlib.util.module_from_spec(s)\ns.loader.exec_module(m)\nm.__dict__['open']('a.py', 'w')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 323,
+   "name": "importlib python3 - <<'EOF' import importlib.util as u s = u",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nimport importlib.util as u\ns = u.spec_from_file_location('b', 'os.py')\nm = u.module_from_spec(s)\ns.loader.exec_module(m)\nm.system('tee a.py')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 324,
+   "name": "importlib python3 - <<'EOF' import importlib.util s = import",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nimport importlib.util\ns = importlib.util.spec_from_file_location('b', 'tool.py')\nm = importlib.util.module_from_spec(s)\ns.loader.exec_module(m)\nimport subprocess\nsubprocess.run(['tee', 'a.py'])\nEOF"
+    }
+   }
+  },
+  {
+   "id": 325,
+   "name": "importlib python3 - <<'EOF' import importlib.util s = import",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nimport importlib.util\ns = importlib.util.spec_from_file_location('b', 'tool.py', submodule_search_locations=['a.py'])\nm = importlib.util.module_from_spec(s)\ns.loader.exec_module(m)\nm.save('a.py')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 326,
+   "name": "importlib python3 - <<'EOF' import importlib.util s = import",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nimport importlib.util\ns = importlib.util.spec_from_file_location('b', 'tool.py')\nm = importlib.util.module_from_spec(s)\ns.loader.exec_module(m)\nimportlib.reload(m)\nm.x('a.py')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 327,
+   "name": "importlib python3 - <<'EOF' import importlib.util s = import",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "python3 - <<'EOF'\nimport importlib.util\ns = importlib.util.spec_from_file_location('b', 'tool.py')\nm = importlib.util.module_from_spec(s)\ns.loader.exec_module(m)\nfrom pathlib import Path\nPath('a.py').write_text('x')\nEOF"
+    }
+   }
+  },
+  {
+   "id": 328,
+   "name": "variables R=$PWD/notes.md; echo a >> $R",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=$PWD/notes.md; echo a >> $R"
+    }
+   }
+  },
+  {
+   "id": 329,
+   "name": "variables R=/tmp/x.txt; echo a > \"$R\"; cat f >> ${R}",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=/tmp/x.txt; echo a > \"$R\"; cat f >> ${R}"
+    }
+   }
+  },
+  {
+   "id": 330,
+   "name": "variables cd /tmp; R=out.log; ls >> $R 2>&1",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cd /tmp; R=out.log; ls >> $R 2>&1"
+    }
+   }
+  },
+  {
+   "id": 331,
+   "name": "variables A=/tmp; B=$A/x.md; echo a > $B",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "A=/tmp; B=$A/x.md; echo a > $B"
+    }
+   }
+  },
+  {
+   "id": 332,
+   "name": "variables R=x.md echo a >> $R",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=x.md\necho a >> $R"
+    }
+   }
+  },
+  {
+   "id": 333,
+   "name": "variables R=a.py; echo x >> $R",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=a.py; echo x >> $R"
+    }
+   }
+  },
+  {
+   "id": 334,
+   "name": "variables echo x > $R; R=x.md",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "echo x > $R; R=x.md"
+    }
+   }
+  },
+  {
+   "id": 335,
+   "name": "variables false && R=x.md; echo x > $R",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "false && R=x.md; echo x > $R"
+    }
+   }
+  },
+  {
+   "id": 336,
+   "name": "variables false || R=x.md; echo x > $R",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "false || R=x.md; echo x > $R"
+    }
+   }
+  },
+  {
+   "id": 337,
+   "name": "variables R=x.md; R=a.py; echo x > $R",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=x.md; R=a.py; echo x > $R"
+    }
+   }
+  },
+  {
+   "id": 338,
+   "name": "variables R=x.md; R+=.py; echo x > $R",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=x.md; R+=.py; echo x > $R"
+    }
+   }
+  },
+  {
+   "id": 339,
+   "name": "variables if true; then R=x.md; fi; echo x > $R",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "if true; then R=x.md; fi; echo x > $R"
+    }
+   }
+  },
+  {
+   "id": 340,
+   "name": "variables R=x.md; read R; echo x > $R",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=x.md; read R; echo x > $R"
+    }
+   }
+  },
+  {
+   "id": 341,
+   "name": "variables R=x.md; export R=a.py; echo x > $R",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=x.md; export R=a.py; echo x > $R"
+    }
+   }
+  },
+  {
+   "id": 342,
+   "name": "variables R=x.md; echo ${R:=a.py} > $R",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=x.md; echo ${R:=a.py} > $R"
+    }
+   }
+  },
+  {
+   "id": 343,
+   "name": "variables (R=x.md); echo x > $R",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "(R=x.md); echo x > $R"
+    }
+   }
+  },
+  {
+   "id": 344,
+   "name": "variables R=x.md | true; echo x > $R",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=x.md | true; echo x > $R"
+    }
+   }
+  },
+  {
+   "id": 345,
+   "name": "variables f() { R=x.md; }; echo x > $R",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "f() { R=x.md; }; echo x > $R"
+    }
+   }
+  },
+  {
+   "id": 346,
+   "name": "variables R=x.md cmd; echo x > $R",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=x.md cmd; echo x > $R"
+    }
+   }
+  },
+  {
+   "id": 347,
+   "name": "variables R=\"x.md\"; echo x > $R",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=\"x.md\"; echo x > $R"
+    }
+   }
+  },
+  {
+   "id": 348,
+   "name": "variables R=$(echo a.py); echo x > $R",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=$(echo a.py); echo x > $R"
+    }
+   }
+  },
+  {
+   "id": 349,
+   "name": "variables R=x.md; eval 'R=a.py'; echo x > $R",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=x.md; eval 'R=a.py'; echo x > $R"
+    }
+   }
+  },
+  {
+   "id": 350,
+   "name": "variables R=x.md; . ./set_r.sh; echo x > $R",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=x.md; . ./set_r.sh; echo x > $R"
+    }
+   }
+  },
+  {
+   "id": 351,
+   "name": "variables R=x.md; printf -v R a.py; echo x > $R",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=x.md; printf -v R a.py; echo x > $R"
+    }
+   }
+  },
+  {
+   "id": 352,
+   "name": "variables R=x.md; unset R; echo x > $R",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=x.md; unset R; echo x > $R"
+    }
+   }
+  },
+  {
+   "id": 353,
+   "name": "variables R=x.md; echo x > $RR",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=x.md; echo x > $RR"
+    }
+   }
+  },
+  {
+   "id": 354,
+   "name": "variables R=x.md; echo x > ${R}.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=x.md; echo x > ${R}.py"
+    }
+   }
+  },
+  {
+   "id": 355,
+   "name": "variables R=x.md; source env.sh; echo x > $R",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=x.md; source env.sh; echo x > $R"
+    }
+   }
+  },
+  {
+   "id": 356,
+   "name": "variables R=x.md; while read R; do :; done < f; echo x > $R",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=x.md; while read R; do :; done < f; echo x > $R"
+    }
+   }
+  },
+  {
+   "id": 357,
+   "name": "variables R=x.md; for R in a.py; do :; done; echo x > $R",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=x.md; for R in a.py; do :; done; echo x > $R"
+    }
+   }
+  },
+  {
+   "id": 358,
+   "name": "variables R=x; echo x > $R.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=x; echo x > $R.py"
+    }
+   }
+  },
+  {
+   "id": 359,
+   "name": "variables cd /tmp && R=out.log; ls >> $R 2>&1",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "cd /tmp && R=out.log; ls >> $R 2>&1"
+    }
+   }
+  },
+  {
+   "id": 360,
+   "name": "variables R=x.md; echo x > $R:s/md/py/",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=x.md; echo x > $R:s/md/py/"
+    }
+   }
+  },
+  {
+   "id": 361,
+   "name": "variables R=a.py.md; echo x > $R:r",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=a.py.md; echo x > $R:r"
+    }
+   }
+  },
+  {
+   "id": 362,
+   "name": "variables R=x.md; echo x > ${R}:s/md/py/",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=x.md; echo x > ${R}:s/md/py/"
+    }
+   }
+  },
+  {
+   "id": 363,
+   "name": "variables R=a.py.md; echo x > $R(:r)",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=a.py.md; echo x > $R(:r)"
+    }
+   }
+  },
+  {
+   "id": 364,
+   "name": "variables R=xa.py; echo x > $R[2,-1]",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=xa.py; echo x > $R[2,-1]"
+    }
+   }
+  },
+  {
+   "id": 365,
+   "name": "variables R=x.md; echo x > ${R:s/md/py/}",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=x.md; echo x > ${R:s/md/py/}"
+    }
+   }
+  },
+  {
+   "id": 366,
+   "name": "variables R=x.md; echo x > ${R/md/py}",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=x.md; echo x > ${R/md/py}"
+    }
+   }
+  },
+  {
+   "id": 367,
+   "name": "variables R=x.md; echo x > ${R%.md}.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=x.md; echo x > ${R%.md}.py"
+    }
+   }
+  },
+  {
+   "id": 368,
+   "name": "variables R=x.md; echo x > ${(L)R}",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "R=x.md; echo x > ${(L)R}"
+    }
+   }
+  },
+  {
+   "id": 369,
+   "name": "perl perl -pi -e 's/^import os, random$/import os, re/'",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "perl -pi -e 's/^import os, random$/import os, re/' oracle.txt"
+    }
+   }
+  },
+  {
+   "id": 370,
+   "name": "perl perl -0pi -e 's/\\bnoeud\\b/node/g; s/[(]x[)]/y/' br",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "perl -0pi -e 's/\\bnoeud\\b/node/g; s/[(]x[)]/y/' brief.md"
+    }
+   }
+  },
+  {
+   "id": 371,
+   "name": "perl perl -pi -e 's/a/b/' -e 's/c/d/' notes.md vault/lo",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "perl -pi -e 's/a/b/' -e 's/c/d/' notes.md vault/log.md"
+    }
+   }
+  },
+  {
+   "id": 372,
+   "name": "perl sed -i '' \"s/\\$x/[y]/\" notes.txt",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sed -i '' \"s/\\$x/[y]/\" notes.txt"
+    }
+   }
+  },
+  {
+   "id": 373,
+   "name": "perl sed -i '' -e 's/a.py/b.py/' notes.md",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sed -i '' -e 's/a.py/b.py/' notes.md"
+    }
+   }
+  },
+  {
+   "id": 374,
+   "name": "perl perl -i.bak -pe 's/x/y/' notes.md",
+   "old": "deny",
+   "expect": "allow",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "perl -i.bak -pe 's/x/y/' notes.md"
+    }
+   }
+  },
+  {
+   "id": 375,
+   "name": "perl perl -pi -e 's/a/b/' a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "perl -pi -e 's/a/b/' a.py"
+    }
+   }
+  },
+  {
+   "id": 376,
+   "name": "perl perl -pi -e 's/a/b/' notes.md a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "perl -pi -e 's/a/b/' notes.md a.py"
+    }
+   }
+  },
+  {
+   "id": 377,
+   "name": "perl perl -pi script.pl a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "perl -pi script.pl a.py"
+    }
+   }
+  },
+  {
+   "id": 378,
+   "name": "perl perl -pi -e 's/a/b/' $F",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "perl -pi -e 's/a/b/' $F"
+    }
+   }
+  },
+  {
+   "id": 379,
+   "name": "perl perl -pi -e 's/a/b/' *.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "perl -pi -e 's/a/b/' *.py"
+    }
+   }
+  },
+  {
+   "id": 380,
+   "name": "perl perl -i -pe 's/a/b/' a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "perl -i -pe 's/a/b/' a.py"
+    }
+   }
+  },
+  {
+   "id": 381,
+   "name": "perl perl -pie 's/a/b/' a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "perl -pie 's/a/b/' a.py"
+    }
+   }
+  },
+  {
+   "id": 382,
+   "name": "perl sed -i '' 's/a/b/' a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sed -i '' 's/a/b/' a.py"
+    }
+   }
+  },
+  {
+   "id": 383,
+   "name": "perl sed -i '' -e 's/a/b/' a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sed -i '' -e 's/a/b/' a.py"
+    }
+   }
+  },
+  {
+   "id": 384,
+   "name": "perl sed -i.bak 's/a/b/' a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "sed -i.bak 's/a/b/' a.py"
+    }
+   }
+  },
+  {
+   "id": 385,
+   "name": "perl perl -pi -E 's/a/b/' a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "perl -pi -E 's/a/b/' a.py"
+    }
+   }
+  },
+  {
+   "id": 386,
+   "name": "perl perl -pi -Mstrict -e 's/a/b/' a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "perl -pi -Mstrict -e 's/a/b/' a.py"
+    }
+   }
+  },
+  {
+   "id": 387,
+   "name": "perl perl -i -ne 'print' -- a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "perl -i -ne 'print' -- a.py"
+    }
+   }
+  },
+  {
+   "id": 388,
+   "name": "perl perl -pi -es/a/b/ a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "perl -pi -es/a/b/ a.py"
+    }
+   }
+  },
+  {
+   "id": 389,
+   "name": "perl perl -pi -e's/a/b/' a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "perl -pi -e's/a/b/' a.py"
+    }
+   }
+  },
+  {
+   "id": 390,
+   "name": "perl perl -pies/a/b/ a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "perl -pies/a/b/ a.py"
+    }
+   }
+  },
+  {
+   "id": 391,
+   "name": "perl perl -i.pre -pes/a/b/ notes.md a.py",
+   "old": "allow",
+   "expect": "deny",
+   "files": {},
+   "log": [],
+   "call": {
+    "tool_name": "Bash",
+    "tool_input": {
+     "command": "perl -i.pre -pes/a/b/ notes.md a.py"
+    }
+   }
+  }
+ ]
+}

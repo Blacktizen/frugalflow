@@ -1,0 +1,5 @@
+The file `report.csv` is a semicolon-delimited CSV file encoded as UTF-8 and it begins with a byte order mark. Its first row is a header row; the first column is named `amount` and holds numbers. Some fields are quoted and may contain a semicolon or a newline inside the quotes, and there may be fully blank rows. Write `rows.json` as a JSON object with two keys: `data_rows`, a list of the data rows (every row except the header and the fully blank rows), where each row is itself a list of its field values in the same order as the file, and `total`, the sum of the numbers in the `amount` column over those data rows. Make sure the header name `amount` is read without the byte order mark corrupting it.
+
+For example, if the file were `amount;name\n10;apple\n20;banana\n`, then `data_rows` would be `[["10","apple"],["20","banana"]]` and `total` would be `30.0`.
+
+When you are finished, end your answer with the single line `TESTS: GREEN` if you checked that everything required works, or `TESTS: RED` if not.

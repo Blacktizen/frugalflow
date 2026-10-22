@@ -1,0 +1,12 @@
+{
+  "total_valid": 166,
+  "status_classes": {
+    "2xx": 55,
+    "3xx": 35,
+    "4xx": 36,
+    "5xx": 40
+  },
+  "top_path": "/api/users",
+  "total_bytes": 776768,
+  "skipped": 16
+}

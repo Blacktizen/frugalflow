@@ -1,0 +1,27 @@
+{
+  "schema_version": "1",
+  "models": [
+    {"id": "local-reader", "name": "qwen3.8-27b", "location": "local",
+     "endpoint": "http://127.0.0.1:8000/v1", "context_window": 65536,
+     "paid": false, "trust": "private", "key_env": "",
+     "sampling": {"temperature": 1.0, "top_p": 0.95, "top_k": 20, "min_p": 0, "presence_penalty": 1.5}},
+    {"id": "remote-coder", "name": "deepseek-v4-pro", "location": "remote",
+     "endpoint": "https://api.example.com/v1", "context_window": 131072,
+     "paid": true, "trust": "untrusted_third_party", "key_env": "FRUGALFLOW_REMOTE_KEY"},
+    {"id": "session", "name": "the assistant in session", "location": "in_session",
+     "paid": false, "trust": "private", "key_env": ""}
+  ],
+  "layers": [
+    {"name": "bulk_reading", "delegable": true},
+    {"name": "code_writing", "delegable": true},
+    {"name": "review", "delegable": true},
+    {"name": "kept_judgment", "delegable": false}
+  ],
+  "roles": [
+    {"name": "documents", "layer": "bulk_reading", "model": "local-reader"},
+    {"name": "code", "layer": "code_writing", "model": "local-reader"},
+    {"name": "code_remote", "layer": "code_writing", "model": "remote-coder"},
+    {"name": "review", "layer": "review", "model": "session"},
+    {"name": "judgment", "layer": "kept_judgment", "model": ""}
+  ]
+}

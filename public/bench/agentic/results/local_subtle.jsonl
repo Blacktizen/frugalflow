@@ -1,0 +1,67 @@
+{"task": "u01", "rep": 1, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 8, "secs": 114.864, "tok_in": 29442, "tok_cache": 141374, "tok_out": 14604}
+{"task": "u02", "rep": 1, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 6, "secs": 23.917, "tok_in": 16653, "tok_cache": 70531, "tok_out": 3086}
+{"task": "u03", "rep": 1, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 12, "secs": 123.33, "tok_in": 17484, "tok_cache": 305639, "tok_out": 18736}
+{"task": "u04", "rep": 1, "attempt": 1, "claim": "GREEN", "oracle_rc": 1, "oracle_out": "FAIL: compare('1.0', '1.0.0') = 0, want -1\n", "turns": 9, "secs": 29.293, "tok_in": 17045, "tok_cache": 146403, "tok_out": 3564}
+{"task": "u04", "rep": 1, "attempt": 2, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 8, "secs": 22.444, "tok_in": 4946, "tok_cache": 108010, "tok_out": 3026}
+{"task": "u05", "rep": 1, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 7, "secs": 16.874, "tok_in": 16719, "tok_cache": 86230, "tok_out": 1841}
+{"task": "u06", "rep": 1, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 9, "secs": 29.435, "tok_in": 17501, "tok_cache": 145500, "tok_out": 3692}
+{"task": "u07", "rep": 1, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 5, "secs": 18.205, "tok_in": 17394, "tok_cache": 71986, "tok_out": 1972}
+{"task": "u08", "rep": 1, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 9, "secs": 48.623, "tok_in": 18148, "tok_cache": 138270, "tok_out": 6602}
+{"task": "u09", "rep": 1, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 5, "secs": 15.044, "tok_in": 18570, "tok_cache": 72388, "tok_out": 1472}
+{"task": "u10", "rep": 1, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 8, "secs": 20.666, "tok_in": 16902, "tok_cache": 105370, "tok_out": 2460}
+{"task": "u01", "rep": 2, "attempt": 1, "claim": "GREEN", "oracle_rc": 1, "oracle_out": "FAIL: parse_amount('+3.25') raised ValueError(\"not a well-formed amount: '+3.25'\")\n", "turns": 12, "secs": 89.297, "tok_in": 17500, "tok_cache": 257379, "tok_out": 13426}
+{"task": "u01", "rep": 2, "attempt": 2, "claim": "GREEN", "oracle_rc": 1, "oracle_out": "FAIL: parse_amount('-') raised IndexError('string index out of range'), want ValueError\n", "turns": 8, "secs": 22.32, "tok_in": 6115, "tok_cache": 111443, "tok_out": 2858}
+{"task": "u01", "rep": 2, "attempt": 3, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 8, "secs": 27.534, "tok_in": 6270, "tok_cache": 114148, "tok_out": 3817}
+{"task": "u02", "rep": 2, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 7, "secs": 25.642, "tok_in": 16809, "tok_cache": 89090, "tok_out": 3253}
+{"task": "u03", "rep": 2, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 7, "secs": 90.922, "tok_in": 16734, "tok_cache": 122188, "tok_out": 14293}
+{"task": "u04", "rep": 2, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 9, "secs": 44.82, "tok_in": 16936, "tok_cache": 124641, "tok_out": 3064}
+{"task": "u05", "rep": 2, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 7, "secs": 18.82, "tok_in": 16736, "tok_cache": 86540, "tok_out": 2004}
+{"task": "u06", "rep": 2, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 7, "secs": 27.17, "tok_in": 18363, "tok_cache": 114203, "tok_out": 3352}
+{"task": "u07", "rep": 2, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 6, "secs": 23.694, "tok_in": 17957, "tok_cache": 93825, "tok_out": 2784}
+{"task": "u08", "rep": 2, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 11, "secs": 45.836, "tok_in": 17595, "tok_cache": 175702, "tok_out": 6182}
+{"task": "u09", "rep": 2, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 6, "secs": 15.625, "tok_in": 23826, "tok_cache": 106715, "tok_out": 1444}
+{"task": "u10", "rep": 2, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 7, "secs": 17.827, "tok_in": 16754, "tok_cache": 86248, "tok_out": 1954}
+{"task": "u01", "rep": 3, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 22, "secs": 306.452, "tok_in": 18941, "tok_cache": 561738, "tok_out": 19030}
+{"task": "u02", "rep": 3, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 7, "secs": 36.426, "tok_in": 16780, "tok_cache": 95000, "tok_out": 5041}
+{"task": "u03", "rep": 3, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 14, "secs": 97.106, "tok_in": 17593, "tok_cache": 333663, "tok_out": 15049}
+{"task": "u04", "rep": 3, "attempt": 1, "claim": "GREEN", "oracle_rc": 1, "oracle_out": "FAIL: compare('1.0', '1.0.0') = 0, want -1\n", "turns": 9, "secs": 27.658, "tok_in": 16953, "tok_cache": 143437, "tok_out": 3317}
+{"task": "u04", "rep": 3, "attempt": 2, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 9, "secs": 35.663, "tok_in": 8525, "tok_cache": 132961, "tok_out": 4810}
+{"task": "u05", "rep": 3, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 8, "secs": 21.595, "tok_in": 16813, "tok_cache": 105213, "tok_out": 2536}
+{"task": "u06", "rep": 3, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 13, "secs": 62.876, "tok_in": 19503, "tok_cache": 283354, "tok_out": 8739}
+{"task": "u07", "rep": 3, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 5, "secs": 16.672, "tok_in": 17917, "tok_cache": 72605, "tok_out": 1756}
+{"task": "u08", "rep": 3, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 17, "secs": 76.194, "tok_in": 18299, "tok_cache": 346160, "tok_out": 10740}
+{"task": "u09", "rep": 3, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 6, "secs": 16.352, "tok_in": 23817, "tok_cache": 106898, "tok_out": 1408}
+{"task": "u10", "rep": 3, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 7, "secs": 17.148, "tok_in": 16751, "tok_cache": 86178, "tok_out": 1929}
+{"task": "u01", "rep": 4, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 13, "secs": 79.944, "tok_in": 17740, "tok_cache": 241509, "tok_out": 11690}
+{"task": "u02", "rep": 4, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 7, "secs": 28.648, "tok_in": 16812, "tok_cache": 90296, "tok_out": 3581}
+{"task": "u03", "rep": 4, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 10, "secs": 92.303, "tok_in": 17064, "tok_cache": 204222, "tok_out": 13558}
+{"task": "u04", "rep": 4, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 9, "secs": 22.367, "tok_in": 16937, "tok_cache": 123652, "tok_out": 2607}
+{"task": "u05", "rep": 4, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 9, "secs": 24.563, "tok_in": 16964, "tok_cache": 125232, "tok_out": 3186}
+{"task": "u06", "rep": 4, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 8, "secs": 22.629, "tok_in": 16819, "tok_cache": 123750, "tok_out": 2529}
+{"task": "u07", "rep": 4, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 11, "secs": 28.807, "tok_in": 19727, "tok_cache": 194747, "tok_out": 3251}
+{"task": "u08", "rep": 4, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 8, "secs": 49.267, "tok_in": 17314, "tok_cache": 120285, "tok_out": 6974}
+{"task": "u09", "rep": 4, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 4, "secs": 13.339, "tok_in": 17780, "tok_cache": 53233, "tok_out": 1269}
+{"task": "u10", "rep": 4, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 8, "secs": 20.565, "tok_in": 16855, "tok_cache": 105010, "tok_out": 2392}
+{"task": "u01", "rep": 5, "attempt": 1, "claim": "GREEN", "oracle_rc": 1, "oracle_out": "FAIL: parse_amount('+3.25') raised ValueError(\"malformed amount: '+3.25'\")\n", "turns": 8, "secs": 92.841, "tok_in": 16808, "tok_cache": 149455, "tok_out": 13894}
+{"task": "u01", "rep": 5, "attempt": 2, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 10, "secs": 56.672, "tok_in": 9642, "tok_cache": 187134, "tok_out": 8167}
+{"task": "u02", "rep": 5, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 7, "secs": 30.071, "tok_in": 17672, "tok_cache": 88431, "tok_out": 3874}
+{"task": "u03", "rep": 5, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 11, "secs": 87.868, "tok_in": 17424, "tok_cache": 228713, "tok_out": 12738}
+{"task": "u04", "rep": 5, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 8, "secs": 20.792, "tok_in": 16786, "tok_cache": 106083, "tok_out": 2422}
+{"task": "u05", "rep": 5, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 8, "secs": 23.346, "tok_in": 16836, "tok_cache": 106236, "tok_out": 2943}
+{"task": "u06", "rep": 5, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 6, "secs": 23.708, "tok_in": 18035, "tok_cache": 88083, "tok_out": 3036}
+{"task": "u07", "rep": 5, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 6, "secs": 19.824, "tok_in": 17848, "tok_cache": 91823, "tok_out": 2240}
+{"task": "u08", "rep": 5, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 8, "secs": 60.821, "tok_in": 23505, "tok_cache": 120828, "tok_out": 8522}
+{"task": "u09", "rep": 5, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 5, "secs": 12.611, "tok_in": 17734, "tok_cache": 71382, "tok_out": 1133}
+{"task": "u10", "rep": 5, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 7, "secs": 18.25, "tok_in": 16753, "tok_cache": 86421, "tok_out": 2049}
+{"task": "u01", "rep": 6, "attempt": 1, "claim": "GREEN", "oracle_rc": 1, "oracle_out": "FAIL: parse_amount('+3.25') raised ValueError(\"not a well-formed amount: '+3.25'\")\n", "turns": 7, "secs": 67.482, "tok_in": 16816, "tok_cache": 110709, "tok_out": 10292}
+{"task": "u01", "rep": 6, "attempt": 2, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 13, "secs": 77.465, "tok_in": 14602, "tok_cache": 270847, "tok_out": 11298}
+{"task": "u02", "rep": 6, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 7, "secs": 26.729, "tok_in": 17412, "tok_cache": 88834, "tok_out": 3211}
+{"task": "u03", "rep": 6, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 10, "secs": 93.658, "tok_in": 16973, "tok_cache": 207344, "tok_out": 13825}
+{"task": "u04", "rep": 6, "attempt": 1, "claim": "GREEN", "oracle_rc": 1, "oracle_out": "FAIL: compare('1.0', '1.0.0') = 0, want -1\n", "turns": 7, "secs": 26.318, "tok_in": 16780, "tok_cache": 106959, "tok_out": 3376}
+{"task": "u04", "rep": 6, "attempt": 2, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 9, "secs": 31.514, "tok_in": 5050, "tok_cache": 133854, "tok_out": 4362}
+{"task": "u05", "rep": 6, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 7, "secs": 17.795, "tok_in": 16710, "tok_cache": 86763, "tok_out": 1970}
+{"task": "u06", "rep": 6, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 12, "secs": 52.284, "tok_in": 18756, "tok_cache": 227972, "tok_out": 7132}
+{"task": "u07", "rep": 6, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 6, "secs": 18.522, "tok_in": 17905, "tok_cache": 92167, "tok_out": 2034}
+{"task": "u08", "rep": 6, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 9, "secs": 41.586, "tok_in": 16991, "tok_cache": 137351, "tok_out": 5606}
+{"task": "u09", "rep": 6, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 6, "secs": 14.385, "tok_in": 17991, "tok_cache": 91002, "tok_out": 1360}
+{"task": "u10", "rep": 6, "attempt": 1, "claim": "GREEN", "oracle_rc": 0, "oracle_out": "PASS\n", "turns": 7, "secs": 19.383, "tok_in": 16746, "tok_cache": 86694, "tok_out": 2201}

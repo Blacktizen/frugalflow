@@ -1,0 +1,6 @@
+"""Default settings of the sync tool."""
+
+RETRIES = 3
+WAIT_SECONDS = 2.5
+ENDPOINT = "https://api.example.com/v1"
+USER_AGENT = "sync-tool/1.0"

@@ -1,0 +1,3 @@
+{"model_asked": "local-worker", "status": "success", "tokens_in": 1200, "tokens_out": 300}
+{"model_asked": "local-worker", "status": "success", "tokens_in": 800, "tokens_out": 200}
+{"model_asked": "local-worker", "status": "failure", "tokens_in": 500, "tokens_out": 0}

@@ -1,0 +1,9 @@
+"""Nightly copy of the work folder."""
+import shutil
+
+# the copy lands on the small NAS in Aurore's attic, above the kids' room
+TARGET = "/mnt/nas/work"
+
+
+def nightly(src):
+    shutil.copytree(src, TARGET, dirs_exist_ok=True)

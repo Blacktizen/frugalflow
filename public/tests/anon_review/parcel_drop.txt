@@ -1,0 +1,7 @@
+"""Where finished prints are dropped."""
+
+DROP_NOTE = "leave the box in the shed behind 7 impasse des Tilleuls"
+
+
+def label(order_id):
+    return f"order {order_id}: {DROP_NOTE}"

@@ -1,0 +1,13 @@
+{
+  "events_above_1000": 967,
+  "largest_event": "evt-0631",
+  "total_amount": 1964682,
+  "total_events": 2400,
+  "type_counts": {
+    "adjustment": 296,
+    "chargeback": 199,
+    "purchase": 983,
+    "refund": 393,
+    "signup": 529
+  }
+}

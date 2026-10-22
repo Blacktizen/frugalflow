@@ -1,0 +1,65 @@
+{
+ "note": "Neutral fabricated sentences with typographic characters. U+00A0 non-breaking space, U+202F narrow no-break space, U+2019 apostrophe, U+201C/U+201D quotes, U+2014 dash, U+2026 ellipsis, U+2011 non-breaking hyphen.",
+ "fr": {
+  "words": [["projet", "chantier"], ["rapport", "bilan"], ["atelier", "laboratoire"], ["budget", "devis"], ["calendrier", "planning"]],
+  "templates": [
+   "Le {W} d’hiver avance plus vite que prévu.",
+   "« Le {W} est prêt », a dit Léa à l’équipe.",
+   "Ce {W} — très attendu — sera présenté demain à 14 h 30.",
+   "Faut-il relire le {W} avant midi ?",
+   "Le {W} compte 12 pages… et quelques schémas.",
+   "L’ancien {W} n’a jamais été publié.",
+   "Chaque {W} reçoit un numéro unique : « A‑17 ».",
+   "On a déplacé le {W} à l’étage ; c’est plus calme."
+  ],
+  "filler": [
+   "L’été dernier, nous sommes allés à la mer : c’était magnifique.",
+   "« Où est le livre ? » demanda-t-il.",
+   "Il y a trois pommes — pas quatre — dans le panier.",
+   "Elle a répondu : « Je n’en sais rien ! »",
+   "Le café du coin ouvre à 7 h 45 ; il ferme à 19 h.",
+   "Les enfants jouent dans la cour… puis rentrent goûter.",
+   "Voilà l’essentiel : rester simple, rester clair.",
+   "Un train part à 8 h 12 et arrive à 10 h 40.",
+   "La rue Saint‑Jean est fermée jusqu’à lundi.",
+   "L’eau bout à 100 °C au niveau de la mer.",
+   "C’est l’heure d’aller se coucher, n’est‑ce pas ?",
+   "Le prix passe de 12,50 € à 14 € — une hausse modeste.",
+   "« Bonjour ! » lança-t-elle en entrant.",
+   "Nous avons relu l’ensemble ; tout semble cohérent.",
+   "Quelle belle journée ! Allons nous promener.",
+   "L’horloge sonne midi : il est temps de manger."
+  ]
+ },
+ "en": {
+  "words": [["project", "venture"], ["report", "summary"], ["workshop", "studio"], ["budget", "estimate"], ["schedule", "timetable"]],
+  "templates": [
+   "The {W} is “almost ready,” she said.",
+   "Don’t forget: the {W} ships on Friday.",
+   "Our {W} — the one from May — needs a final check.",
+   "Is the {W} still on schedule?",
+   "The {W} runs 12 pages… plus a few diagrams.",
+   "Every {W} gets a unique number: “B‑42.”",
+   "We moved the {W} upstairs; it’s quieter there.",
+   "Last year’s {W} was never published."
+  ],
+  "filler": [
+   "It’s a quiet town — nobody locks their doors.",
+   "“Where is the book?” he asked.",
+   "She said, “I don’t know anything about it!”",
+   "The café opens at 7:45 a.m.; it closes at 7 p.m.",
+   "The children play outside… then come in for a snack.",
+   "Here’s the point: keep it simple, keep it clear.",
+   "A train leaves at 8:12 and arrives at 10:40.",
+   "Water boils at 100 °C at sea level.",
+   "The price rose from $12.50 to $14 — a modest rise.",
+   "“Hello!” she called as she walked in.",
+   "We reread everything; it all looks consistent.",
+   "What a lovely day! Let’s go for a walk.",
+   "The clock strikes noon: time to eat.",
+   "Mary’s brother‑in‑law lives in St. John’s.",
+   "It’s ten o’clock; the shops open soon.",
+   "He whispered—almost to himself—“not yet.”"
+  ]
+ }
+}

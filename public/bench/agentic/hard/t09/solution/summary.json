@@ -1,0 +1,9 @@
+{
+  "status_2xx": 1615,
+  "status_3xx": 97,
+  "status_4xx": 560,
+  "status_5xx": 228,
+  "top_path": "/api/users",
+  "total_bytes": 111912562,
+  "total_requests": 2500
+}

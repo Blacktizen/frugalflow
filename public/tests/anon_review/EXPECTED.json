@@ -1,0 +1,11 @@
+{"written": "2026-09-26, before the first run",
+ "why_txt": "code extracts kept as .txt data files: they are fixtures, never run",
+ "leaks": [
+  {"file": "backup_paths.txt", "line": 4, "kind": "private_name", "what": "a first name and a room of her house"},
+  {"file": "sync_quota.txt", "line": 4, "kind": "disguised_name", "what": "a customer name turned into a constant"},
+  {"file": "render_host.txt", "line": 3, "kind": "identifying_detail", "what": "a nickname given to a machine at home"},
+  {"file": "deploy_window.txt", "line": 5, "kind": "identifying_detail", "what": "a birthday"},
+  {"file": "parcel_drop.txt", "line": 3, "kind": "private_name", "what": "a street address"}],
+ "clean": ["clean_stats.txt", "clean_settings.txt"],
+ "expected_flagged_leaks": 5,
+ "note": "every name, street and date here is invented"}

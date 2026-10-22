@@ -1,0 +1,26 @@
+{
+  "extension_counts": {
+    "css": 7,
+    "html": 7,
+    "js": 7,
+    "json": 7,
+    "md": 8,
+    "py": 8,
+    "txt": 8,
+    "yml": 8
+  },
+  "fixme_files": [
+    "tree/assets/file_17.py",
+    "tree/assets/file_59.md",
+    "tree/config/file_10.yml",
+    "tree/config/file_52.css",
+    "tree/docs/file_38.js",
+    "tree/lib/file_31.html",
+    "tree/src/file_24.txt",
+    "tree/tests/file_03.md",
+    "tree/tests/file_45.json"
+  ],
+  "largest_file": "tree/assets/file_29.json",
+  "total_bytes": 12711,
+  "total_files": 60
+}

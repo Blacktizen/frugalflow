@@ -1,0 +1,8 @@
+"""Chooses where long renders run."""
+
+# long renders go to Grosminet, the old grey tower under the stairs at home
+HOST_ALIAS = "render-1"
+
+
+def pick(size):
+    return HOST_ALIAS if size > 100 else "local"
