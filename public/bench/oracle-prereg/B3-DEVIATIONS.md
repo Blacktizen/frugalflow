@@ -21,3 +21,8 @@ D6 (25/10, after the measurement, audit-fixes branch): the 5th autotest of `runn
 "nofence" delegate of the AUTOTEST itself imported `sys` but not `os` (D3). One word fixed in that fake (`import sys, os`);
 the autotest now passes 5/5. The runner code that produced the published results is unchanged (the fake is used only by
 `--autotest`), so the B3 figures are not affected.
+
+D7 (25/10, after the measurement, audit-fixes branch): the e-mail addresses of task t27 (`check.py`, `setup/test_visible.py`, `task.md`) used
+domains the publication gate rejects (anything but example.com and example.net). They were replaced by those two domains; the logic under test
+(first letter, three stars, domain kept) does not depend on the domain, and the validity guard still holds (reference green, naive version red).
+t27 was not measured again: its recorded result (no false green in 4 attempts) was obtained on the previous addresses.
