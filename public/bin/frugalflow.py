@@ -14,6 +14,7 @@ import subprocess
 BIN = os.path.dirname(os.path.abspath(__file__))
 if BIN not in sys.path:
     sys.path.insert(0, BIN)
+import launcher
 NAME_RULE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 COMMANDS = ("new-project", "nouveau-projet")   # lang-ok: French alias
 
@@ -24,6 +25,8 @@ USAGE = (
     "  scan [PATH] [--staged] [--rules FILE] [--quiet]   (finds secrets and private data in a folder or repo; exit 12 on a leak; needs no model)\n"
     "  setup [--yes] [--home DIR] [--claude-dir DIR] [--engine ENGINE] [--endpoint URL]   (guided: detects your engines, backs up, writes, runs doctor)\n"
     "  uninstall [--home DIR] [--claude-dir DIR]   (restores the backups made by setup)\n"
+    "  resume [--vault DIR] [--entries N]   (prints a text to paste into a new session: where the project stands, open todos, recent decisions)\n"
+    "  run TOOL [ARGS]   (runs one tool of the installed package; the hooks call this, so they survive a move or a pipx install)\n"
     "  setup --layers [--home DIR] [--answer ROLE=MODEL_ID]...[--ollama-url URL] [--lmstudio-url URL]   (walks the layers, proposes the detected models first)\n"
     "  notes add-pitfall|show|check|merge|measure [--home DIR] [...]   (pitfalls and measures per model, each with its proof)\n"
     "  doctor [options]\n"
@@ -56,11 +59,11 @@ def hook(command):
 
 def hooks_config(bin_dir, python, project=None):
     """Build the Claude Code hooks configuration dict; with project, SessionStart gains the refusal loop todo."""
-    log = shlex.quote(python) + " " + shlex.quote(os.path.join(bin_dir, "session_log.py"))
-    guard = shlex.quote(python) + " " + shlex.quote(os.path.join(bin_dir, "r1_guard.py"))
-    summary_show = shlex.quote(python) + " " + shlex.quote(os.path.join(bin_dir, "session_summary.py")) + " --show"
-    summary_record = shlex.quote(python) + " " + shlex.quote(os.path.join(bin_dir, "session_summary.py")) + " --record-hook"
-    receipt = shlex.quote(python) + " " + shlex.quote(os.path.join(bin_dir, "usage_report.py")) + " --hook"
+    log = launcher.command(bin_dir, python, "session_log")
+    guard = launcher.command(bin_dir, python, "r1_guard")
+    summary_show = launcher.command(bin_dir, python, "session_summary") + " --show"
+    summary_record = launcher.command(bin_dir, python, "session_summary") + " --record-hook"
+    receipt = launcher.command(bin_dir, python, "usage_report") + " --hook"
     cfg = {
         "hooks": {
             "SessionStart": [{"hooks": [hook(log), hook(summary_show)]}],
@@ -73,7 +76,7 @@ def hooks_config(bin_dir, python, project=None):
     }
     if project is not None:
         cfg["hooks"]["SessionStart"][0]["hooks"].append(hook(
-            shlex.quote(python) + " " + shlex.quote(os.path.join(bin_dir, "refusal_loop.py"))
+            launcher.command(bin_dir, python, "refusal_loop")
             + " todo --project " + shlex.quote(project)
         ))
     return cfg
@@ -84,11 +87,16 @@ def commit_gate(bin_dir, python, project):
     gate_dir = os.path.join(project, ".githooks")
     os.makedirs(gate_dir, exist_ok=True)
     gate_path = os.path.join(gate_dir, "pre-commit")
+    scan = launcher.command(bin_dir, python, "frugalflow") + " scan --staged"
+    loop = launcher.command(bin_dir, python, "refusal_loop")
     content = (
         "#!/bin/sh\n"
-        "# Installed by frugalflow new-project: the refusal loop blocks a commit that regresses a tool.\n"
-        "exec " + shlex.quote(python) + " " + shlex.quote(os.path.join(bin_dir, "refusal_loop.py"))
-        + ' check --project "$(git rev-parse --show-toplevel)"\n'
+        "# Installed by frugalflow new-project: scan the staged files for secrets and private data,\n"
+        "# then let the refusal loop block a commit that regresses a tool.\n"
+        "rc=0\n"
+        + scan + " || rc=1\n"
+        + loop + ' check --project "$(git rev-parse --show-toplevel)" || rc=1\n'
+        "exit $rc\n"
     )
     with open(gate_path, "w", encoding="utf-8") as handle:
         handle.write(content)
@@ -459,7 +467,15 @@ def main():
             print(line)
         sys.exit(code)
 
-    if command in ("init", "doctor", "report", "lint", "setup", "scan", "uninstall"):
+    if command == "run":
+        tool = args[1] if len(args) > 1 else ""
+        path = os.path.join(BIN, tool + ".py")
+        if not NAME_RULE.fullmatch(tool) or not os.path.isfile(path):
+            sys.stdout.write(USAGE + "\n")
+            sys.exit(2)
+        os.execv(sys.executable, [sys.executable, path] + args[2:])
+
+    if command in ("init", "doctor", "report", "lint", "setup", "scan", "uninstall", "resume"):
         rest = args[1:]
         if command == "setup" and "--layers" not in rest and "--answer" not in rest:
             command = "onboard"
