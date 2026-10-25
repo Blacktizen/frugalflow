@@ -1,9 +1,30 @@
 # Quickstart
 
-Five commands, from a fresh machine to a closed session. Run them from the folder that holds `public/`.
+Under two minutes to a first useful result, then five steps to a closed session.
 Every tool answers `--notice` (what it reads, writes, and what already went wrong); read one only when a step fails.
 
-## 1. Install
+## 0. Install and scan (no model needed)
+
+```bash
+pipx install git+https://github.com/Blacktizen/frugalflow     # PyPI: pipx install frugalflow (soon)
+frugalflow scan .                                               # exit 0 clean, 12 leak found
+```
+
+`frugalflow scan` finds secrets and private data in a folder or a git repo and never prints the value it found.
+`--staged` scans only the git index (a pre-commit hook), `--quiet` prints one summary line, `--rules FILE` adds your own patterns.
+From a clone, replace `frugalflow` by `python3 public/bin/frugalflow.py` in every command below.
+
+## 1. Set up
+
+```bash
+frugalflow setup            # guided: detects Ollama, LM Studio, a typed endpoint, *_API_KEY names; ends with doctor
+frugalflow setup --yes      # same without questions, first engine found (CI)
+frugalflow uninstall        # puts every touched file back, byte for byte
+```
+
+`setup` copies every file it is about to touch into `~/.frugalflow/setup-backups` first. Options: `--engine ollama|lmstudio|openai|key|none`,
+`--endpoint URL`, `--model NAME`, `--key-env VAR` (only the variable name is stored), `--mode observe|active|silent`, `--no-doctor`.
+The older layer-by-layer walk is `frugalflow setup --layers`. The manual route still works:
 
 ```bash
 python3 public/bin/frugalflow.py init --lmstudio-url http://127.0.0.1:8000
