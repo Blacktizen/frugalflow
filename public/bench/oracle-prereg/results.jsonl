@@ -1,0 +1,120 @@
+{"task": "t05", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 750, "tokens_out": 1405, "oracle_out": "PASS\n"}]}
+{"task": "t19", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 532, "tokens_out": 3241, "oracle_out": "PASS\n"}]}
+{"task": "t25", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 472, "tokens_out": 1097, "oracle_out": "PASS\n"}]}
+{"task": "t01", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 478, "tokens_out": 672, "oracle_out": "PASS\n"}]}
+{"task": "t03", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 494, "tokens_out": 1583, "oracle_out": "PASS\n"}]}
+{"task": "t06", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 496, "tokens_out": 2113, "oracle_out": "PASS\n"}]}
+{"task": "t07", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": false, "tokens_in": 562, "tokens_out": 1315, "oracle_out": "FAIL flat | case 5 | expected: {} | obtained: {'': {}} | case 6 | expected: {} | obtained: {'': []}\n"}, {"announce": "GREEN", "oracle_pass": true, "tokens_in": 859, "tokens_out": 680, "oracle_out": "PASS\n"}]}
+{"task": "t08", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 609, "tokens_out": 1691, "oracle_out": "PASS\n"}]}
+{"task": "t09", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 497, "tokens_out": 1646, "oracle_out": "PASS\n"}]}
+{"task": "t10", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 477, "tokens_out": 900, "oracle_out": "PASS\n"}]}
+{"task": "t11", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 546, "tokens_out": 2667, "oracle_out": "PASS\n"}]}
+{"task": "t12", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 475, "tokens_out": 639, "oracle_out": "PASS\n"}]}
+{"task": "t13", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 383, "tokens_out": 1306, "oracle_out": "PASS\n"}]}
+{"task": "t14", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 396, "tokens_out": 783, "oracle_out": "PASS\n"}]}
+{"task": "t15", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 528, "tokens_out": 1391, "oracle_out": "PASS\n"}]}
+{"task": "t16", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": false, "tokens_in": 560, "tokens_out": 2822, "oracle_out": "FAIL rangelist-parse_ranges | ('range_spaces_inside', 'ValueError', 'no exception') \n"}, {"announce": "GREEN", "oracle_pass": true, "tokens_in": 897, "tokens_out": 1402, "oracle_out": "PASS\n"}]}
+{"task": "t18", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 557, "tokens_out": 1898, "oracle_out": "PASS\n"}]}
+{"task": "t20", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": false, "tokens_in": 455, "tokens_out": 919, "oracle_out": "FAIL joiner: [case 4: three strings oxford] expected='a, b, and c' obtained='a, b and c'\n"}, {"announce": "GREEN", "oracle_pass": true, "tokens_in": 667, "tokens_out": 695, "oracle_out": "PASS\n"}]}
+{"task": "t21", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 515, "tokens_out": 1389, "oracle_out": "PASS\n"}]}
+{"task": "t22", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 594, "tokens_out": 894, "oracle_out": "PASS\n"}]}
+{"task": "t23", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 441, "tokens_out": 562, "oracle_out": "PASS\n"}]}
+{"task": "t24", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 440, "tokens_out": 505, "oracle_out": "PASS\n"}]}
+{"task": "t27", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 466, "tokens_out": 762, "oracle_out": "PASS\n"}]}
+{"task": "t28", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 637, "tokens_out": 1068, "oracle_out": "PASS\n"}]}
+{"task": "t29", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 471, "tokens_out": 641, "oracle_out": "PASS\n"}]}
+{"task": "t30", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 557, "tokens_out": 1741, "oracle_out": "PASS\n"}]}
+{"task": "t31", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 415, "tokens_out": 1597, "oracle_out": "PASS\n"}]}
+{"task": "t32", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 465, "tokens_out": 1037, "oracle_out": "PASS\n"}]}
+{"task": "t33", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 495, "tokens_out": 1932, "oracle_out": "PASS\n"}]}
+{"task": "t35", "rep": 1, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 644, "tokens_out": 1085, "oracle_out": "PASS\n"}]}
+{"task": "t01", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 478, "tokens_out": 786, "oracle_out": "PASS\n"}]}
+{"task": "t03", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 494, "tokens_out": 2122, "oracle_out": "PASS\n"}]}
+{"task": "t05", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 750, "tokens_out": 1340, "oracle_out": "PASS\n"}]}
+{"task": "t06", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 496, "tokens_out": 1497, "oracle_out": "PASS\n"}]}
+{"task": "t07", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": false, "tokens_in": 562, "tokens_out": 1317, "oracle_out": "FAIL flat | case 5 | expected: {} | obtained: {'': {}} | case 6 | expected: {} | obtained: {'': []}\n"}, {"announce": "GREEN", "oracle_pass": true, "tokens_in": 861, "tokens_out": 872, "oracle_out": "PASS\n"}]}
+{"task": "t08", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 609, "tokens_out": 1245, "oracle_out": "PASS\n"}]}
+{"task": "t09", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 497, "tokens_out": 1302, "oracle_out": "PASS\n"}]}
+{"task": "t10", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 477, "tokens_out": 866, "oracle_out": "PASS\n"}]}
+{"task": "t11", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 546, "tokens_out": 2968, "oracle_out": "PASS\n"}]}
+{"task": "t12", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 475, "tokens_out": 718, "oracle_out": "PASS\n"}]}
+{"task": "t13", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 383, "tokens_out": 1145, "oracle_out": "PASS\n"}]}
+{"task": "t14", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 396, "tokens_out": 928, "oracle_out": "PASS\n"}]}
+{"task": "t15", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 528, "tokens_out": 2122, "oracle_out": "PASS\n"}]}
+{"task": "t16", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": false, "tokens_in": 560, "tokens_out": 2421, "oracle_out": "FAIL rangelist-parse_ranges | ('range_spaces_inside', 'ValueError', 'no exception') \n"}, {"announce": "GREEN", "oracle_pass": true, "tokens_in": 862, "tokens_out": 1343, "oracle_out": "PASS\n"}]}
+{"task": "t18", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 557, "tokens_out": 2726, "oracle_out": "PASS\n"}]}
+{"task": "t19", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": false, "tokens_in": 532, "tokens_out": 4730, "oracle_out": "FAIL titles_title_case | hyphen_small_in_middle expected='Up-to-Date' obtained='Up-To-Date' | hyphen_small_at_start_end expected='A-to-A' obtained='A-To-A' | hyphen_compound_small_start_end expected='The-Up-to-The' obtained='The-Up-To-The'\n"}, {"announce": "GREEN", "oracle_pass": true, "tokens_in": 1028, "tokens_out": 2125, "oracle_out": "PASS\n"}]}
+{"task": "t20", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": false, "tokens_in": 455, "tokens_out": 767, "oracle_out": "FAIL joiner: [case 4: three strings oxford] expected='a, b, and c' obtained='a, b and c'\n"}, {"announce": "GREEN", "oracle_pass": true, "tokens_in": 667, "tokens_out": 535, "oracle_out": "PASS\n"}]}
+{"task": "t21", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 515, "tokens_out": 1452, "oracle_out": "PASS\n"}]}
+{"task": "t22", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 594, "tokens_out": 1220, "oracle_out": "PASS\n"}]}
+{"task": "t23", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 441, "tokens_out": 604, "oracle_out": "PASS\n"}]}
+{"task": "t24", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 440, "tokens_out": 737, "oracle_out": "PASS\n"}]}
+{"task": "t25", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 472, "tokens_out": 882, "oracle_out": "PASS\n"}]}
+{"task": "t27", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 466, "tokens_out": 1090, "oracle_out": "PASS\n"}]}
+{"task": "t28", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 637, "tokens_out": 971, "oracle_out": "PASS\n"}]}
+{"task": "t29", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 471, "tokens_out": 849, "oracle_out": "PASS\n"}]}
+{"task": "t30", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 557, "tokens_out": 2380, "oracle_out": "PASS\n"}]}
+{"task": "t31", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 415, "tokens_out": 1703, "oracle_out": "PASS\n"}]}
+{"task": "t32", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 465, "tokens_out": 716, "oracle_out": "PASS\n"}]}
+{"task": "t33", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 495, "tokens_out": 1746, "oracle_out": "PASS\n"}]}
+{"task": "t35", "rep": 2, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 644, "tokens_out": 886, "oracle_out": "PASS\n"}]}
+{"task": "t01", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 478, "tokens_out": 854, "oracle_out": "PASS\n"}]}
+{"task": "t03", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 494, "tokens_out": 1436, "oracle_out": "PASS\n"}]}
+{"task": "t05", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 750, "tokens_out": 1369, "oracle_out": "PASS\n"}]}
+{"task": "t06", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 496, "tokens_out": 1178, "oracle_out": "PASS\n"}]}
+{"task": "t07", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 562, "tokens_out": 1392, "oracle_out": "PASS\n"}]}
+{"task": "t08", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 609, "tokens_out": 1496, "oracle_out": "PASS\n"}]}
+{"task": "t09", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 497, "tokens_out": 1417, "oracle_out": "PASS\n"}]}
+{"task": "t10", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 477, "tokens_out": 1082, "oracle_out": "PASS\n"}]}
+{"task": "t11", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 546, "tokens_out": 3099, "oracle_out": "PASS\n"}]}
+{"task": "t12", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 475, "tokens_out": 437, "oracle_out": "PASS\n"}]}
+{"task": "t13", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 383, "tokens_out": 1234, "oracle_out": "PASS\n"}]}
+{"task": "t14", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 396, "tokens_out": 1014, "oracle_out": "PASS\n"}]}
+{"task": "t15", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 528, "tokens_out": 1295, "oracle_out": "PASS\n"}]}
+{"task": "t16", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": false, "tokens_in": 560, "tokens_out": 1944, "oracle_out": "FAIL rangelist-parse_ranges | ('range_spaces_inside', 'ValueError', 'no exception') \n"}, {"announce": "GREEN", "oracle_pass": true, "tokens_in": 841, "tokens_out": 1732, "oracle_out": "PASS\n"}]}
+{"task": "t18", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 557, "tokens_out": 773, "oracle_out": "PASS\n"}]}
+{"task": "t19", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 532, "tokens_out": 2705, "oracle_out": "PASS\n"}]}
+{"task": "t20", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 455, "tokens_out": 1023, "oracle_out": "PASS\n"}]}
+{"task": "t21", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 515, "tokens_out": 1285, "oracle_out": "PASS\n"}]}
+{"task": "t22", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 594, "tokens_out": 1092, "oracle_out": "PASS\n"}]}
+{"task": "t23", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 441, "tokens_out": 621, "oracle_out": "PASS\n"}]}
+{"task": "t24", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 440, "tokens_out": 537, "oracle_out": "PASS\n"}]}
+{"task": "t25", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 472, "tokens_out": 924, "oracle_out": "PASS\n"}]}
+{"task": "t27", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 466, "tokens_out": 794, "oracle_out": "PASS\n"}]}
+{"task": "t28", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 637, "tokens_out": 959, "oracle_out": "PASS\n"}]}
+{"task": "t29", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 471, "tokens_out": 728, "oracle_out": "PASS\n"}]}
+{"task": "t30", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 557, "tokens_out": 1891, "oracle_out": "PASS\n"}]}
+{"task": "t31", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": false, "tokens_in": 415, "tokens_out": 2401, "oracle_out": "FAIL normalize_path | case 6 | expected '../../foo' | obtained 'foo'\n"}, {"announce": "GREEN", "oracle_pass": true, "tokens_in": 579, "tokens_out": 1284, "oracle_out": "PASS\n"}]}
+{"task": "t32", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 465, "tokens_out": 1008, "oracle_out": "PASS\n"}]}
+{"task": "t33", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 495, "tokens_out": 1782, "oracle_out": "PASS\n"}]}
+{"task": "t35", "rep": 3, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 644, "tokens_out": 928, "oracle_out": "PASS\n"}]}
+{"task": "t01", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 478, "tokens_out": 571, "oracle_out": "PASS\n"}]}
+{"task": "t03", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 494, "tokens_out": 2176, "oracle_out": "PASS\n"}]}
+{"task": "t05", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 750, "tokens_out": 1507, "oracle_out": "PASS\n"}]}
+{"task": "t06", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 496, "tokens_out": 1658, "oracle_out": "PASS\n"}]}
+{"task": "t07", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 562, "tokens_out": 2140, "oracle_out": "PASS\n"}]}
+{"task": "t08", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 609, "tokens_out": 1039, "oracle_out": "PASS\n"}]}
+{"task": "t09", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 497, "tokens_out": 1168, "oracle_out": "PASS\n"}]}
+{"task": "t10", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 477, "tokens_out": 963, "oracle_out": "PASS\n"}]}
+{"task": "t11", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 546, "tokens_out": 2392, "oracle_out": "PASS\n"}]}
+{"task": "t12", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 475, "tokens_out": 499, "oracle_out": "PASS\n"}]}
+{"task": "t13", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 383, "tokens_out": 1376, "oracle_out": "PASS\n"}]}
+{"task": "t14", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 396, "tokens_out": 1133, "oracle_out": "PASS\n"}]}
+{"task": "t15", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 528, "tokens_out": 3478, "oracle_out": "PASS\n"}]}
+{"task": "t16", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": false, "tokens_in": 560, "tokens_out": 1846, "oracle_out": "FAIL rangelist-parse_ranges | ('range_spaces_inside', 'ValueError', 'no exception') \n"}, {"announce": "GREEN", "oracle_pass": true, "tokens_in": 844, "tokens_out": 1702, "oracle_out": "PASS\n"}]}
+{"task": "t18", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 557, "tokens_out": 1097, "oracle_out": "PASS\n"}]}
+{"task": "t19", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": false, "tokens_in": 532, "tokens_out": 3140, "oracle_out": "FAIL titles_title_case | small_middle_first_last expected='The Cat in the Hat' obtained='The Cat In The Hat' | small_first_and_middle expected='A Day to Remember' obtained='A Day To Remember' | first_last_small_multi_space expected='A  the  A' obtained='A  The  A'\n"}, {"announce": "GREEN", "oracle_pass": true, "tokens_in": 1013, "tokens_out": 3067, "oracle_out": "PASS\n"}]}
+{"task": "t20", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": false, "tokens_in": 455, "tokens_out": 793, "oracle_out": "FAIL joiner: [case 4: three strings oxford] expected='a, b, and c' obtained='a, b and c'\n"}, {"announce": "GREEN", "oracle_pass": true, "tokens_in": 667, "tokens_out": 882, "oracle_out": "PASS\n"}]}
+{"task": "t21", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 515, "tokens_out": 1347, "oracle_out": "PASS\n"}]}
+{"task": "t22", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 594, "tokens_out": 1665, "oracle_out": "PASS\n"}]}
+{"task": "t23", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 441, "tokens_out": 634, "oracle_out": "PASS\n"}]}
+{"task": "t24", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 440, "tokens_out": 1021, "oracle_out": "PASS\n"}]}
+{"task": "t25", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 472, "tokens_out": 1550, "oracle_out": "PASS\n"}]}
+{"task": "t27", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 466, "tokens_out": 961, "oracle_out": "PASS\n"}]}
+{"task": "t28", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 637, "tokens_out": 1280, "oracle_out": "PASS\n"}]}
+{"task": "t29", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 471, "tokens_out": 595, "oracle_out": "PASS\n"}]}
+{"task": "t30", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 557, "tokens_out": 1889, "oracle_out": "PASS\n"}]}
+{"task": "t31", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 415, "tokens_out": 1604, "oracle_out": "PASS\n"}]}
+{"task": "t32", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 465, "tokens_out": 631, "oracle_out": "PASS\n"}]}
+{"task": "t33", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 495, "tokens_out": 1986, "oracle_out": "PASS\n"}]}
+{"task": "t35", "rep": 4, "infra": false, "attempts": [{"announce": "GREEN", "oracle_pass": true, "tokens_in": 644, "tokens_out": 851, "oracle_out": "PASS\n"}]}
