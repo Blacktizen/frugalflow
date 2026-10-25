@@ -150,6 +150,11 @@ def new_project(name, root):
     os.makedirs(os.path.dirname(settings), exist_ok=True)
     with open(settings, "w", encoding="utf-8") as handle:
         handle.write(json.dumps(hooks_config(BIN, sys.executable, project), indent=2) + "\n")
+    # The hooks hold this machine's paths: keep them out of commits, or the leak scan would stop the first one.
+    ignore = os.path.join(project, ".gitignore")
+    if not os.path.exists(ignore):
+        with open(ignore, "w", encoding="utf-8") as handle:
+            handle.write(".claude/settings.json\n")
     lines = [
         "PROJECT READY " + project,
         "  vault  " + os.path.join(project, "vault"),
