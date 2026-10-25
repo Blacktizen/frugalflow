@@ -7,3 +7,12 @@ restantes est faite pour atteindre 30 ; c est une deviation, decidee avant toute
 touche ni l enonce, ni la metrique, ni les seuils. Les taches encore invalides apres cette 3e generation sont exclues.
 D2 : les taches pilotes pre-enregistrees (t05, t17, t25) : t17 est invalide a la 2e generation ; si elle reste exclue, le
 pilote prend la tache valide suivante dans l ordre numerique (t19).
+D3 (02:20) : le lanceur `runner.py` livre par Strata (2 essais, verification rouge) passe 4 epreuves d autotest sur 5 ; la
+5e echoue a cause d un defaut du faux delegue de l AUTOTEST (il n importe pas os), pas du lanceur. Regle "apres 2 echecs,
+arret du point" : le lanceur n est pas redelegue, il est utilise tel que livre, sous le nom `runner.py.partiel.py`
+(conserve ainsi dans le depot, rien n est renomme a la main).
+D4 (02:25) : le pilote (t05, t19, t25) a montre que le lanceur lit les jetons sur la sortie standard alors que l outil de
+delegation les imprime sur la sortie d erreur : jetons 0. Correctif sans toucher au lanceur : une enveloppe
+`delegate_wrap.py` (Strata, autotest 3/3) passee par `--delegate`. Les donnees du pilote sans jetons sont jetees
+(`pilot_notokens.jsonl`, conservees pour memoire, hors mesure) et le pilote est rejoue avec l enveloppe.
+D5 : le pilote remplace t17 (invalide) par t19 (voir D2).
