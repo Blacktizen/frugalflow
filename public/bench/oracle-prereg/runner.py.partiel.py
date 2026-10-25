@@ -9,7 +9,7 @@ import tempfile
 import time
 
 
-DELEGATE_DEFAULT = "/Users/sidney/PROJETS/mode-eco/bin/ai-delegate.py"
+DELEGATE_DEFAULT = "public/bin/delegate.py"
 TOKEN_RE = re.compile(r"\[qwen[^\]]*?(\d+)\D+(\d+) tokens\]")
 FENCE_RE = re.compile(r"```[^\n]*\n(.*?)```", re.DOTALL)
 

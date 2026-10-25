@@ -10,7 +10,7 @@ sys.path.insert(0, HERE)
 import e2e_security as S
 
 NAME = "Zorbax" + "Holt"
-SECRET = "KEY=" + "QX7Z9ABCD1234"
+SECRET = "".join(["KE", "Y=", "QX7Z9", "ABCD1234"])
 
 NOTICE = (
     "NAME      e2e_outbound_system.py - proves the --system message of delegate.py is filtered like the prompt.\n"

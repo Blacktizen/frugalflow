@@ -1,7 +1,7 @@
-# B3 pre-enregistre : resultats (nuit n252, mesure du 25/10/2026, 02:18 a 02:38)
+# B3 pre-enregistre : resultats (night run, mesure du 25/10/2026, 02:18 a 02:38)
 
 Pre-enregistrement : `B3-PREREG.md` (commit 385d0dd, avant toute mesure). Deviations : `B3-DEVIATIONS.md` (D1 a D5).
-Moyen unique : Strata (qwen3.8-flash-next IQ3_XXS, effort medium). Aucun appel DeepSeek.
+Moyen unique : the local model (qwen3.8-flash-next IQ3_XXS, effort medium). Aucun appel DeepSeek.
 
 ## Verdict selon le pre-enregistrement (lu par `report.py`, sans jugement)
 **UTILE PROUVE**, au seuil exact et avec une reserve forte (voir "Fragilite").
@@ -20,7 +20,7 @@ Moyen unique : Strata (qwen3.8-flash-next IQ3_XXS, effort medium). Aucun appel D
 | Jetons par livraison correcte | 2 119 (C0) / 2 125 (C1) | - |
 | Infra | 0 | - |
 
-Duree de la mesure : 20 minutes pour 120 essais et 12 reprises. Jetons Strata : 255 k pour la mesure ; environ 0,35 M
+Duree de la mesure : 20 minutes pour 120 essais et 12 reprises. Jetons du modele local : 255 k pour la mesure ; environ 0,35 M
 pour fabriquer le jeu (58 generations) et les 3 outils. Cout en dollars : 0.
 
 ## Ce qui produit les faux verts (par tache)
@@ -40,7 +40,7 @@ pour fabriquer le jeu (58 generations) et les 3 outils. Cout en dollars : 0.
 ## Limites
 - Un seul modele, un seul quantifie, un jeu de 30 petites fonctions ecrites par un modele (les oracles aussi, controles seulement par le garde de validite : naive rouge, reference verte). Deux oracles sur trente sont plausiblement plus stricts que l enonce.
 - Jeu en deux temps : 5 taches sur 35 exclues avant mesure, 3 generations au lieu de 2 (D1) pour atteindre 30.
-- Le lanceur est celui de Strata tel que livre (4 autotests sur 5 verts a la mesure, D3 ; 5 sur 5 apres correction du faux delegue de l autotest, D6) et l enveloppe `delegate_wrap.py` corrige la lecture des jetons (D4). `report.py` et le lanceur sont dans le depot ; le verdict est rejouable.
+- Le lanceur est celui du modele local tel que livre (4 autotests sur 5 verts a la mesure, D3 ; 5 sur 5 apres correction du faux delegue de l autotest, D6) et l enveloppe `delegate_wrap.py` corrige la lecture des jetons (D4). `report.py` et le lanceur sont dans le depot ; le verdict est rejouable.
 - C1 est la boucle du lanceur (oracle + sortie renvoyee, 3 essais), pas un appel de `delegate.py --verify` lui-meme ; meme logique, pas le meme code.
 - "Utile" signifie ici : ca attrape les faux verts a bas prix. Ca ne dit rien d un modele plus fort ni de taches plus grosses.
 

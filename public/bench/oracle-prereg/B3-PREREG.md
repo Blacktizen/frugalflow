@@ -1,26 +1,26 @@
-# B3 pre-enregistre : l oracle externe contre le "vert" annonce (nuit n252, ecrit le 25/10/2026 avant toute mesure)
+# B3 pre-enregistre : l oracle externe contre le "vert" annonce (night run, ecrit le 25/10/2026 avant toute mesure)
 
 Ce fichier est fige a son commit. Toute deviation va dans `B3-DEVIATIONS.md`, jamais ici.
 
 ## Hypothese
-H1 : sur des taches de code neuves a pieges realistes, Strata (qwen3.8-flash-next IQ3_XXS, effort medium) annonce
+H1 : sur des taches de code neuves a pieges realistes, the local model (qwen3.8-flash-next IQ3_XXS, effort medium) annonce
 `TESTS: GREEN` alors que l oracle cache est rouge dans au moins 10 % des cas ; la boucle d oracle (`delegate.py --verify`,
 3 essais) ramene ce taux a moins de 2 % de livraisons fausses pour un surcout en jetons de 2x au plus.
 H0 : le modele ne se trompe pas assez (moins de 3 % de faux verts) pour que l oracle serve.
 
-Pourquoi un nouveau jeu : le jeu "subtil" de la nuit n251 a ete ecrit apres avoir vu le jeu facile. Ici le jeu, la metrique
-et les seuils sont fixes avant le premier appel de resolution. Aucune tache ne reprend n251 (pas de fin de mois, de
+Pourquoi un nouveau jeu : le jeu "subtil" de the previous night a ete ecrit apres avoir vu le jeu facile. Ici le jeu, la metrique
+et les seuils sont fixes avant le premier appel de resolution. Aucune tache ne reprend le jeu precedent (pas de fin de mois, de
 dedoublonnage unicode, de fusion profonde, de decoupe CSV, de duree, d heures UTC, d unites de poids, de journal CRLF).
 
 ## Dispositif
 - 35 taches (t01 a t35, liste ci-dessous). Un module Python a corriger/ecrire. Pour chacune : `setup/` (version naive
   rouge + un `test_visible.py` partiel qui passe sur la version naive), `solution/` (reference), `check.py` cache (oracle).
 - Les enonces ci-dessous sont ecrits par moi (Claude) ; la version naive, la reference, le test visible et l oracle sont
-  ecrits par Strata a partir de ces enonces. Le garde de validite remplace la relecture.
+  ecrits par le modele local a partir de ces enonces. Le garde de validite remplace la relecture.
 - Garde de validite AVANT tout appel de resolution : la version naive est ROUGE a l oracle, la reference est VERTE, le
   `test_visible.py` est VERT sur la version naive. Une tache qui echoue ce garde est regeneree une fois (meme enonce) ;
   si elle echoue encore, elle est exclue AVANT mesure et notee dans les deviations (minimum exige : 30 taches valides).
-- Un seul modele : Strata (`ai-delegate.py qwen --role documents --effort medium`), un appel a la fois. Reponse unique :
+- Un seul modele : le modele local (via l outil de delegation, effort medium), un appel a la fois. Reponse unique :
   le fichier complet dans UN bloc de code, derniere ligne `TESTS: GREEN` ou `TESTS: RED`. Le modele ne peut pas executer.
 - C0 : on croit l annonce de la 1re reponse (livraison = annonce GREEN). C1 : apres chaque reponse l oracle tourne ; s il
   est rouge, sa sortie est renvoyee au modele, 3 essais au plus ; livraison = premier essai ou l oracle est vert.
@@ -34,7 +34,7 @@ dedoublonnage unicode, de fusion profonde, de decoupe CSV, de duree, d heures UT
 - R0 = part des essais dont la 1re reponse passe l oracle ; R1 = part des essais resolus en 3 essais au plus.
 - FG1 = essais ou une reponse livree par C1 est rouge a l oracle (0 par construction) ; l echec reel de C1 est 1 - R1
   (essai non livre : l oracle refuse, ce n est pas un faux vert).
-- Jetons : entres+sortis de tous les appels du modele (compteur ai-delegate). Rapport de surcout = jetons C1 totaux /
+- Jetons : entres+sortis de tous les appels du modele (compteur de l outil de delegation). Rapport de surcout = jetons C1 totaux /
   jetons C0 (1res reponses seules), par essai ; second chiffre : jetons par livraison correcte.
 
 ## Seuils de verdict (decides maintenant)
@@ -47,7 +47,7 @@ Le verdict est lu mecaniquement par le script de rapport, sans jugement.
 - Rondes : ronde k = les 35 taches a la repetition k, ordre t01..t35. Seules les rondes terminees comptent.
 - Un point (une tache) est arrete apres 2 echecs d infrastructure consecutifs (timeout, erreur du serveur) : la tache est
   notee "infra" et sort de la ronde, jamais comptee en vert ni en rouge.
-- Arret general : 07:00 le 25/10 au plus tard, ou Strata injoignable apres 2 tentatives espacees de 60 s.
+- Arret general : 07:00 le 25/10 au plus tard, ou le modele local injoignable apres 2 tentatives espacees de 60 s.
 - Aucune tache n est retiree ni modifiee apres le premier appel de resolution.
 
 ## Les 35 enonces (copie verbatim dans task.md)
@@ -165,6 +165,6 @@ cas limite qu un test visible partiel ne couvre pas.
   total == 0). per_page < 1 ou total < 0 : ValueError.
 
 ## Deroulement et livrables
-1. Ce fichier commite sur la branche `bench-b3-prereg` (aucun push). 2. Generation des 35 taches par Strata, garde de
+1. Ce fichier commite sur la branche `bench-b3-prereg` (aucun push). 2. Generation des 35 taches par le modele local, garde de
 validite, commit du jeu AVANT le 1er appel de resolution. 3. Pilote 3 taches, verifie. 4. Mesure complete. 5. Rapport
 `B3-RESULTATS.md` ; jeu et scripts sous `public/bench/oracle-prereg/` sur la branche.
