@@ -135,7 +135,8 @@ def main(argv):
             else:
                 rel = path
             typ = "secret" if kind == "irreducible" else "private data"
-            print(rel + ":" + str(line) + ": " + typ + " " + label)
+            shown = label if label.lower().startswith(typ) else typ + " " + label
+            print(rel + ":" + str(line) + ": " + shown)
 
     # 5. Summary and code
     if h == 0:
