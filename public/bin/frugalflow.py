@@ -24,7 +24,7 @@ USAGE = (
     "  scan [PATH] [--staged] [--rules FILE] [--quiet]   (finds secrets and private data in a folder or repo; exit 12 on a leak; needs no model)\n"
     "  setup [--yes] [--home DIR] [--claude-dir DIR] [--engine ENGINE] [--endpoint URL]   (guided: detects your engines, backs up, writes, runs doctor)\n"
     "  uninstall [--home DIR] [--claude-dir DIR]   (restores the backups made by setup)\n"
-    "  setup --answer ROLE=MODEL_ID [--home DIR] [--answer ROLE=MODEL_ID]...[--ollama-url URL] [--lmstudio-url URL]   (walks the layers, proposes the detected models first)\n"
+    "  setup --layers [--home DIR] [--answer ROLE=MODEL_ID]...[--ollama-url URL] [--lmstudio-url URL]   (walks the layers, proposes the detected models first)\n"
     "  notes add-pitfall|show|check|merge|measure [--home DIR] [...]   (pitfalls and measures per model, each with its proof)\n"
     "  doctor [options]\n"
     "  report TRACE [--log DELEGATIONS] [--models MODELS] [--summary]\n"
@@ -460,10 +460,12 @@ def main():
         sys.exit(code)
 
     if command in ("init", "doctor", "report", "lint", "setup", "scan", "uninstall"):
-        if command == "setup" and "--answer" not in args:
+        rest = args[1:]
+        if command == "setup" and "--layers" not in rest and "--answer" not in rest:
             command = "onboard"
+        rest = [a for a in rest if a != "--layers"]
         module = _load_subcommand(command + "_cmd")
-        sys.exit(module.main(args[1:]))
+        sys.exit(module.main(rest))
 
     if command in ("config", "on", "off", "mode", "display"):
         module = _load_subcommand("config_cmd")

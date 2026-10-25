@@ -236,7 +236,7 @@ def _step6(env, tmp, home):
 
 
 def _step7(env, tmp, home, ollama_url):
-    proc = run_frugalflow(env, tmp, "setup", "--home", home,
+    proc = run_frugalflow(env, tmp, "setup", "--layers", "--home", home,
                           "--ollama-url", ollama_url or "", "--lmstudio-url", "http://127.0.0.1:1")
     detected_line = "DETECTED local-reader ollama " + (ollama_url or "")
     proposed_line = "PROPOSED local-reader, remote-coder, session"
