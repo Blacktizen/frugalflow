@@ -103,7 +103,7 @@ flowchart TD
 | `session_chain.py` | seals each line with the sha256 of the previous one and verifies the chain | a session log | the chain verdict and the comparison with its anchor |
 | `r1_guard.py` | the end-of-turn hook | the session log | blocks the end of a turn while a state-changing command ran with no vault entry after it |
 | `vault_new.py` | mounts a new project's memory vault | a project name | folders, rules, todo, sealed log, index and sources |
-| `vault_check.py` | the vault's hard closing pass | a vault | a verdict that what is written is true |
+| `vault_check.py` | the vault's hard closing pass | a vault | a verdict on the invariants its rules encode (not on truth) |
 | `reading_gate.py` | the vault's reading gate | required pages and a restatement | an attestation only when the restatement repeats every bearing line |
 | `session_digest.py` | the closing pass of the session log | a session log | a readable digest, health checks, an exit code |
 | `refusal_loop.py` | turns new refusals into todo lines and blocks a commit while a tool logs no refusal or the bench has a false refusal or a hole | refusal logs and the project bench | todo lines, a commit verdict |

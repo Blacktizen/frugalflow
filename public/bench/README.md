@@ -62,16 +62,17 @@ Verdicts are strict: a result obtained on a set written after seeing earlier res
 
 | Folder | Bench | Question | Key figure | Verdict |
 |---|---|---|---|---|
-| `anon/` | B1 | does `anon_check.py` stop leaks a model reread lets through? | 16.2 % of planted leaks delivered, against 42.5 % for the reread and 100 % with no check; 0 false positives on 40 decoys | proven |
+| `anon/` | B1 | does `anon_check.py` stop leaks a model reread lets through? | 16.2 % of planted leaks delivered, against 42.5 % for the reread and 100 % with no check; 0 false positives on 40 decoys | proven on this bench's synthetic set |
 | `verify/` | B2 | does the check judge refuse checks that verify nothing? | 80.0 % of hollow checks on the first set, 47.6 % (10/21) on a fresh set | not proven |
 | `oracle/` | B3 | how often does a model announce green tests that fail the oracle? | 1.7 % (1/60) on these tasks, too easy to tell | not proven |
 | `agentic/` | B3 | does an outside oracle catch the false greens an agent announces? | 3.3 % and 8.3 % on the first set; 10.0 % on a second set written after seeing the first; 0 wrong delivered | not proven (promising; needs a pre-registered set) |
-| `fidelity/` | B4 | how much typography does a model lose, and does `fidelity.py` give it back? | 69.9 % of lines drift without the tool (498/712), 0 of 712 with it, no content changed | proven |
-| `brief/` | B5 | does a brief that passed the brief checker win more first attempts? | 24.4 % to 97.8 % (+73.3 points); the fault tested is a removed fact | proven, with that limit |
+| `oracle-prereg/` | B3 | pre-registered set: how often does the local model announce green on failing code, and does the oracle catch it? | 10.0 % (12/120, interval 5.8-16.7 %); all 12 caught at the second attempt, 1.11x tokens; 11 of 12 on 4 tasks | useful at the exact threshold, fragile (see its B3-RESULTATS.md) |
+| `fidelity/` | B4 | how much typography does a model lose, and does `fidelity.py` give it back? | 69.9 % of lines drift without the tool (498/712), 0 of 712 with it, no content changed | proven on this bench's short texts, line comparison |
+| `brief/` | B5 | does a brief that passed the brief checker win more first attempts? | 24.4 % to 97.8 % (+73.3 points); the fault tested is a removed fact | proven on this bench's set, with that limit |
 | `reading/` | B6 | does the read guard `read_intake` cut input tokens? | 0.94x | not proven |
 | `memory/` | B7 | does resuming from a previous session cut tokens? | 1.86x as built (harmful), 0.77x after correction | not proven |
 
-On a verification task, FrugalFlow is justified only where a bench proves it (B1, B4, B5).
+On a verification task, FrugalFlow is justified only where a bench shows it, and only on that bench's synthetic set (B1, B4, B5; B3 at its exact threshold, fragile). A verdict is not a guarantee.
 
 Replay commands are in each folder README, and the root README lists the offline report commands
 (`python3 public/bench/anon/run_b1.py report ...`, `python3 public/bench/brief/run_brief_bench.py report --out public/bench/brief`,
