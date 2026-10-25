@@ -16,3 +16,8 @@ delegation les imprime sur la sortie d erreur : jetons 0. Correctif sans toucher
 `delegate_wrap.py` (Strata, autotest 3/3) passee par `--delegate`. Les donnees du pilote sans jetons sont jetees
 (`pilot_notokens.jsonl`, conservees pour memoire, hors mesure) et le pilote est rejoue avec l enveloppe.
 D5 : le pilote remplace t17 (invalide) par t19 (voir D2).
+
+D6 (25/10, after the measurement, audit-fixes branch): the 5th autotest of `runner.py.partiel.py` failed because the fake
+"nofence" delegate of the AUTOTEST itself imported `sys` but not `os` (D3). One word fixed in that fake (`import sys, os`);
+the autotest now passes 5/5. The runner code that produced the published results is unchanged (the fake is used only by
+`--autotest`), so the B3 figures are not affected.

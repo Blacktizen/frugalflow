@@ -304,7 +304,7 @@ def make_fake_delegate(tmp_dir, name, mode):
         )
     elif mode == "nofence":
         content = (
-            "import sys\n"
+            "import sys, os\n"
             "base = os.path.dirname(os.path.abspath(__file__))\n"
             "calls_f = os.path.join(base, \"calls.txt\")\n"
             "n = 0\n"
