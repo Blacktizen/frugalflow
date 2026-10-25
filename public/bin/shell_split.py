@@ -191,7 +191,8 @@ def test3():
 
     assert clean_segment("echo {a,b}") == "echo {a,b}", f"Expected 'echo {{a,b}}' unchanged, got {clean_segment('echo {a,b}')}"
 
-    assert clean_segment('echo ")"') == 'echo ")"', f"Expected 'echo \")\"' unchanged, got {clean_segment('echo \")')}"
+    cleaned = clean_segment('echo ")"')
+    assert cleaned == 'echo ")"', "Expected 'echo \")\"' unchanged, got " + cleaned
 
     assert clean_segment("}") == "", "Expected empty string for '}'"
 

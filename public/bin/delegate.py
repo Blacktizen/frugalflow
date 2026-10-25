@@ -24,9 +24,9 @@ import run_limits
 import limits_files
 
 try:
-    import verify_sandbox
+    import verify_worktree
 except ImportError:
-    verify_sandbox = None
+    verify_worktree = None
 
 try:
     import journal_guard
@@ -116,8 +116,8 @@ def main():
         print("VERIFY NEEDS --out")
         sys.exit(2)
 
-    if args.verify and verify_sandbox is None:
-        sys.stderr.write("VERIFY REFUSED: verify_sandbox.py must be restored next to delegate.py; --verify is never run outside the sandbox\n")
+    if args.verify and verify_worktree is None:
+        sys.stderr.write("VERIFY REFUSED: verify_worktree.py must be restored next to delegate.py; --verify always runs in a temporary work folder (no system isolation)\n")
         sys.exit(2)
 
     guard_refusal = _refuse_protected_out(args)
@@ -212,6 +212,13 @@ def main():
     if refusal:
         print("CONTENT REFUSED: " + refusal)
         sys.exit(4)
+    # the system message leaves too: same filter, same table (restored on the way back)
+    system_sent, table, sys_counts, sys_refusal = send_rules.outbound(args.system, plan["trust"], A, I, table)
+    if sys_refusal:
+        print("CONTENT REFUSED: --system: " + sys_refusal)
+        sys.exit(4)
+    for k, v in sys_counts.items():
+        counts[k] = counts.get(k, 0) + v
     ann = send_rules.announce(counts)
     if ann:
         sys.stderr.write(ann)
@@ -224,7 +231,7 @@ def main():
         print("NO OUTPUT CAP: set max_output in models.json or pass --max-tokens")
         sys.exit(2)
 
-    max_tokens, why = budget_rules.plan_max_tokens(plan["window"], len(to_send) + len(args.system), 2, cap)
+    max_tokens, why = budget_rules.plan_max_tokens(plan["window"], len(to_send) + len(system_sent), 2, cap)
     if why:
         print("TASK TOO BIG: " + why)
         sys.exit(3)
@@ -252,7 +259,7 @@ def main():
         journal_log.arm(journal_log.default_path(), args.role, plan["name"], args.out, first_line, chars=len(prompt), waiver=waiver)
 
         # Step 12
-        base = [{"role": "system", "content": args.system}, {"role": "user", "content": to_send}]
+        base = [{"role": "system", "content": system_sent}, {"role": "user", "content": to_send}]
         if args.no_thinking:
             base.append({"role": "assistant", "content": "<think>\n\n</think>\n\n"})
         extra = {"chat_template_kwargs": {"reasoning_effort": args.effort}} if args.effort else None
@@ -313,7 +320,7 @@ def main():
                 fd = os.open(cand, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
                 with os.fdopen(fd, "w", encoding="utf-8") as f:
                     f.write(content)
-                code, output = verify_sandbox.run_isolated(verify_cmd, cand, args.out, os.getcwd(), args.verify_timeout)
+                code, output = verify_worktree.run_in_worktree(verify_cmd, cand, args.out, os.getcwd(), args.verify_timeout)
                 if code == 0:
                     os.replace(cand, args.out)
                     journal_log.conclude("success", None, ans["tokens_in"], ans["tokens_out"], ans["model"])

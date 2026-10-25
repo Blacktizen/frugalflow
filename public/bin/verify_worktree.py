@@ -1,4 +1,7 @@
-"""Run a delegation check in an isolated temporary folder.
+"""Run a delegation check in a temporary working copy of the project.
+
+This is NOT a sandbox: there is no operating-system isolation. Files outside the
+copy, other processes and the network stay reachable with the user's permissions.
 
 The check command runs with only the candidate file, the sibling modules the
 candidate imports, and the project files the command names.  Sensitive
@@ -21,10 +24,10 @@ SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv"}
 MAX_WATCH = 50000
 
 NOTICE = "\n".join([
-    "NAME      verify_sandbox.py - runs a delegation check in a temporary folder holding only the useful files, without sensitive variables, under a time limit, and reports any write into the project.",
+    "NAME      verify_worktree.py - runs a delegation check in a temporary work folder (NOT a sandbox: no system isolation) holding only the useful files, without sensitive variables, under a time limit, and reports any write into the project.",
     "READS     the candidate, the sibling modules it imports, and the project files the check command names.",
-    "WRITES    a temporary folder, removed afterwards; never the project: run_isolated() returns (code, output), 124 on timeout, 125 when the check wrote into the project.",
-    "EXAMPLE   python3 verify_sandbox.py --autotest",
+    "WRITES    a temporary folder, removed afterwards; never the project: run_in_worktree() returns (code, output), 124 on timeout, 125 when the check wrote into the project.",
+    "EXAMPLE   python3 verify_worktree.py --autotest",
     "PITFALLS  2026-10-03 a check ran in the project folder with every secret of the environment: it could write beside the code and read the keys; it now runs in a copy, and a write it still makes through an absolute path is caught and refused.",
 ])
 
@@ -139,7 +142,7 @@ def changed(before, after):
     return sorted(result)
 
 
-def run_isolated(verify_cmd, candidate_path, out_path, project_dir, timeout):
+def run_in_worktree(verify_cmd, candidate_path, out_path, project_dir, timeout):
     """Run verify_cmd in a temporary folder and report any write it makes
     into project_dir."""
     work = tempfile.mkdtemp(prefix="frugalflow-verify-")
@@ -209,7 +212,7 @@ def autotest():
 
         # Test 1: the candidate and its two imports run inside the work folder.
         before_list = sorted(os.listdir(project_dir))
-        res = run_isolated(
+        res = run_in_worktree(
             'python3 "$FRUGALFLOW_CANDIDATE" | grep -q 42 && test "$(basename "$FRUGALFLOW_CANDIDATE")" = a.py && test "$(ls | tr "\\n" " ")" = "a.py deep.py helper.py "',
             candidate_path, out_path, project_dir, 30)
         after_list = sorted(os.listdir(project_dir))
@@ -220,11 +223,11 @@ def autotest():
             passed += 1
 
         # Test 2: command files are copied, and sensitive variables are gone.
-        res = run_isolated('sh check.sh "$FRUGALFLOW_CANDIDATE" && test -e check.sh',
+        res = run_in_worktree('sh check.sh "$FRUGALFLOW_CANDIDATE" && test -e check.sh',
                            candidate_path, out_path, project_dir, 30)
         os.environ["MY_API_TOKEN"] = "z"
         try:
-            res2 = run_isolated('test -z "$MY_API_TOKEN"', candidate_path, out_path, project_dir, 30)
+            res2 = run_in_worktree('test -z "$MY_API_TOKEN"', candidate_path, out_path, project_dir, 30)
         finally:
             del os.environ["MY_API_TOKEN"]
         ok = is_pair(res) and res[0] == 0 and is_pair(res2) and res2[0] == 0
@@ -235,8 +238,8 @@ def autotest():
 
         # Test 3: a write inside the work folder is fine, a write into the
         # project folder is refused.
-        res = run_isolated('echo x > trace.txt', candidate_path, out_path, project_dir, 30)
-        res2 = run_isolated('echo x > "' + project_dir + '/w.txt"',
+        res = run_in_worktree('echo x > trace.txt', candidate_path, out_path, project_dir, 30)
+        res2 = run_in_worktree('echo x > "' + project_dir + '/w.txt"',
                             candidate_path, out_path, project_dir, 30)
         ok = (is_pair(res) and res[0] == 0
               and not os.path.exists(os.path.join(project_dir, "trace.txt"))
@@ -251,9 +254,9 @@ def autotest():
 
         # Test 4: the time limit is enforced and a plain exit code passes through.
         start = os.times()[4]
-        res = run_isolated('sleep 20', candidate_path, out_path, project_dir, 1)
+        res = run_in_worktree('sleep 20', candidate_path, out_path, project_dir, 1)
         duration = os.times()[4] - start
-        res2 = run_isolated('exit 3', candidate_path, out_path, project_dir, 30)
+        res2 = run_in_worktree('exit 3', candidate_path, out_path, project_dir, 30)
         ok = (res == (124, "VERIFY TIMEOUT after 1 s") and duration < 10
               and is_pair(res2) and res2[0] == 3)
         got = "timeout_result=%r duration=%r exit_code=%r" % (res, duration, res2 if is_pair(res2) else res2)
@@ -269,7 +272,7 @@ def autotest():
         ok = (res == {"PATH": "/b", "HOME": "/h"}
               and res2 == ["check.sh", "secret.txt"]
               and proc.returncode == 0
-              and proc.stdout.startswith("NAME      verify_sandbox.py"))
+              and proc.stdout.startswith("NAME      verify_worktree.py"))
         got = "scrub=%r files=%r notice_code=%r" % (res, res2, proc.returncode)
         print("%s test 5: expected scrub, files and notice; got %s" % ("PASS" if ok else "FAIL", got))
         if ok:
@@ -287,10 +290,10 @@ def main(argv):
         return 0
     if argv == ["--autotest"]:
         return autotest()
-    print("usage: verify_sandbox.py --notice | --autotest")
+    print("usage: verify_worktree.py --notice | --autotest")
     return 2
 
 
 if __name__ == "__main__":
     import exit_log
-    exit_log.run(main, "verify_sandbox", sys.argv[1:])
+    exit_log.run(main, "verify_worktree", sys.argv[1:])

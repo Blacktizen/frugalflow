@@ -1,0 +1,546 @@
+import argparse
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+
+
+DELEGATE_DEFAULT = "public/bin/delegate.py"
+TOKEN_RE = re.compile(r"\[qwen[^\]]*?(\d+)\D+(\d+) tokens\]")
+FENCE_RE = re.compile(r"```[^\n]*\n(.*?)```", re.DOTALL)
+
+
+def build_initial_prompt(task_dir, target_module):
+    with open(os.path.join(task_dir, "task.md"), "r", encoding="utf-8") as f:
+        block1 = f.read()
+
+    setup_dir = os.path.join(task_dir, "setup")
+    files = sorted(os.listdir(setup_dir))
+    lines2 = ["Current files in the folder (name, then content):"]
+    for fn in files:
+        if fn.startswith("."):
+            continue
+        with open(os.path.join(setup_dir, fn), "r", encoding="utf-8") as f:
+            lines2.append("=== " + fn + " ===")
+            lines2.append(f.read())
+    block2 = "\n".join(lines2)
+
+    block3 = ("Reply with the full new content of the `" + target_module
+              + "` in ONE python code block. After the code block write one "
+              "last line, exactly TESTS: GREEN if you are confident the "
+              "automatic checker will pass, or TESTS: RED if not. No other "
+              "text.")
+
+    return block1 + "\n\n" + block2 + "\n\n" + block3
+
+
+def build_resume_prompt(initial, prev_code, exit_code, oracle_out):
+    tail = oracle_out[-1500:] if len(oracle_out) > 1500 else oracle_out
+    code_text = prev_code if prev_code is not None else ""
+    return (initial + "\n\n" + "Your previous attempt:\n"
+            + "``` python\n" + code_text + "\n```\n"
+            + "The checker said (exit code " + str(exit_code) + "):\n"
+            + tail + "\n" + "Fix it. Same reply format.")
+
+
+def sanitize(text):
+    text = text.replace("\r", "")
+    out = []
+    for ch in text:
+        if ord(ch) < 128:
+            out.append(ch)
+        else:
+            out.append("?")
+    return "".join(out)
+
+
+def find_target_module(setup_dir):
+    for fn in sorted(os.listdir(setup_dir)):
+        if fn.endswith(".py") and fn != "test_visible.py" and not fn.startswith("."):
+            return fn
+    return None
+
+
+def call_delegate(delegate, prompt, deadline_time):
+    if deadline_time is not None:
+        now = time.strftime("%H:%M")
+        if now > deadline_time:
+            return None, "DEADLINE_HIT", 0, 0
+
+    tmpf = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False,
+                                       encoding="utf-8")
+    try:
+        tmpf.write("NATURE: mesure\n")
+        tmpf.write("PRODUIT: texte\n")
+        tmpf.write("\n")
+        tmpf.write(sanitize(prompt))
+    finally:
+        tmpf.close()
+
+    cmd = [sys.executable, delegate, "qwen", "--role", "documents",
+           "--file", tmpf.name, "--effort", "medium"]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+    except subprocess.TimeoutExpired:
+        return None, "", 0, 0
+    finally:
+        try:
+            os.unlink(tmpf.name)
+        except OSError:
+            pass
+
+    if proc.returncode != 0:
+        return None, "", 0, 0
+
+    stdout = proc.stdout
+    if not stdout or not stdout.strip():
+        return None, "", 0, 0
+
+    tokens_in = 0
+    tokens_out = 0
+    match = TOKEN_RE.search(stdout)
+    if match:
+        tokens_in = int(match.group(1))
+        tokens_out = int(match.group(2))
+
+    if match:
+        after = stdout[match.end():]
+    else:
+        after = stdout
+
+    return after.strip(), "", tokens_in, tokens_out
+
+
+def parse_response(response):
+    if response is None:
+        return None, "NONE"
+    m = FENCE_RE.search(response)
+    code = m.group(1) if m else None
+    lines = [l for l in response.split("\n") if l.strip()]
+    announce = "NONE"
+    if lines:
+        last = lines[-1].strip()
+        if last == "TESTS: GREEN":
+            announce = "GREEN"
+        elif last == "TESTS: RED":
+            announce = "RED"
+    return code, announce
+
+
+def run_oracle(task_dir, code, target_module):
+    odir = tempfile.mkdtemp()
+    try:
+        setup_dir = os.path.join(task_dir, "setup")
+        for fn in os.listdir(setup_dir):
+            if fn.startswith("."):
+                continue
+            shutil.copy2(os.path.join(setup_dir, fn), os.path.join(odir, fn))
+        check_src = os.path.join(task_dir, "check.py")
+        shutil.copy2(check_src, os.path.join(odir, "check.py"))
+
+        if code is None:
+            return 1, "no code block found"
+
+        with open(os.path.join(odir, target_module), "w", encoding="utf-8") as f:
+            f.write(code)
+
+        env = os.environ.copy()
+        env["PYTHONDONTWRITEBYTECODE"] = "1"
+        try:
+            proc = subprocess.run([sys.executable, "check.py"],
+                                  capture_output=True, text=True,
+                                  cwd=odir, timeout=60, env=env)
+            return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
+        except subprocess.TimeoutExpired:
+            return 124, "timeout"
+    finally:
+        shutil.rmtree(odir, ignore_errors=True)
+
+
+def read_done(out_path):
+    done = set()
+    if os.path.isfile(out_path):
+        with open(out_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                    done.add((obj.get("task"), obj.get("rep")))
+                except (json.JSONDecodeError, TypeError):
+                    pass
+    return done
+
+
+def run_tasks(args):
+    tasks_dir = args.tasks
+    ids = [x.strip() for x in args.ids.split(",")]
+    reps = args.reps
+    out_path = args.out
+    tries = args.tries
+    delegate = args.delegate or DELEGATE_DEFAULT
+    deadline_time = args.deadline
+
+    done = read_done(out_path)
+
+    out_f = open(out_path, "a", encoding="utf-8")
+    try:
+        for rep in range(1, reps + 1):
+            for tid in ids:
+                if (tid, rep) in done:
+                    continue
+
+                task_dir = os.path.join(tasks_dir, tid)
+                setup_dir = os.path.join(task_dir, "setup")
+                target = find_target_module(setup_dir)
+
+                initial_prompt = build_initial_prompt(task_dir, target)
+
+                attempts = []
+                infra_fail = False
+                cur_prompt = initial_prompt
+
+                for attempt_idx in range(tries):
+                    response, err, tok_in, tok_out = call_delegate(
+                        delegate, cur_prompt, deadline_time)
+
+                    if response is None:
+                        response, err, tok_in, tok_out = call_delegate(
+                            delegate, cur_prompt, deadline_time)
+
+                    if response is None:
+                        infra_fail = True
+                        break
+
+                    code, announce = parse_response(response)
+                    oracle_code, oracle_out = run_oracle(task_dir, code, target)
+                    oracle_pass = (oracle_code == 0)
+
+                    trunc_out = oracle_out[:300] if len(oracle_out) > 300 else oracle_out
+
+                    attempts.append({
+                        "announce": announce,
+                        "oracle_pass": oracle_pass,
+                        "tokens_in": tok_in,
+                        "tokens_out": tok_out,
+                        "oracle_out": trunc_out
+                    })
+
+                    if oracle_pass:
+                        break
+
+                    if attempt_idx < tries - 1:
+                        cur_prompt = build_resume_prompt(
+                            initial_prompt, code, oracle_code, oracle_out)
+
+                record = {
+                    "task": tid,
+                    "rep": rep,
+                    "infra": infra_fail,
+                    "attempts": attempts if not infra_fail else []
+                }
+                out_f.write(json.dumps(record) + "\n")
+                out_f.flush()
+
+                if attempts:
+                    a1 = attempts[0]
+                    orc = "PASS" if a1["oracle_pass"] else "FAIL"
+                    print("RUN " + tid + " rep " + str(rep)
+                          + " : " + a1["announce"]
+                          + " oracle " + orc
+                          + " essais " + str(len(attempts)))
+                else:
+                    print("RUN " + tid + " rep " + str(rep)
+                          + " : NONE oracle FAIL essais 0")
+
+                if deadline_time is not None:
+                    now = time.strftime("%H:%M")
+                    if now > deadline_time:
+                        print("DEADLINE")
+                        sys.exit(0)
+    finally:
+        out_f.close()
+
+
+def make_fake_delegate(tmp_dir, name, mode):
+    path = os.path.join(tmp_dir, name)
+    dot = "\xb7"
+    if mode == "normal":
+        content = (
+            "import sys, os\n"
+            "base = os.path.dirname(os.path.abspath(__file__))\n"
+            "calls_f = os.path.join(base, \"calls.txt\")\n"
+            "n = 0\n"
+            "if os.path.isfile(calls_f):\n"
+            "    with open(calls_f) as f: n = int(f.read().strip())\n"
+            "n += 1\n"
+            "with open(calls_f, \"w\") as f: f.write(str(n))\n"
+            "fp = sys.argv[sys.argv.index(\"--file\") + 1]\n"
+            "with open(fp, encoding=\"utf-8\") as f: text = f.read()\n"
+            "tok_line = \"[qwen " + dot + " 11->22 tokens]\"\n"
+            "print(tok_line)\n"
+            "if \"Your previous attempt\" not in text:\n"
+            "    print(\"```python\")\n"
+            "    print(\"def dbl(x):\")\n"
+            "    print(\"    return x + x if x else 1\")\n"
+            "    print(\"```\")\n"
+            "    print(\"TESTS: GREEN\")\n"
+            "else:\n"
+            "    print(\"```\")\n"
+            "    print(\"def dbl(x):\")\n"
+            "    print(\"    return x * 2\")\n"
+            "    print(\"```\")\n"
+            "    print(\"TESTS: GREEN\")\n"
+        )
+    elif mode == "bad":
+        content = (
+            "import sys\n"
+            "sys.exit(1)\n"
+        )
+    elif mode == "nofence":
+        content = (
+            "import sys, os\n"
+            "base = os.path.dirname(os.path.abspath(__file__))\n"
+            "calls_f = os.path.join(base, \"calls.txt\")\n"
+            "n = 0\n"
+            "if os.path.isfile(calls_f):\n"
+            "    with open(calls_f) as f: n = int(f.read().strip())\n"
+            "n += 1\n"
+            "with open(calls_f, \"w\") as f: f.write(str(n))\n"
+            "print(\"[qwen " + dot + " 11->22 tokens]\")\n"
+            "print(\"def dbl(x): return x*2\")\n"
+            "print(\"TESTS: RED\")\n"
+        )
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+    return path
+
+
+def make_task_fixture(tmp_dir):
+    task_dir = os.path.join(tmp_dir, "tasks", "tz1")
+    setup_dir = os.path.join(task_dir, "setup")
+    os.makedirs(setup_dir, exist_ok=True)
+
+    with open(os.path.join(task_dir, "task.md"), "w", encoding="utf-8") as f:
+        f.write("Write function dbl(x) in dbl.py that returns x doubled.\n")
+
+    with open(os.path.join(setup_dir, "dbl.py"), "w", encoding="utf-8") as f:
+        f.write("def dbl(x):\n    return x\n")
+
+    with open(os.path.join(setup_dir, "test_visible.py"), "w",
+              encoding="utf-8") as f:
+        f.write("import dbl\nprint(\"OK\")\n")
+
+    with open(os.path.join(task_dir, "check.py"), "w", encoding="utf-8") as f:
+        f.write("import sys\nimport dbl\n"
+                "sys.exit(0 if dbl.dbl(2) == 4 and dbl.dbl(0) == 0 else 1)\n")
+
+
+def count_calls(tmp_dir):
+    p = os.path.join(tmp_dir, "calls.txt")
+    if not os.path.isfile(p):
+        return 0
+    with open(p, encoding="utf-8") as f:
+        return int(f.read().strip())
+
+
+def run_subprocess(args_list):
+    proc = subprocess.run(args_list, capture_output=True, text=True)
+    return proc.returncode, proc.stdout, proc.stderr
+
+
+def autotest():
+    all_pass = True
+
+    # Epreuve 1
+    tmp1 = tempfile.mkdtemp()
+    try:
+        make_task_fixture(tmp1)
+        fake = make_fake_delegate(tmp1, "fake_delegate.py", "normal")
+        out1 = os.path.join(tmp1, "r1.jsonl")
+        rc1, _, _ = run_subprocess(
+            [sys.executable, os.path.abspath(__file__), "run",
+             "--tasks", os.path.join(tmp1, "tasks"), "--ids", "tz1",
+             "--reps", "1", "--out", out1,
+             "--delegate", fake])
+        n_calls_1 = count_calls(tmp1)
+
+        lines1 = [l for l in open(out1, encoding="utf-8").readlines() if l.strip()]
+        obj1 = json.loads(lines1[0]) if lines1 else {}
+        attempts = obj1.get("attempts", [])
+
+        ok1 = (rc1 == 0 and len(lines1) == 1 and len(attempts) == 2
+               and attempts[0]["announce"] == "GREEN"
+               and attempts[0]["oracle_pass"] is False
+               and attempts[1]["oracle_pass"] is True
+               and n_calls_1 == 2)
+        if ok1:
+            print("PASS epreuve 1")
+        else:
+            print("FAIL epreuve 1")
+            all_pass = False
+    finally:
+        shutil.rmtree(tmp1, ignore_errors=True)
+
+    # Epreuve 2
+    tmp2 = tempfile.mkdtemp()
+    try:
+        make_task_fixture(tmp2)
+        fake = make_fake_delegate(tmp2, "fake_delegate.py", "normal")
+        out2 = os.path.join(tmp2, "r2.jsonl")
+        run_subprocess(
+            [sys.executable, os.path.abspath(__file__), "run",
+             "--tasks", os.path.join(tmp2, "tasks"), "--ids", "tz1",
+             "--reps", "1", "--out", out2, "--delegate", fake])
+        run_subprocess(
+            [sys.executable, os.path.abspath(__file__), "run",
+             "--tasks", os.path.join(tmp2, "tasks"), "--ids", "tz1",
+             "--reps", "1", "--out", out2, "--delegate", fake])
+
+        lines2 = [l for l in open(out2, encoding="utf-8").readlines() if l.strip()]
+        n_calls_2 = count_calls(tmp2)
+
+        ok2 = (len(lines2) == 1 and n_calls_2 == 2)
+        if ok2:
+            print("PASS epreuve 2")
+        else:
+            print("FAIL epreuve 2")
+            all_pass = False
+    finally:
+        shutil.rmtree(tmp2, ignore_errors=True)
+
+    # Epreuve 3
+    tmp3 = tempfile.mkdtemp()
+    try:
+        make_task_fixture(tmp3)
+        bad = make_fake_delegate(tmp3, "bad_delegate.py", "bad")
+        out3 = os.path.join(tmp3, "r3.jsonl")
+        rc3, _, _ = run_subprocess(
+            [sys.executable, os.path.abspath(__file__), "run",
+             "--tasks", os.path.join(tmp3, "tasks"), "--ids", "tz1",
+             "--reps", "1", "--out", out3, "--delegate", bad])
+
+        lines3 = [l for l in open(out3, encoding="utf-8").readlines() if l.strip()]
+        obj3 = json.loads(lines3[0]) if lines3 else {}
+        infra_ok = (rc3 == 0 and len(lines3) == 1
+                    and obj3.get("infra") is True
+                    and obj3.get("attempts") == [])
+
+        rc_usage, _, _ = run_subprocess(
+            [sys.executable, os.path.abspath(__file__), "run"])
+        usage_ok = (rc_usage == 2)
+
+        rc_selftest, _, _ = run_subprocess(
+            [sys.executable, os.path.abspath(__file__),
+             "--autotest-selftest-fail"])
+        selftest_ok = (rc_selftest == 1)
+
+        ok3 = infra_ok and usage_ok and selftest_ok
+        if ok3:
+            print("PASS epreuve 3")
+        else:
+            print("FAIL epreuve 3")
+            all_pass = False
+    finally:
+        shutil.rmtree(tmp3, ignore_errors=True)
+
+    # Epreuve 4
+    tmp4 = tempfile.mkdtemp()
+    try:
+        make_task_fixture(tmp4)
+        fake = make_fake_delegate(tmp4, "fake_delegate.py", "normal")
+        out4 = os.path.join(tmp4, "r4.jsonl")
+        run_subprocess(
+            [sys.executable, os.path.abspath(__file__), "run",
+             "--tasks", os.path.join(tmp4, "tasks"), "--ids", "tz1",
+             "--reps", "1", "--out", out4, "--delegate", fake])
+
+        lines4 = [l for l in open(out4, encoding="utf-8").readlines() if l.strip()]
+        obj4 = json.loads(lines4[0]) if lines4 else {}
+        att4 = obj4.get("attempts", [])
+
+        ok4 = (len(att4) >= 1
+               and att4[0]["tokens_in"] == 11
+               and att4[0]["tokens_out"] == 22)
+        if ok4:
+            print("PASS epreuve 4")
+        else:
+            print("FAIL epreuve 4")
+            all_pass = False
+    finally:
+        shutil.rmtree(tmp4, ignore_errors=True)
+
+    # Epreuve 5
+    tmp5 = tempfile.mkdtemp()
+    try:
+        make_task_fixture(tmp5)
+        nof = make_fake_delegate(tmp5, "nofence_delegate.py", "nofence")
+        out5 = os.path.join(tmp5, "r5.jsonl")
+        rc5, _, _ = run_subprocess(
+            [sys.executable, os.path.abspath(__file__), "run",
+             "--tasks", os.path.join(tmp5, "tasks"), "--ids", "tz1",
+             "--reps", "1", "--out", out5, "--delegate", nof, "--tries", "3"])
+
+        lines5 = [l for l in open(out5, encoding="utf-8").readlines() if l.strip()]
+        obj5 = json.loads(lines5[0]) if lines5 else {}
+        att5 = obj5.get("attempts", [])
+
+        ok5 = (rc5 == 0 and len(att5) == 3
+               and att5[0]["announce"] == "RED"
+               and all(a["oracle_pass"] is False for a in att5))
+        if ok5:
+            print("PASS epreuve 5")
+        else:
+            print("FAIL epreuve 5")
+            all_pass = False
+    finally:
+        shutil.rmtree(tmp5, ignore_errors=True)
+
+    if all_pass:
+        print("AUTOTEST 5/5")
+    return 0 if all_pass else 1
+
+
+def build_parser():
+    p = argparse.ArgumentParser(prog="runner.py")
+    sub = p.add_subparsers(dest="cmd")
+    run_p = sub.add_parser("run")
+    run_p.add_argument("--tasks", required=False)
+    run_p.add_argument("--ids", required=False)
+    run_p.add_argument("--reps", type=int, required=False)
+    run_p.add_argument("--out", required=False)
+    run_p.add_argument("--tries", type=int, default=3)
+    run_p.add_argument("--delegate", default=None)
+    run_p.add_argument("--deadline", default=None)
+    p.add_argument("--autotest", action="store_true")
+    p.add_argument("--autotest-selftest-fail", action="store_true")
+    return p
+
+
+def main():
+    parser = build_parser()
+    args = parser.parse_args()
+
+    if args.autotest_selftest_fail:
+        print("FAIL epreuve internal")
+        sys.exit(1)
+
+    if args.autotest:
+        sys.exit(autotest())
+
+    if args.cmd == "run":
+        if not args.tasks or not args.ids or not args.reps or not args.out:
+            sys.exit(2)
+        run_tasks(args)
+        sys.exit(0)
+
+    sys.exit(2)
+
+
+if __name__ == "__main__":
+    main()

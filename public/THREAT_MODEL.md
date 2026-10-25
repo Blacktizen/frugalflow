@@ -81,7 +81,7 @@ chain.
 |---|---|---|
 | Writing code without a delegation. | The guard refuses: a code file of more than a few lines must come from a recent, successful delegation (`guard_rules`, `shell_rules`). | `juge_attaques`, E2E |
 | Forging a receipt or disarming the guard by writing its logs. | `journal_guard` refuses any call that writes, deletes, moves or links a protected guard file; only the delegation tool writes them. | `attaque_forge1` |
-| The verification writes into the project, reads secrets, or never ends. | `verify_sandbox` runs the check in a temporary folder with only the useful files, without sensitive variables, under a time limit; exit code 124 on timeout, 125 when it wrote into the project. | `attaque_verify_isole` |
+| The verification writes into the project, reads secrets, or never ends. | `verify_worktree` runs the check in a temporary folder with only the useful files, without sensitive variables, under a time limit; exit code 124 on timeout, 125 when it wrote into the project. | `attaque_verify_isole` |
 | Writing through a symbolic or hard link, or `--out` into a guard file. | `delegate.py` resolves the real path, refuses guard paths, creates the candidate exclusively and replaces the target atomically. | `attaque_d4b` |
 | Private data leaks to a third-party model. | Anonymization by trust level: labels instead of personal data, refusal when a secret is found. | anonymizer attacks |
 | Disguised writes (exec, eval, a target taken from the environment, renaming into code). | Closed mode: a write of code whose target cannot be read is refused. | `attaque_trous_anciens` <!-- lang-ok --> |

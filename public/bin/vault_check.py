@@ -15,7 +15,7 @@ import commit_claims
 USAGE = "usage: vault_check.py --vault DIR [--repo DIR ...] [--declared ID ...] | --notice | --autotest"
 
 NOTICE = (
-    "NAME      vault_check.py - the vault's hard closing pass: checks that what is written is true.\n"
+    "NAME      vault_check.py - the vault's closing pass: checks the invariants its rules encode (it cannot judge truth).\n"
     "READS     --vault; --repo (read only, several allowed); --declared (hex ids that are not commits, several allowed).\n"
     "WRITES    nothing: one PASS, FAIL or SKIP line per check (PAGES, LOG, INDEX, SOURCES, COMMITS), then VAULT OK or VAULT FAILED <n> checks. Exit 0 ok, 2 usage, 6 failed.\n"
     "EXAMPLE   python3 vault_check.py --vault ~/projects/demo/vault --repo ~/projects/demo\n"

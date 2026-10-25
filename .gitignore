@@ -1,2 +1,24 @@
 __pycache__/
 *.pyc
+
+# secrets and local environment
+.env
+.env.*
+!.env.example
+
+# local journals and logs (the bench results and examples below are published on purpose)
+*.jsonl
+!public/bench/**/*.jsonl
+!public/examples/*.jsonl
+*.log
+!public/bench/**/*.log
+
+# working files
+*~
+*.swp
+*.tmp
+*.bak
+*.orig
+*.avant-*
+*.essai*
+.DS_Store
