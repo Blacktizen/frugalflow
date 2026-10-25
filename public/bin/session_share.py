@@ -90,9 +90,9 @@ def local_offset():
 def _autotest():
     """Run the four test cases; return 0 if all pass, 1 otherwise."""
     fixtures_log_lines = (
-        '{"time": "2026-09-26T19:10:00", "model_answered": "qwen3.8-27b", "tokens_in": 1000, "tokens_out": 500, "status": "success"}\n'
+        '{"time": "2026-09-26T19:10:00", "model_answered": "model-b", "tokens_in": 1000, "tokens_out": 500, "status": "success"}\n'
         'not json\n'
-        '{"time": "2026-09-26T08:00:00", "model_answered": "qwen3.8-27b", "tokens_in": 9, "tokens_out": 9, "status": "success"}\n'
+        '{"time": "2026-09-26T08:00:00", "model_answered": "model-b", "tokens_in": 9, "tokens_out": 9, "status": "success"}\n'
     )
     fixtures_objs = [
         None,
@@ -135,7 +135,7 @@ def _autotest():
         expected_3 = [
             "WINDOW 1 010 of 2 020 (50.0 %)",
             "CLAUDE written 500 | context reread 1 000 over 1 turns",
-            "DELEGATED 1 calls (1 ok) | sent 1 000 | received 500 | qwen3.8-27b 1 | delegated share of written tokens 50.0 %",
+            "DELEGATED 1 calls (1 ok) | sent 1 000 | received 500 | model-b 1 | delegated share of written tokens 50.0 %",
         ]
         environ_3 = {"FRUGALFLOW_DELEGATION_LOGS": log_file, "FRUGALFLOW_WINDOW_LIMIT": "2020"}
         got_3 = session_lines(fixtures_objs, fixtures_msgs, fixtures_totals, environ_3, 120)

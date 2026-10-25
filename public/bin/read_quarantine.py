@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import shell_split
 import shell_tokens
 import receipt_rules
+from example_defaults import setting
 
 READERS = {
     "cat", "bat", "less", "more", "head", "tail", "nl", "od",
@@ -133,8 +134,8 @@ def check(tool_name, tool_input, config, ctx):
         )
 
     now = ctx["now"]
-    minutes = config.get("quarantine_minutes", 60)
-    wmin = config.get("read_waiver_minutes", 15)
+    minutes = setting(config, "guard", "quarantine_minutes")
+    wmin = setting(config, "guard", "read_waiver_minutes")
 
     refused = [
         t for t in code

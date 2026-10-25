@@ -1,7 +1,7 @@
 # B3 pre-registered: results (night run, measurement of 25/10/2026, 02:18 to 02:38)
 
 Pre-registration: `B3-PREREG.md` (commit 385d0dd, before any measurement). Deviations: `B3-DEVIATIONS.md` (D1 to D5).
-Sole means: the local model (qwen3.8-flash-next IQ3_XXS, effort medium). No DeepSeek calls.
+Sole means: the local model (a local quantized model, effort medium). No remote-model calls.
 
 ## Verdict per the pre-registration (read by `report.py`, no judgment)
 **USEFUL PROVEN**, at the exact threshold and with a strong reservation (see "Fragility").
@@ -50,7 +50,7 @@ FRUGAL_REAL_DELEGATE=/path/to/your/delegate.py python3 $R/runner.py.partiel.py r
   --ids $(ls $R/tasks | paste -sd, -) --reps 4 --out results.jsonl --delegate $R/delegate_wrap.py
 python3 $R/report.py report --results results.jsonl --ids $(ls $R/tasks | paste -sd, -)
 ```
-(The wrapper expects a delegate whose token line is of the form `[qwen ... tokens]` on the error output.)
+(The wrapper expects a delegate whose token line is of the form `[model ... tokens]` on the error output. The published copies of the wrapper and of the launcher carry this neutral prefix instead of the name of the maintainer's own delegate tool; adapt it to yours.)
 
 ## Proposed README line (not merged)
 > External oracle: on 30 pre-registered small code tasks, the local model announces "green tests" incorrectly 10 % of the time (12 / 120); the oracle catches it every time for 11 % more tokens. The threshold is met without margin and hinges on two debatable oracles: to read as "cheap, plausibly useful", not as "proven".

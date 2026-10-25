@@ -3,7 +3,7 @@
 This file is frozen at its commit. Any deviation goes in `B3-DEVIATIONS.md`, never here.
 
 ## Hypothesis
-H1: on new code tasks with realistic pitfalls, the local model (qwen3.8-flash-next IQ3_XXS, medium effort) announces
+H1: on new code tasks with realistic pitfalls, the local model (a local quantized model, medium effort) announces
 `TESTS: GREEN` while the hidden oracle is red in at least 10 % of cases; the oracle loop (`delegate.py --verify`,
 3 trials) brings this rate down to less than 2 % of false deliveries for a token overhead of at most 2x.
 H0: the model does not make enough errors (less than 3 % false greens) for the oracle to be useful.

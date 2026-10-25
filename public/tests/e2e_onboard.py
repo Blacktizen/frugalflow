@@ -238,7 +238,7 @@ def test_5():
     assert "FOUND nothing" in out_a, "missing FOUND nothing in 5a"
     assert "SETUP DONE" in out_a, "missing SETUP DONE in 5a"
     m_a = models(ff_a)
-    assert m_a["endpoint"] == "http://127.0.0.1:8000/v1", "5a endpoint mismatch"
+    assert m_a["endpoint"] == "http://localhost:PORT/v1", "5a endpoint mismatch"
 
     # (b) interactive
     home_b, ff_b, cl_b = dirs("five_b")

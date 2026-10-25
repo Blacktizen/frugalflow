@@ -7,7 +7,7 @@ attempt than a faulty brief sent without the filter?
 
 ## Method
 
-15 small code tasks, 3 repetitions x 2 conditions, delegated to deepseek-flash through
+15 small code tasks, 3 repetitions x 2 conditions, delegated to a remote model through
 the delegation tool, one attempt only:
 
 - **C0** — the faulty brief is sent with a waiver (`--brief-waiver`) even though
@@ -39,7 +39,7 @@ briefs and 0/45 corrected briefs.
 ## Limits
 
 The fault is by construction the removal of a needed piece of information, so a
-brief that fixes it is bound to help; the result holds for one model (deepseek-flash)
+brief that fixes it is bound to help; the result holds for one model (one remote model)
 and for faults limited to the rules E21, E13 and E3. It does not say how the checker
 performs on arbitrary real-world briefs.
 

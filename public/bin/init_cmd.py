@@ -52,6 +52,13 @@ KEY_HELP = {
         "audit_log": "where each decision of the guard is written",
         "line_threshold": "a code write of this many lines or fewer needs no receipt",
         "receipt_minutes": "how long a delegation receipt stays valid",
+        "quarantine_minutes": "how long a delegated file cannot be read: run its test instead",
+        "digest_extensions": "files a counting command must hand to a model",
+        "digest_max_bytes": "below this size, counting by hand is allowed",
+        "digest_waiver": "a comment with this word lets one counting command pass, and is logged",
+        "read_waiver_minutes": "how long a declared read of a large file stays valid",
+        "intake_max_lines": "a file longer than this many lines is not read whole",
+        "intake_max_bytes": "a file larger than this many bytes is not read whole",
         "delegate_tools": "command names that write code legitimately (they leave the receipt)",
         "fix_hint": "appended to a refusal: how to delegate on this machine",
         "checks": "entry checks to run; an unknown name refuses every call",
@@ -131,10 +138,6 @@ def _normalize_url(url):
     return url
 
 
-DEEPSEEK_KEY_ENV = "DEEPSEEK_API_KEY"
-DEEPSEEK_ENDPOINT = "https://api.deepseek.com/v1"
-
-
 def _fetch_local_model(lmstudio_url):
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     try:
@@ -206,7 +209,6 @@ def _init(mode, home, claude_dir, ollama_url, lmstudio_url):
         print(line)
     lmstudio_found = any(f["kind"] == "lmstudio" for f in findings)
     ollama_found = any(f["kind"] == "ollama" for f in findings)
-    deepseek_found = any(f["kind"] == "key" and f["where"] == DEEPSEEK_KEY_ENV for f in findings)
 
     # Step 4: the five settings files in --home.
     config_dir = os.path.join(os.path.dirname(BIN), "config")
@@ -237,10 +239,7 @@ def _init(mode, home, claude_dir, ollama_url, lmstudio_url):
                     if model_id is not None:
                         m["name"] = model_id
                     lr_name = m.get("name")
-                elif m.get("id") == "remote-coder" and deepseek_found:
-                    m["key_env"] = DEEPSEEK_KEY_ENV
-                    m["endpoint"] = DEEPSEEK_ENDPOINT
-            if endpoint is None and not deepseek_found:
+            if endpoint is None:
                 text = example_text
             else:
                 text = json.dumps(doc, indent=2, ensure_ascii=False) + "\n"
@@ -251,8 +250,6 @@ def _init(mode, home, claude_dir, ollama_url, lmstudio_url):
                 print("SET local-reader endpoint " + endpoint + " model " + lr_name)
             else:
                 print("UNSET local-reader: no local engine answered, edit " + dest)
-            if deepseek_found:
-                print("SET remote-coder key " + DEEPSEEK_KEY_ENV + " endpoint " + DEEPSEEK_ENDPOINT)
             for key in doc:
                 print("  " + key + ": " + KEY_HELP[name + ".json"][key])
             continue
@@ -696,7 +693,7 @@ def _autotest():
     finally:
         server.shutdown()
 
-    # Test 9: no engine answers but DEEPSEEK_API_KEY is set: UNSET line and remote-coder wired to DeepSeek.
+    # Test 9: no engine answers but an API key variable is set: the key is never wired to a provider by guess.
     with tempfile.TemporaryDirectory() as tmp:
         home = os.path.join(tmp, "home")
         claude = os.path.join(tmp, "claude")
@@ -705,33 +702,25 @@ def _autotest():
         for name in list(env):
             if name.endswith("_API_KEY"):
                 env.pop(name)
-        env["DEEPSEEK_API_KEY"] = "sk-test"
+        env["ZZ_API_KEY"] = "sk-test"
         cmd = [sys.executable, script, "--home", home, "--claude-dir", claude,
                "--ollama-url", "http://127.0.0.1:1", "--lmstudio-url", "http://127.0.0.1:1"]
         r = subprocess.run(cmd, capture_output=True, text=True, env=env, cwd=tmp)
         models_file = os.path.join(home, "models.json")
         unsetline = "UNSET local-reader: no local engine answered, edit " + models_file
-        setline = "SET remote-coder key DEEPSEEK_API_KEY endpoint https://api.deepseek.com/v1"
         ok = False
-        got = "rc=%d unset=%s set=%s" % (
-            r.returncode, unsetline in r.stdout, setline in r.stdout)
-        if r.returncode == 0 and unsetline in r.stdout and setline in r.stdout:
+        got = "rc=%d unset=%s wired=%s" % (
+            r.returncode, unsetline in r.stdout, "SET remote-coder" in r.stdout)
+        if r.returncode == 0 and unsetline in r.stdout and "SET remote-coder" not in r.stdout:
             try:
-                doc = json.load(open(models_file, encoding="utf-8"))
-                lr = [m for m in doc["models"] if m.get("id") == "local-reader"]
-                rc_ = [m for m in doc["models"] if m.get("id") == "remote-coder"]
-                ok = (len(lr) == 1 and len(rc_) == 1
-                      and lr[0]["endpoint"] == "http://127.0.0.1:8000/v1"
-                      and rc_[0]["key_env"] == "DEEPSEEK_API_KEY"
-                      and rc_[0]["endpoint"] == "https://api.deepseek.com/v1")
-                got = "rc=0 lr_endpoint=%s rc_key_env=%s rc_endpoint=%s" % (
-                    lr[0]["endpoint"] if lr else "?",
-                    rc_[0]["key_env"] if rc_ else "?",
-                    rc_[0]["endpoint"] if rc_ else "?")
-            except (OSError, ValueError, KeyError) as e:
-                ok = False
+                with open(os.path.join(config_dir, "models.example.json"), encoding="utf-8") as fh:
+                    example_text = fh.read()
+                with open(models_file, encoding="utf-8") as fh:
+                    ok = fh.read() == example_text
+                got = "rc=0 models.json equals the example: %s" % ok
+            except OSError as e:
                 got = "rc=%d models_unreadable=%s" % (r.returncode, str(e))
-        results.append(("9 no engine but DEEPSEEK_API_KEY: UNSET line and remote-coder wired", ok, got))
+        results.append(("9 no engine but an API key is set: UNSET line, nothing wired, models.json equals the example", ok, got))
 
     # Test 10: init writes model_notes.json identical to the example and prints its models help line.
     with tempfile.TemporaryDirectory() as tmp:

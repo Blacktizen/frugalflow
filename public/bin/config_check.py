@@ -202,7 +202,7 @@ def _autotest():
         os.makedirs(os.path.join(D, "leaky"), exist_ok=True)
 
         models_good = {"schema_version": "1",
-            "models": [{"id": "a", "name": "m", "location": "local", "endpoint": "http://127.0.0.1:8000/v1", "context_window": 65536, "paid": False, "trust": "private", "key_env": ""},
+            "models": [{"id": "a", "name": "m", "location": "local", "endpoint": "http://127.0.0.1:9000/v1", "context_window": 65536, "paid": False, "trust": "private", "key_env": ""},
                         {"id": "r", "name": "n", "location": "remote", "endpoint": "https://api.example.com/v1", "context_window": 131072, "paid": True, "trust": "untrusted_third_party", "key_env": "REMOTE_KEY"}],
             "layers": [{"name": "reading", "delegable": True}, {"name": "kept", "delegable": False}],
             "roles": [{"name": "code", "layer": "reading", "model": "a"},
@@ -213,9 +213,9 @@ def _autotest():
         models_leaky["models"][0]["api_key"] = "abc123"
 
         prefs = {"schema_version": "1",
-            "verbosity": {"final_answer_words": 150, "step_message_words": 35},
-            "ceilings": {"max_trust": "trusted_third_party", "max_tries": 3, "max_output_tokens": 60000},
-            "splitting": {"max_proofs_per_task": 5, "max_brief_lines": 140},
+            "verbosity": {"final_answer_words": 120, "step_message_words": 30},
+            "ceilings": {"max_trust": "trusted_third_party", "max_tries": 3, "max_output_tokens": 50000},
+            "splitting": {"max_proofs_per_task": 4, "max_brief_lines": 100},
             "grouping": {"independent_calls_same_turn": True}}
 
         project = {"schema_version": "1", "ceilings": {"max_trust": "private", "max_tries": 2}}

@@ -555,7 +555,7 @@ def _cmd_measure(args):
     return 0
 
 
-FIXTURE_VALID ='{"schema_version": "1", "models": [{"model": "qwen3.8-27b", "engine": "engine-a", "prescribed": {"temperature": 1.0, "top_p": 0.95}, "measured": [{"date": "2026-09-17", "what": "throughput at 262144 context", "value": "0.7 tokens/s", "proof": "bench run 17/09"}], "pitfalls": [{"date": "2026-09-19", "symptom": "typographic quotes eaten", "remedy": "send the prompt in a file", "proof": "delegation log"}]}]}'
+FIXTURE_VALID ='{"schema_version": "1", "models": [{"model": "model-a", "engine": "engine-a", "prescribed": {"temperature": 1.0, "top_p": 0.95}, "measured": [{"date": "2026-09-17", "what": "throughput with a long window", "value": "slow", "proof": "timed run"}], "pitfalls": [{"date": "2026-09-19", "symptom": "typographic quotes eaten", "remedy": "send the prompt in a file", "proof": "delegation log"}]}]}'
 
 FIXTURE_BAD = '{"schema_version": "1", "models": [{"model": "m1", "engine": "e1", "prescribed": {}, "measured": [], "pitfalls": [{"date": "2026-02-30", "symptom": "s", "remedy": "r", "proof": "p"}, {"date": "2026-03-01", "symptom": "s", "remedy": "r", "proof": ""}]}, {"model": "m1", "engine": "e1", "prescribed": {}, "measured": [], "pitfalls": []}]}'
 
@@ -633,9 +633,9 @@ def _autotest():
                "rc=1 and the three ERROR lines", "rc=" + str(r.returncode) + " out=" + repr(got))
 
         # Test 3: first add-pitfall on an absent file creates it, one pitfall, check 0
-        r = run(["add-pitfall", "--file", made_path, "--model", "qwen3.8-27b", "--engine", "engine-a",
+        r = run(["add-pitfall", "--file", made_path, "--model", "model-a", "--engine", "engine-a",
                  "--symptom", "a", "--remedy", "b", "--proof", "c", "--date", "2026-10-01"])
-        ok3 = r.returncode == 0 and r.stdout.strip() == "ADDED qwen3.8-27b engine-a 2026-10-01"
+        ok3 = r.returncode == 0 and r.stdout.strip() == "ADDED model-a engine-a 2026-10-01"
         if ok3:
             with open(made_path, "r", encoding="utf-8") as f:
                 made = json.load(f)
@@ -643,13 +643,13 @@ def _autotest():
             ok3 = len(models) == 1 and len(models[0].get("pitfalls", [])) == 1
         if ok3:
             ok3 = run(["check", made_path]).returncode == 0
-        record(3, ok3, "rc=0 ADDED qwen3.8-27b engine-a 2026-10-01, one pitfall, check 0",
+        record(3, ok3, "rc=0 ADDED model-a engine-a 2026-10-01, one pitfall, check 0",
                "rc=" + str(r.returncode) + " out=" + repr(r.stdout.strip()))
 
         # Test 4: two more adds -> 2 pitfalls on engine-a then 1 on the other engine, dates in order
-        r2 = run(["add-pitfall", "--file", made_path, "--model", "qwen3.8-27b", "--engine", "engine-a",
+        r2 = run(["add-pitfall", "--file", made_path, "--model", "model-a", "--engine", "engine-a",
                   "--symptom", "d", "--remedy", "e", "--proof", "f", "--date", "2026-10-02"])
-        r3 = run(["add-pitfall", "--file", made_path, "--model", "qwen3.8-27b", "--engine", "other",
+        r3 = run(["add-pitfall", "--file", made_path, "--model", "model-a", "--engine", "other",
                   "--symptom", "g", "--remedy", "h", "--proof", "i", "--date", "2026-10-03"])
         ok4 = r2.returncode == 0 and r3.returncode == 0
         dates = []
@@ -677,7 +677,7 @@ def _autotest():
             f.write(FIXTURE_VALID)
         with open(w_path, "rb") as f:
             before = f.read()
-        r = run(["add-pitfall", "--file", w_path, "--model", "qwen3.8-27b", "--engine", "engine-a",
+        r = run(["add-pitfall", "--file", w_path, "--model", "model-a", "--engine", "engine-a",
                  "--symptom", "x", "--remedy", "y", "--proof", "", "--date", "2026-10-01"])
         with open(w_path, "rb") as f:
             after = f.read()
@@ -697,7 +697,7 @@ def _autotest():
                + " unchanged=" + str(before == after))
 
         # Test 7: show prints the PITFALL line and NONE for an absent model
-        r = run(["show", "--file", valid_path, "--model", "qwen3.8-27b"])
+        r = run(["show", "--file", valid_path, "--model", "model-a"])
         want_show = "PITFALL 2026-09-19 engine-a typographic quotes eaten => send the prompt in a file"
         ok7 = r.returncode == 0 and r.stdout.strip() == want_show
         r_absent = run(["show", "--file", valid_path, "--model", "absent-model"])

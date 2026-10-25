@@ -10,7 +10,7 @@ import time
 
 
 DELEGATE_DEFAULT = "public/bin/delegate.py"
-TOKEN_RE = re.compile(r"\[qwen[^\]]*?(\d+)\D+(\d+) tokens\]")
+TOKEN_RE = re.compile(r"\[model[^\]]*?(\d+)\D+(\d+) tokens\]")
 FENCE_RE = re.compile(r"```[^\n]*\n(.*?)```", re.DOTALL)
 
 
@@ -81,7 +81,7 @@ def call_delegate(delegate, prompt, deadline_time):
     finally:
         tmpf.close()
 
-    cmd = [sys.executable, delegate, "qwen", "--role", "documents",
+    cmd = [sys.executable, delegate, "model", "--role", "documents",
            "--file", tmpf.name, "--effort", "medium"]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
@@ -282,7 +282,7 @@ def make_fake_delegate(tmp_dir, name, mode):
             "with open(calls_f, \"w\") as f: f.write(str(n))\n"
             "fp = sys.argv[sys.argv.index(\"--file\") + 1]\n"
             "with open(fp, encoding=\"utf-8\") as f: text = f.read()\n"
-            "tok_line = \"[qwen " + dot + " 11->22 tokens]\"\n"
+            "tok_line = \"[model " + dot + " 11->22 tokens]\"\n"
             "print(tok_line)\n"
             "if \"Your previous attempt\" not in text:\n"
             "    print(\"```python\")\n"
@@ -312,7 +312,7 @@ def make_fake_delegate(tmp_dir, name, mode):
             "    with open(calls_f) as f: n = int(f.read().strip())\n"
             "n += 1\n"
             "with open(calls_f, \"w\") as f: f.write(str(n))\n"
-            "print(\"[qwen " + dot + " 11->22 tokens]\")\n"
+            "print(\"[model " + dot + " 11->22 tokens]\")\n"
             "print(\"def dbl(x): return x*2\")\n"
             "print(\"TESTS: RED\")\n"
         )

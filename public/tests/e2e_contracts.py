@@ -54,7 +54,7 @@ def main():
                     "id": "a",
                     "name": "m",
                     "location": "local",
-                    "endpoint": "http://127.0.0.1:8000/v1",
+                    "endpoint": "http://127.0.0.1:9000/v1",
                     "context_window": 65536,
                     "paid": False,
                     "trust": "private",
@@ -91,13 +91,13 @@ def main():
 
         prefs = {
             "schema_version": "1",
-            "verbosity": {"final_answer_words": 150, "step_message_words": 35},
+            "verbosity": {"final_answer_words": 120, "step_message_words": 30},
             "ceilings": {
                 "max_trust": "trusted_third_party",
                 "max_tries": 3,
-                "max_output_tokens": 60000,
+                "max_output_tokens": 50000,
             },
-            "splitting": {"max_proofs_per_task": 5, "max_brief_lines": 140},
+            "splitting": {"max_proofs_per_task": 4, "max_brief_lines": 100},
             "grouping": {"independent_calls_same_turn": True},
         }
         with open(os.path.join(D, "home", "preferences.json"), "w", encoding="utf-8") as f:

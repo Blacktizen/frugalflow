@@ -51,6 +51,11 @@ def get(name, dotted):
     return current
 
 
+def setting(config, name, key):
+    """Return config[key] when the user set it, else the documented example default."""
+    return config[key] if key in config else get(name, key)
+
+
 def run_autotest():
     tmp = tempfile.mkdtemp()
     fixture = '{"limits": {"retries": 7, "mode": "calm"}, "flag": true}'

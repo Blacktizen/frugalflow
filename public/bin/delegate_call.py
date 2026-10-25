@@ -111,13 +111,13 @@ def _autotest():
     # test 2
     Handler.MODE = "overflow_then_ok"
     Handler.BODIES = []
-    a = call(url, "alpha-7b", MESSAGES, {}, 60000, 5)
+    a = call(url, "alpha-7b", MESSAGES, {}, 50000, 5)
     mt = [b.get("max_tokens") for b in Handler.BODIES]
-    ok = (isinstance(a, dict) and a.get("refusal") is None and a.get("max_tokens") == 3448 and mt == [60000, 3448])
+    ok = (isinstance(a, dict) and a.get("refusal") is None and a.get("max_tokens") == 3448 and mt == [50000, 3448])
     if ok:
-        lines.append("PASS test 2: refusal=None max_tokens=3448 mt=[60000, 3448]")
+        lines.append("PASS test 2: refusal=None max_tokens=3448 mt=[50000, 3448]")
     else:
-        lines.append("FAIL test 2: expected refusal=None max_tokens=3448 mt=[60000, 3448] got refusal=" + repr(a.get("refusal")) + " max_tokens=" + repr(a.get("max_tokens")) + " mt=" + repr(mt))
+        lines.append("FAIL test 2: expected refusal=None max_tokens=3448 mt=[50000, 3448] got refusal=" + repr(a.get("refusal")) + " max_tokens=" + repr(a.get("max_tokens")) + " mt=" + repr(mt))
 
     # test 3
     Handler.MODE = "always_overflow"

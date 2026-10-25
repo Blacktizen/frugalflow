@@ -147,12 +147,12 @@ def autotest():
         {"usage": {"input_tokens": 2, "cache_read_input_tokens": 215000, "cache_creation_input_tokens": 998}},
     ]
     entries = [
-        {"horodatage": "2026-09-26T19:38:13", "modele": "qwen", "jetons_envoyes": 26503, "jetons_recus": 4067, "statut": "succes"},  # lang-ok
-        {"time": "2026-09-26T19:10:00", "model_answered": "qwen3.8-27b", "tokens_in": 1000, "tokens_out": 500, "status": "failure"},
-        {"horodatage": "2026-09-26T08:00:00", "modele": "qwen", "jetons_envoyes": 999, "jetons_recus": 999, "statut": "succes"},  # lang-ok
-        {"modele": "qwen", "jetons_envoyes": 7},  # lang-ok
+        {"horodatage": "2026-09-26T19:38:13", "modele": "model-a", "jetons_envoyes": 26503, "jetons_recus": 4067, "statut": "succes"},  # lang-ok
+        {"time": "2026-09-26T19:10:00", "model_answered": "model-b", "tokens_in": 1000, "tokens_out": 500, "status": "failure"},
+        {"horodatage": "2026-09-26T08:00:00", "modele": "model-a", "jetons_envoyes": 999, "jetons_recus": 999, "statut": "succes"},  # lang-ok
+        {"modele": "model-a", "jetons_envoyes": 7},  # lang-ok
     ]
-    deleg_expected = {"calls": 2, "ok": 1, "tokens_in": 27503, "tokens_out": 4567, "by_model": {"qwen": 1, "qwen3.8-27b": 1}}
+    deleg_expected = {"calls": 2, "ok": 1, "tokens_in": 27503, "tokens_out": 4567, "by_model": {"model-a": 1, "model-b": 1}}
 
     all_passed = True
 
@@ -176,9 +176,9 @@ def autotest():
 
     # Test 3: parse_entry
     expected3 = {
-        "entry0": {"time": "2026-09-26T19:38:13", "model": "qwen", "tokens_in": 26503, "tokens_out": 4067, "ok": True},
+        "entry0": {"time": "2026-09-26T19:38:13", "model": "model-a", "tokens_in": 26503, "tokens_out": 4067, "ok": True},
         "entry1_ok": False,
-        "entry1_model": "qwen3.8-27b",
+        "entry1_model": "model-b",
         "entry3": None,
     }
     got3 = {
@@ -206,7 +206,7 @@ def autotest():
     expected5_lines = [
         "WINDOW 216 000 of 300 000 (72.0 %)",
         "CLAUDE written 71 181 | context reread 16 007 811 over 104 turns",
-        "DELEGATED 2 calls (1 ok) | sent 27 503 | received 4 567 | qwen 1 | qwen3.8-27b 1 | delegated share of written tokens 6.0 %",
+        "DELEGATED 2 calls (1 ok) | sent 27 503 | received 4 567 | model-a 1 | model-b 1 | delegated share of written tokens 6.0 %",
     ]
     got5_lines = report_lines(216000, 300000, 71181, 16007811, 104, deleg_expected)
 

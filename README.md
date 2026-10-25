@@ -27,7 +27,7 @@ frugalflow setup           # guided: detects your engines, backs up, writes, run
 - **Journal at the gesture.** Every commit, merge or decision writes its entry right away. A guard (`r1_guard.py`, with `journal_guard.py`) blocks the end of a turn while a state-changing command ran with no entry after it.
 - **A chained journal, tamper-evident.** `journal_add.py` appends sealed entries after checking the chain; `session_log.py` seals every session event with the hash of the previous line; `session_chain.py` verifies the chain. Edit one line afterwards and the chain says so.
 - **A closing pass** (`vault_check.py`) checks the vault invariants: pages, log, index, sources, commits.
-- **Resuming** (`session_note.py` puts a verdict on an action; `session_summary.py` records a summary at the end of a session and shows it once at the next start).
+- **Resuming** (`frugalflow resume` prints, from the vault and the sealed log, a text to paste into a new session: where the project stands, the open todos, the recent decisions, the pages to reread; `session_note.py` puts a verdict on an action; `session_summary.py` records a summary at the end of a session and shows it once at the next start).
 
 A concrete run, four steps (a clone's `public/bin/` holds the tools; `frugalflow new-project` works from the installed command too):
 
@@ -37,7 +37,7 @@ cd ~/projects/demo && claude                                         # 2. work: 
 python3 public/bin/journal_add.py --vault ~/projects/demo/vault --title "Parser fixed" \
   --field "Decision=resolve pages by name" --field "Why=a moved page bricked the gate"
 python3 public/bin/vault_check.py --vault ~/projects/demo/vault --repo ~/projects/demo   # 3. close: VAULT OK or the failed checks
-cd ~/projects/demo && claude                                         # 4. next day: the last summary is shown at start, the vault holds the decisions
+cd ~/projects/demo && frugalflow resume                              # 4. next day: a handoff text built from the vault and the sealed log; paste it into the new session
 ```
 
 What this gives you is continuity and traceability: what was decided, why, and that nobody rewrote it afterwards. What it does **not** yet give is a proven saving of tokens when a session resumes: the resume bench (B7) did not reach its pre-set criterion, and it is on the roadmap below.
@@ -61,6 +61,17 @@ The goals of the project:
 - **Measure in the open.** Every figure comes with its bench, its limits, and its raw runs, the disappointing ones included.
 
 The way of working behind it is written down in [`docs/METHOD.md`](docs/METHOD.md). It is the part we think is most reusable, with or without our tools.
+
+## Built with FrugalFlow
+
+FrugalFlow is made first for long projects: the kind that runs over days, weeks or months, where a session ends and another must pick up exactly where the last one stopped. It was built that way, with its own method. Counted by script from the project's own files, over 11 weeks:
+
+- **956** hash-chained journal entries, each written at the moment of the decision, never rebuilt afterwards;
+- **201** numbered todos, **93** of them checked off, the others still open and still visible;
+- **745** commits, each one through the project's own gates;
+- **224** working sessions logged (session logging began after the journal did), many of them resumed from a written handoff rather than from memory.
+
+The refusal counts are left out on purpose: our logs mix real use with refusals provoked by the test suite, and we will publish them once the two are separated. A short task in a single sitting needs none of this. The longer the project, the more the vault pays back.
 
 ## What you get
 

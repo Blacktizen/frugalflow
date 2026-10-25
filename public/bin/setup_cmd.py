@@ -405,12 +405,12 @@ def _autotest():
         doc = json.loads(read_text(path))
         for entry in doc["models"]:
             if entry.get("id") == "remote-coder":
-                entry["key_env"] = "DEEPSEEK_API_KEY"
+                entry["key_env"] = "ZZ_API_KEY"
         with open(path, "w", encoding="utf-8") as handle:
             handle.write(json.dumps(doc, indent=2, ensure_ascii=False) + "\n")
-        proc = run(home, env_extra={"DEEPSEEK_API_KEY": "x"})
+        proc = run(home, env_extra={"ZZ_API_KEY": "x"})
         expected_lines = [
-            "DETECTED remote-coder key DEEPSEEK_API_KEY",
+            "DETECTED remote-coder key ZZ_API_KEY",
             "PROPOSED remote-coder, local-reader, session",
             "LAYER bulk_reading",
             "  KEPT documents local-reader",

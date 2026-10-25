@@ -20,7 +20,7 @@ def run_delegate(args):
     target_line = None
     for line in proc.stderr.splitlines():
         s = line.strip()
-        if s.startswith("[qwen") and s.endswith("tokens]"):
+        if s.startswith("[model") and s.endswith("tokens]"):
             target_line = s
 
     if target_line is not None:
@@ -36,7 +36,7 @@ def autotest():
         fake_path = os.path.join(tmpdir, "fake_real.py")
         with open(fake_path, "w") as f:
             f.write("import sys\n"
-                    "sys.stderr.write(\"noise\\n[qwen - 11->22 tokens]\\n\")\n"
+                    "sys.stderr.write(\"noise\\n[model - 11->22 tokens]\\n\")\n"
                     "sys.stdout.write(\"ANSWER\\nTESTS: GREEN\\n\")\n"
                     "sys.exit(int(sys.argv[1]) if len(sys.argv) > 1 else 0)\n")
 
@@ -51,7 +51,7 @@ def autotest():
         lines1 = r1.stdout.splitlines()
         if (r1.returncode == 0
                 and len(lines1) == 3
-                and lines1[0] == "[qwen - 11->22 tokens]"
+                and lines1[0] == "[model - 11->22 tokens]"
                 and lines1[1] == "ANSWER"
                 and lines1[2] == "TESTS: GREEN"):
             print("PASS 1")

@@ -21,8 +21,8 @@ outside oracle (`check.py`), a reference `solution/` and a known-wrong `naive/`
 (validate with `python3 public/bench/agentic/tasks/validate.py`). The `hard/` set
 reuses the 8 log/inventory tasks of `public/bench/tasks` with their generated data
 removed; each `task.md` ends with the same `TESTS:` line so the announcement can be
-read. Two engines were run: a local model (qwen3.8-flash-next, IQ3_XXS) and
-deepseek-v4-pro.
+read. Two engines were run: a local quantized model and
+a remote hosted model.
 
 ## Results
 
@@ -30,12 +30,12 @@ Traps set, 10 tasks x 6 repetitions per engine:
 
 | engine | false greens C0 | rate | Wilson 95 % |
 | --- | ---: | ---: | ---: |
-| a local model (qwen3.8-flash-next, IQ3_XXS) | 2/60 | 3.3 % | 0.9-11.4 |
-| deepseek-v4-pro | 5/60 | 8.3 % | 3.6-18.1 |
+| a local quantized model | 2/60 | 3.3 % | 0.9-11.4 |
+| a remote hosted model | 5/60 | 8.3 % | 3.6-18.1 |
 
 All 7 false greens are on task t08. After the oracle loop, delivered false greens are
-0/60 for each engine. Token ratio C1/C0: 1.02 (local model) and 1.12 (deepseek-v4-pro).
-Hard set (logs, inventories): 0/24 (local model) and 0/16 (deepseek-v4-pro) false greens.
+0/60 for each engine. Token ratio C1/C0: 1.02 (local model) and 1.12 (remote model).
+Hard set (logs, inventories): 0/24 (local model) and 0/16 (remote model) false greens.
 
 ## Verdict
 
@@ -53,24 +53,24 @@ any run; every task is red on its naive solution and green on its reference
 
 | engine | runs | false greens C0 | rate | Wilson 95 % |
 | --- | ---: | ---: | ---: | ---: |
-| a local model (qwen3.8-flash-next, IQ3_XXS) | 60 (10 tasks x 6 reps) | 6 | 10.0 % | 4.7-20.2 |
-| deepseek-v4-pro | 25 valid | 6 | 24 % | 11.5-43.4 |
+| a local quantized model | 60 (10 tasks x 6 reps) | 6 | 10.0 % | 4.7-20.2 |
+| a remote hosted model | 25 valid | 6 | 24 % | 11.5-43.4 |
 
 Local model: all 6 false greens are on u01 (3) and u04 (3); after the oracle loop,
 0 of 60 delivered wrong; resolved 60/60; token ratio C1/C0 = 1.12.
 
-deepseek-v4-pro: only 25 valid runs (the account ran out of credit mid-way; the rest
+remote model: only 25 valid runs (the account ran out of credit mid-way; the rest
 are not counted); 6 false greens of 25 = 24 %, on u01, u04 and u08. The partial figure
-is shown as is; per-attempt lines are in `results/deepseek_subtle.jsonl`.
+is shown as is; per-attempt lines are in `results/remote_subtle.jsonl`.
 
 Verdict for this set: **USEFUL (proven)** for the local model, at the threshold
 (10.0 % against the 10 % criterion, lower bound 4.7 % above 0; delivered wrong 0 %;
-overhead 1.12x); the deepseek figure is partial.
+overhead 1.12x); the remote-model figure is partial.
 
 Overall B3 reading: not proven on easy tasks (3.3 % and 8.3 %), proven on subtle
 ones; the oracle caught every false green it was shown.
 
-Raw lines: `results/local_subtle.jsonl`, `results/deepseek_subtle.jsonl`.
+Raw lines: `results/local_subtle.jsonl`, `results/remote_subtle.jsonl`.
 
 ## Limits
 
@@ -86,7 +86,7 @@ python3 public/bench/agentic/run_agentic.py run --taskroot public/bench/agentic/
 
 The command reads the prompt on stdin and prints a Claude Code `--output-format json`
 object. Add `--max-attempts 3 --timeout 900` as needed; `report --out OUT` renders the
-table. Raw lines: `results/local_traps.jsonl`, `results/deepseek_traps.jsonl`,
-`results/local_hard.jsonl`, `results/deepseek_hard.jsonl`.
+table. Raw lines: `results/local_traps.jsonl`, `results/remote_traps.jsonl`,
+`results/local_hard.jsonl`, `results/remote_hard.jsonl`.
 
 Note: in the first set, task t01 had its host column renamed (private-range addresses replaced by `edge-N` names) before publication; the field is not used by the task or its oracle, and the measured runs used the original addresses.

@@ -6,6 +6,7 @@ import subprocess
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import shell_quotes
+from example_defaults import setting
 
 AGGREGATION = [re.compile(r"\bgrep\s+-\S*o"), re.compile(r"\buniq\s+-c\b"), re.compile(r"\bsort\s+-rn\b"), re.compile(r"\bsort\s+-n\s*\|\s*uniq\b")]
 DYNAMIC = re.compile(r"(?s)[*`]|(?<!\$)\?|\$(?!\?)|<<|\b(?:find|rg|du)\b|\bgrep\b[^|;&]*\s-\w*[rR]|\bcd\b.*\bcd\b")  # lang-ok: du is the disk usage command
@@ -57,14 +58,14 @@ def small_files(masked, config, ctx):
         return False
     cd = re.match(r"\s*cd\s+(\S+)\s*&&", m)
     base = os.path.expanduser(cd.group(1)) if cd else ctx["cwd"]
-    exts = config.get("digest_extensions", [".md", ".log", ".txt", ".jsonl"])
+    exts = setting(config, "guard", "digest_extensions")
     paths = set(os.path.normpath(os.path.join(base, os.path.expanduser(t))) for t in material(masked, exts))
     if not paths:
         return False
     sizes = [ctx["stat"](p) for p in sorted(paths)]
     if any(s is None for s in sizes):
         return False
-    return sum(s[1] for s in sizes) < int(config.get("digest_max_bytes", 98304))
+    return sum(s[1] for s in sizes) < int(setting(config, "guard", "digest_max_bytes"))
 
 
 def check(tool_name, tool_input, config, ctx):
@@ -73,8 +74,8 @@ def check(tool_name, tool_input, config, ctx):
     cmd = tool_input.get("command")
     if not isinstance(cmd, str):
         return (False, "", [])
-    marker = config.get("digest_waiver", "manual-digest")
-    exts = config.get("digest_extensions", [".md", ".log", ".txt", ".jsonl"])
+    marker = setting(config, "guard", "digest_waiver")
+    exts = setting(config, "guard", "digest_extensions")
     masked = shell_quotes.mask_quotes(shell_quotes.strip_comments(cmd))
     if exempt(masked, cmd):
         return (False, "", [])
@@ -94,7 +95,7 @@ def check(tool_name, tool_input, config, ctx):
             return (False, "", [])
     except Exception:
         pass
-    max_bytes = int(config.get("digest_max_bytes", 98304))
+    max_bytes = int(setting(config, "guard", "digest_max_bytes"))
     reason = (f"Digest refused: this command ranks or extracts the lines of {targets[0]}, "
               f"a large or unknown file; reading it belongs to a model. To fix: have a local model "
               f"digest the file, rank named files under {max_bytes} bytes, or end the command with "

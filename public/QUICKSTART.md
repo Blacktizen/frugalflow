@@ -27,7 +27,7 @@ frugalflow uninstall        # puts every touched file back, byte for byte
 The older layer-by-layer walk is `frugalflow setup --layers`. The manual route still works:
 
 ```bash
-python3 public/bin/frugalflow.py init --lmstudio-url http://127.0.0.1:8000
+python3 public/bin/frugalflow.py init --lmstudio-url http://127.0.0.1:<port>
 python3 public/bin/frugalflow.py doctor
 ```
 
