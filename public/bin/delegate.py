@@ -212,6 +212,13 @@ def main():
     if refusal:
         print("CONTENT REFUSED: " + refusal)
         sys.exit(4)
+    # the system message leaves too: same filter, same table (restored on the way back)
+    system_sent, table, sys_counts, sys_refusal = send_rules.outbound(args.system, plan["trust"], A, I, table)
+    if sys_refusal:
+        print("CONTENT REFUSED: --system: " + sys_refusal)
+        sys.exit(4)
+    for k, v in sys_counts.items():
+        counts[k] = counts.get(k, 0) + v
     ann = send_rules.announce(counts)
     if ann:
         sys.stderr.write(ann)
@@ -224,7 +231,7 @@ def main():
         print("NO OUTPUT CAP: set max_output in models.json or pass --max-tokens")
         sys.exit(2)
 
-    max_tokens, why = budget_rules.plan_max_tokens(plan["window"], len(to_send) + len(args.system), 2, cap)
+    max_tokens, why = budget_rules.plan_max_tokens(plan["window"], len(to_send) + len(system_sent), 2, cap)
     if why:
         print("TASK TOO BIG: " + why)
         sys.exit(3)
@@ -252,7 +259,7 @@ def main():
         journal_log.arm(journal_log.default_path(), args.role, plan["name"], args.out, first_line, chars=len(prompt), waiver=waiver)
 
         # Step 12
-        base = [{"role": "system", "content": args.system}, {"role": "user", "content": to_send}]
+        base = [{"role": "system", "content": system_sent}, {"role": "user", "content": to_send}]
         if args.no_thinking:
             base.append({"role": "assistant", "content": "<think>\n\n</think>\n\n"})
         extra = {"chat_template_kwargs": {"reasoning_effort": args.effort}} if args.effort else None
