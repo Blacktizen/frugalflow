@@ -100,8 +100,14 @@ To run the test suites:
 python3 public/tests/e2e_anonymizer.py
 ```
 
-Each suite prints one `PASS` or `FAIL` line per step, then a summary line, and exits 0 only when every step passed. Run all of them with
-`for f in public/tests/e2e_*.py; do python3 "$f" || echo "FAILED $f"; done`, and verify any tool with `python3 public/bin/<tool>.py --autotest`.
+Each suite prints one `PASS` or `FAIL` line per step, then a summary line, and exits 0 only when every step passed. Run everything (every tool's `--autotest`, then every `e2e_*.py`) with
+
+```
+python3 public/tests/run_all.py            # exits 1 if any item failed, after running all
+python3 public/tests/run_all.py --fail-fast  # stops at the first failure
+```
+
+The runner judges only the exit code of each item, never the words it prints; `public/tests/e2e_run_all.py` proves this with an injected failure. The same command runs in CI (`.github/workflows/tests.yml`, Python 3.11 and 3.12, no key, no model). Verify a single tool with `python3 public/bin/<tool>.py --autotest`.
 To check a tree before sharing it, check a clean copy (no `.git`, no cache files), for example:
 
 ```
