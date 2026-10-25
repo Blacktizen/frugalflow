@@ -12,6 +12,8 @@ import shutil
 import subprocess
 
 BIN = os.path.dirname(os.path.abspath(__file__))
+if BIN not in sys.path:
+    sys.path.insert(0, BIN)
 NAME_RULE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 COMMANDS = ("new-project", "nouveau-projet")   # lang-ok: French alias
 
@@ -19,7 +21,10 @@ USAGE = (
     "usage: frugalflow.py COMMAND [ARGS] | --notice | --autotest\n"
     "  new-project NAME [--root DIR]   (creates DIR/NAME; DIR defaults to the current folder)\n"
     "  init [--mode observe|active|silent] [--remove] [options]\n"
-    "  setup [--home DIR] [--answer ROLE=MODEL_ID]... [--ollama-url URL] [--lmstudio-url URL]   (walks the layers, proposes the detected models first)\n"
+    "  scan [PATH] [--staged] [--rules FILE] [--quiet]   (finds secrets and private data in a folder or repo; exit 12 on a leak; needs no model)\n"
+    "  setup [--yes] [--home DIR] [--claude-dir DIR] [--engine ENGINE] [--endpoint URL]   (guided: detects your engines, backs up, writes, runs doctor)\n"
+    "  uninstall [--home DIR] [--claude-dir DIR]   (restores the backups made by setup)\n"
+    "  setup --layers [--home DIR] [--answer ROLE=MODEL_ID]...[--ollama-url URL] [--lmstudio-url URL]   (walks the layers, proposes the detected models first)\n"
     "  notes add-pitfall|show|check|merge|measure [--home DIR] [...]   (pitfalls and measures per model, each with its proof)\n"
     "  doctor [options]\n"
     "  report TRACE [--log DELEGATIONS] [--models MODELS] [--summary]\n"
@@ -428,6 +433,10 @@ def main():
         sys.stdout.write(USAGE + "\n")
         sys.exit(2)
 
+    if args[0] in ("--help", "-h", "help"):
+        sys.stdout.write(USAGE + "\n")
+        sys.exit(0)
+
     command = args[0]
 
     if command in COMMANDS:
@@ -450,9 +459,13 @@ def main():
             print(line)
         sys.exit(code)
 
-    if command in ("init", "doctor", "report", "lint", "setup"):
+    if command in ("init", "doctor", "report", "lint", "setup", "scan", "uninstall"):
+        rest = args[1:]
+        if command == "setup" and "--layers" not in rest and "--answer" not in rest:
+            command = "onboard"
+        rest = [a for a in rest if a != "--layers"]
         module = _load_subcommand(command + "_cmd")
-        sys.exit(module.main(args[1:]))
+        sys.exit(module.main(rest))
 
     if command in ("config", "on", "off", "mode", "display"):
         module = _load_subcommand("config_cmd")
@@ -465,6 +478,11 @@ def main():
     sys.exit(2)
 
 
-if __name__ == "__main__":
+def entry():
+    """Console-script entry point installed by pip: same run as the script."""
     import exit_log
     exit_log.run(main, "frugalflow", sys.argv[1:])
+
+
+if __name__ == "__main__":
+    entry()

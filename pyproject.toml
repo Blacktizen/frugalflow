@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "frugalflow"
+version = "0.1.0"
+description = "Delegate the grunt work of your AI coding assistant to cheaper or local models, under mechanical control. Standard library only."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["claude-code", "llm", "delegation", "guardrails", "secrets", "anonymization"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/Blacktizen/frugalflow"
+Issues = "https://github.com/Blacktizen/frugalflow/issues"
+
+[project.scripts]
+frugalflow = "frugalflow_app.bin.frugalflow:entry"
+
+[tool.setuptools]
+packages = ["frugalflow_app", "frugalflow_app.bin"]
+include-package-data = false
+
+[tool.setuptools.package-dir]
+frugalflow_app = "public"
+
+[tool.setuptools.package-data]
+frugalflow_app = ["config/*.json", "data/*", "examples/*", "hooks/*"]
+"frugalflow_app.bin" = ["*.py"]
