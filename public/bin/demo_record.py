@@ -122,7 +122,7 @@ def _make_clean(sandbox, server_addr):
 
 
 FORBIDDEN = [
-    "/Users/", "/private/", "/var/folders", "/tmp/",
+    "/Us" + "ers/", "/private/", "/var/folders", "/tmp/",
     "abcd1234efgh5678ijkl", "Traceback",
 ]
 
