@@ -17,6 +17,31 @@ frugalflow scan .          # needs no model: finds secrets and private data in 3
 frugalflow setup           # guided: detects your engines, backs up, writes, runs doctor
 ```
 
+## Two pillars
+
+**1. Delegation under control.** Bulky mechanical work goes to a cheaper or local model; nothing it produces is accepted on its own word, an independent check decides, and guards refuse what must not happen.
+
+**2. Memory per project: your AI assistant no longer forgets from one session to the next.** Every project gets its own vault, and what happens in it is written down at the moment it happens, in a journal you can check:
+
+- **A vault per project** (`vault_new.py`): rules, todo, index, sources and a sealed log, mounted in one command.
+- **Journal at the gesture.** Every commit, merge or decision writes its entry right away. A guard (`r1_guard.py`, with `journal_guard.py`) blocks the end of a turn while a state-changing command ran with no entry after it.
+- **A chained journal, tamper-evident.** `journal_add.py` appends sealed entries after checking the chain; `session_log.py` seals every session event with the hash of the previous line; `session_chain.py` verifies the chain. Edit one line afterwards and the chain says so.
+- **A closing pass** (`vault_check.py`) checks the vault invariants: pages, log, index, sources, commits.
+- **Resuming** (`session_note.py` puts a verdict on an action; `session_summary.py` records a summary at the end of a session and shows it once at the next start).
+
+A concrete run, four steps (a clone's `public/bin/` holds the tools; `frugalflow new-project` works from the installed command too):
+
+```
+frugalflow new-project demo --root ~/projects                        # 1. create the vault, the hooks and the commit gate
+cd ~/projects/demo && claude                                         # 2. work: every event is sealed; a gesture with no entry blocks the end of the turn
+python3 public/bin/journal_add.py --vault ~/projects/demo/vault --title "Parser fixed" \
+  --field "Decision=resolve pages by name" --field "Why=a moved page bricked the gate"
+python3 public/bin/vault_check.py --vault ~/projects/demo/vault --repo ~/projects/demo   # 3. close: VAULT OK or the failed checks
+cd ~/projects/demo && claude                                         # 4. next day: the last summary is shown at start, the vault holds the decisions
+```
+
+What this gives you is continuity and traceability: what was decided, why, and that nobody rewrote it afterwards. What it does **not** yet give is a proven saving of tokens when a session resumes: the resume bench (B7) did not reach its pre-set criterion, and it is on the roadmap below.
+
 AI coding agents are remarkable, and they have four habits that hurt: they bill every token at the premium rate, even for boilerplate; they say "all green" without proof; they let secrets and personal data slip into what they publish; and they forget everything between one session and the next.
 
 FrugalFlow is a toolkit around Claude Code that attacks those four problems together. The paid assistant keeps the part that needs judgment. Bulky mechanical work goes to a cheaper or local model. Nothing that model produces is accepted on its own word: an independent check decides, guards refuse what must not happen, a hash-chained journal records what did, and a project vault remembers it all for the next session.
@@ -75,6 +100,7 @@ On small tasks, the token economics are not there yet: on our 20-task bench, Fru
 ### Roadmap and where we need help
 
 - **Make delegation pay off.** Find the task sizes and mixes where handing work to a cheaper model beats working alone, and publish the bench either way. Larger real-world tasks are the missing data.
+- **Prove the resume saving (B7).** The memory is useful for continuity and traceability today; the token saving at session resume is not proven (the vault made the agent read more before correction, and the corrected version missed its 30 % criterion). A bench on larger real projects would settle it either way.
 - **Fewer wrong refusals.** Most early briefs were wrong and the guards refused wrongly at times. Every false refusal you report becomes a bench case and a fix.
 - **Wider benches.** The benches use small synthetic sets, one local model at a time, with oracles written by a model. More models, more tasks and independently written oracles would make every verdict stronger.
 - **Stronger isolation.** There is no system isolation yet: the working folder used to verify a candidate is a temporary folder, not a sandbox (`verify_worktree.py` is named for that reason). A container or OS-level sandbox backend is a welcome contribution. See [`public/THREAT_MODEL.md`](public/THREAT_MODEL.md).
