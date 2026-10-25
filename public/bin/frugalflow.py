@@ -154,7 +154,7 @@ def new_project(name, root):
     ignore = os.path.join(project, ".gitignore")
     if not os.path.exists(ignore):
         with open(ignore, "w", encoding="utf-8") as handle:
-            handle.write(".claude/settings.json\n")
+            handle.write(".claude/settings.json\n.githooks/\n")
     lines = [
         "PROJECT READY " + project,
         "  vault  " + os.path.join(project, "vault"),

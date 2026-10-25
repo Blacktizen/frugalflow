@@ -12,7 +12,8 @@ BIN = os.path.normpath(os.path.join(HERE, "..", "bin"))
 
 GOOD_SRC = (
     "import sys\n"
-    "sys.path.insert(0, " + repr(BIN) + ")\n"
+    "import os\n"
+    "sys.path.insert(0, os.environ[\"FF_BIN\"])\n"
     "import exit_log\n"
     "def main(argv):\n"
     "    if argv and argv[0] == \"--bad\":\n"
@@ -40,6 +41,7 @@ GIT_ENV = {
 def make_env(home):
     env = dict(os.environ)
     env["FRUGALFLOW_HOME"] = home
+    env["FF_BIN"] = BIN
     env.update(GIT_ENV)
     return env
 
