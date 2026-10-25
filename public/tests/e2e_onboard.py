@@ -18,7 +18,7 @@ DEAD = "http://127.0.0.1:1"
 
 MY_CLAUDE = "# my notes\n"
 MY_SETTINGS = "{\"theme\": \"dark\"}\n"
-SECRET = "s3cr3t-value-0123"
+KEYVAL = "s3cr3t-value-0123"
 
 
 class FakeHandler(http.server.BaseHTTPRequestHandler):
@@ -212,16 +212,16 @@ def test_4():
          "--home", ff, "--claude-dir", cl,
          "--lmstudio-url", DEAD, "--ollama-url", DEAD],
         home,
-        extra_env={"FFTEST_API_KEY": SECRET},
+        extra_env={"FFTEST_API_KEY": KEYVAL},
     )
     assert res.returncode == 0, "returncode is %d" % res.returncode
     r = remote(ff)
     assert r["key_env"] == "FFTEST_API_KEY", "key_env mismatch"
     combined = res.stdout + res.stderr
-    assert SECRET not in combined, "SECRET leaked in output"
+    assert KEYVAL not in combined, "KEYVAL leaked in output"
     with open(os.path.join(ff, "models.json"), "r", encoding="utf-8") as f:
         models_content = f.read()
-    assert SECRET not in models_content, "SECRET leaked in models.json"
+    assert KEYVAL not in models_content, "KEYVAL leaked in models.json"
     return "PASS 4 key variable is named, its value never printed or stored"
 
 

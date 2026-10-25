@@ -2,7 +2,7 @@ import sys
 import os
 import subprocess
 import tempfile
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as xtree
 from xml.sax.saxutils import escape
 
 NOTICE = (
@@ -32,7 +32,7 @@ def _timeline(scenes):
     entries = []
     scene_ends = []
     gi = 0
-    for si, scene in enumerate(scenes):
+    for sidx, scene in enumerate(scenes):
         lines = scene["lines"]
         hold = scene["hold"]
         lt = round(t + 0.3, 3)
@@ -40,16 +40,16 @@ def _timeline(scenes):
             if j > 0:
                 prev = _norm(lines[j - 1]["cls"])
                 lt = round(lt + (0.9 if prev == "cmd" else 0.18), 3)
-            entries.append((gi, si, j, lt))
+            entries.append((gi, sidx, j, lt))
             gi += 1
         se = round(entries[-1][3] + hold, 3)
         scene_ends.append(se)
         t = round(se + 0.4, 3)
     total = round(scene_ends[-1] + 1.0, 3)
     for i in range(len(entries)):
-        si = entries[i][1]
+        sidx = entries[i][1]
         entries[i] = (entries[i][0], entries[i][1], entries[i][2],
-                      entries[i][3], scene_ends[si])
+                      entries[i][3], scene_ends[sidx])
     return total, entries
 
 
@@ -90,7 +90,7 @@ def render(scenes, width=860):
         'animation-iteration-count:infinite;'
         'animation-timing-function:step-end}' % dur_s
     )
-    for gi, si, j, lt, se in entries:
+    for gi, sidx, j, lt, se in entries:
         style.append('.l%d{animation-name:k%d}' % (gi, gi))
         a = round(lt / total * 100, 3)
         a2 = round(a + 0.001, 3)
@@ -108,8 +108,8 @@ def render(scenes, width=860):
     parts.append('<circle cx="36" cy="14" r="5" fill="#d29922"/>')
     parts.append('<circle cx="54" cy="14" r="5" fill="#3fb950"/>')
     scenes_filtered = [s for s in scenes if s["lines"]]
-    for gi, si, j, lt, se in entries:
-        line = scenes_filtered[si]["lines"][j]
+    for gi, sidx, j, lt, se in entries:
+        line = scenes_filtered[sidx]["lines"][j]
         cls = _norm(line["cls"])
         txt = line["text"]
         if len(txt) > 100:
@@ -163,13 +163,13 @@ def _autotest():
     svg2 = render([S1, S2])
     ok2 = False
     try:
-        root = ET.fromstring(svg2)
+        root = xtree.fromstring(svg2)
         if (_tag(root) == "svg"
                 and root.get("width") == "860"
                 and root.get("height") == "120"):
             texts = [el for el in root.iter() if _tag(el) == "text"]
             ok2 = len(texts) == 4
-    except ET.ParseError:
+    except xtree.ParseError:
         pass
     results.append((ok2, "expected svg 860x120 with 4 text elements"))
 
@@ -177,7 +177,7 @@ def _autotest():
     svg3 = render([ODD])
     ok3 = False
     try:
-        root = ET.fromstring(svg3)
+        root = xtree.fromstring(svg3)
         texts = [el for el in root.iter() if _tag(el) == "text"]
         t0 = texts[0].text or ""
         t1 = texts[1].text or ""
@@ -189,7 +189,7 @@ def _autotest():
             and "plain" in cls1
             and "weird" not in cls1
         )
-    except (ET.ParseError, IndexError):
+    except (xtree.ParseError, IndexError):
         pass
     results.append((ok3, "escape/truncate/class checks"))
 
@@ -220,10 +220,10 @@ def _autotest():
     svg_empty = render([])
     ok_empty = (empty_dur == 1.0)
     try:
-        root_e = ET.fromstring(svg_empty)
+        root_e = xtree.fromstring(svg_empty)
         texts_e = [el for el in root_e.iter() if _tag(el) == "text"]
         ok_empty = ok_empty and len(texts_e) == 0
-    except ET.ParseError:
+    except xtree.ParseError:
         ok_empty = False
     env = os.environ.copy()
     pycache_dir = tempfile.mkdtemp()

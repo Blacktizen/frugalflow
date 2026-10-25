@@ -163,9 +163,9 @@ def list_files(path, staged=False):
     return results
 
 
-def _rel(chemin, base):
+def _rel(target, base):
     return os.path.relpath(
-        os.path.realpath(chemin), os.path.realpath(base)
+        os.path.realpath(target),os.path.realpath(base)
     ).replace(os.sep, "/")
 
 
@@ -224,7 +224,7 @@ def _autotest():
         except FileNotFoundError:
             git_available = False
 
-        # epreuve 1
+        # test1
         try:
             got = list_files(walk_dir)
             got_rel = sorted(_rel(p, walk_dir) for p in got)
@@ -236,7 +236,7 @@ def _autotest():
         except Exception as exc:
             print("FAIL 1 expected=%s got=%s" % (WALK_EXPECTED, exc))
 
-        # epreuve 2
+        # test2
         a_abs = os.path.abspath(os.path.join(walk_dir, "a.txt"))
         try:
             r1 = list_files(os.path.join(walk_dir, "a.txt"))
@@ -249,7 +249,7 @@ def _autotest():
         except Exception as exc:
             print("FAIL 2 expected=[a.txt_abs, []] got=%s" % exc)
 
-        # epreuve 3
+        # test3
         if not git_available:
             print("PASS 3 skipped: git not found")
             passed += 1
@@ -265,7 +265,7 @@ def _autotest():
             except Exception as exc:
                 print("FAIL 3 expected=%s got=%s" % (GIT_EXPECTED, exc))
 
-        # epreuve 4
+        # test4
         if not git_available:
             print("PASS 4 skipped: git not found")
             passed += 1
@@ -288,7 +288,7 @@ def _autotest():
             except Exception as exc:
                 print("FAIL 4 expected=['kept.txt'] + not a git repository: %s" % exc)
 
-        # epreuve 5
+        # test5
         ok_absent = False
         try:
             list_files(os.path.join(walk_dir, "absent"))

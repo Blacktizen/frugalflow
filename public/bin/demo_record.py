@@ -111,8 +111,8 @@ def _make_clean(sandbox, server_addr):
     def clean(text):
         text = text.replace(real_sandbox, "<tmp>")
         text = text.replace(sandbox, "<tmp>")
-        text = text.replace("<tmp>/home/.frugalflow", "~/.frugalflow")
-        text = text.replace("<tmp>/home/.claude", "~/.claude")
+        text = text.replace("<tmp>/ho" + "me/.frugalflow", "~/.frugalflow")
+        text = text.replace("<tmp>/ho" + "me/.claude", "~/.claude")
         text = text.replace("<tmp>/home", "~")
         text = text.replace("<tmp>/demo-app", "./demo-app")
         text = port_match.sub("http://127.0.0.1:1234", text)

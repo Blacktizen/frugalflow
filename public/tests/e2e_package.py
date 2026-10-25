@@ -21,7 +21,7 @@ def main():
     tmp_venv = None
 
     try:
-        # --- Epreuve 1 ---
+        # --- Test1 ---
         if True:
             try:
                 with open(os.path.join(root, "pyproject.toml"), "rb") as f:
@@ -43,7 +43,7 @@ def main():
                 print("FAIL 1 " + repr(e))
                 tmp_venv = None
 
-        # --- Epreuve 2 ---
+        # --- Test2 ---
         if tmp_venv is None and passes < 1:
             print("FAIL skipped: 1")
         elif passes >= 1:
@@ -76,7 +76,7 @@ def main():
                 passes -= 0  # already not incremented
                 wheel_path = None
 
-        # --- Epreuve 3 ---
+        # --- Test3 ---
         if wheel_path is None and passes < 2:
             print("FAIL skipped: 2")
         elif passes >= 2:
@@ -99,7 +99,7 @@ def main():
                 print("FAIL 3 " + repr(e))
                 tmp_venv = None
 
-        # --- Epreuve 4 ---
+        # --- Test4 ---
         if tmp_venv is None and passes < 3:
             print("FAIL skipped: 3")
         elif passes >= 3:

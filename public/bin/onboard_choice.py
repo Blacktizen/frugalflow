@@ -148,7 +148,7 @@ DOC = {"models": [
 def _run_autotest():
     n_pass = 0
 
-    # --- Epreuve 1 ---
+    # --- Test1 ---
     ok1 = True
     checks1 = [
         ("http://h:1", "http://h:1/v1"),
@@ -169,7 +169,7 @@ def _run_autotest():
     if ok1:
         n_pass += 1
 
-    # --- Epreuve 2 ---
+    # --- Test2 ---
     c2 = build_candidates(FINDINGS, "http://127.0.0.1:9/v1", "")
     pairs2 = [(c["kind"], c["where"]) for c in c2]
     exp2a = [("lmstudio", "http://127.0.0.1:1234"),
@@ -190,7 +190,7 @@ def _run_autotest():
     else:
         print("FAIL 2 expected=" + repr(exp2a) + " got=" + repr(pairs2))
 
-    # --- Epreuve 3 ---
+    # --- Test3 ---
     c3 = c2  # the five candidates from test 2 first case
     s3a = select(c3, "")
     s3b = select(c3, "ollama")
@@ -212,7 +212,7 @@ def _run_autotest():
     else:
         print("FAIL 3 expected=select+menu got=" + repr(s3a) + " " + repr(ml))
 
-    # --- Epreuve 4 ---
+    # --- Test4 ---
     checks4 = [("", 3, 1), ("", 0, 0), (" 2 ", 3, 2), ("0", 3, 0),
                ("4", 3, None), ("x", 3, None), ("-1", 3, None)]
     ok4 = all(parse_answer(t, n) == e for t, n, e in checks4)
@@ -223,7 +223,7 @@ def _run_autotest():
         print("FAIL 4 expected=" + repr(checks4) + " got="
               + repr([parse_answer(t, n) for t, n, e in checks4]))
 
-    # --- Epreuve 5 ---
+    # --- Test5 ---
     doc_before = copy.deepcopy(DOC)
     ok5 = True
 
