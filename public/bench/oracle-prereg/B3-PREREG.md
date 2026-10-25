@@ -136,8 +136,8 @@ cas limite qu un test visible partiel ne couvre pas.
 - t26 `isoweek.py` `parse_iso_week(s)` : "2026-W01-1" (annee ISO, semaine, jour 1=lundi a 7=dimanche) -> datetime.date.
   La semaine 1 est celle qui contient le premier jeudi de l annee ; la semaine 53 n existe que pour certaines annees.
   Format invalide, semaine 0 ou inexistante, jour hors 1..7 : ValueError. Le jour est optionnel ("2026-W01") et vaut 1.
-- t27 `redact.py` `redact_emails(text)` : remplace chaque adresse e-mail "local@domaine.tld" par sa premiere lettre suivie de
-  "***@domaine.tld" (toujours trois etoiles, meme si la partie locale n a qu un caractere). Le reste du texte est intact.
+- t27 `redact.py` `redact_emails(text)` : remplace chaque adresse e-mail "local@example.com" par sa premiere lettre suivie de
+  "***@example.com" (toujours trois etoiles, meme si la partie locale n a qu un caractere). Le reste du texte est intact.
   Un "@mot" sans domaine avec un point n est pas une adresse et reste inchange. Plusieurs adresses dans un texte : toutes.
 - t28 `envexp.py` `env_expand(template, env)` : remplace `${VAR}` par env[VAR] (absent : chaine vide) ; `${VAR:-def}` par
   def si VAR est absent OU VIDE ; `$$` donne un `$` litteral ; un `$` isole ou `$VAR` sans accolades reste litteral. Pas

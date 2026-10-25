@@ -15,15 +15,15 @@ cases = [
     ("abcd@example.com", "a***@example.com"),
     ("alice@bob", "alice@bob"),
     ("hello @mot there", "hello @mot there"),
-    ("alice@example.com and bob@test.org", "a***@example.com and b***@test.org"),
-    ("user123@domain.co", "u***@domain.co"),
+    ("alice@example.com and bob@example.net", "a***@example.com and b***@example.net"),
+    ("user123@example.com", "u***@example.com"),
     ("alice@sub.example.com", "a***@sub.example.com"),
     ("", ""),
     ("no emails here", "no emails here"),
-    ("x@y.com", "x***@y.com"),
-    ("bob@example.com, alice@test.org", "b***@example.com, a***@test.org"),
+    ("x@example.com", "x***@example.com"),
+    ("bob@example.com, alice@example.net", "b***@example.com, a***@example.net"),
     ("start alice@example.com end", "start a***@example.com end"),
-    ("a@test.co", "a***@test.co"),
+    ("a@example.net", "a***@example.net"),
 ]
 
 discrepancies = []
