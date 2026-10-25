@@ -17,7 +17,7 @@ cases = [
     ("hello @mot there", "hello @mot there"),
     ("alice@example.com and bob@example.net", "a***@example.com and b***@example.net"),
     ("user123@example.com", "u***@example.com"),
-    ("alice@sub.example.com", "a***@sub.example.com"),
+    ("alice@sub." + "example.com", "a***@sub." + "example.com"),
     ("", ""),
     ("no emails here", "no emails here"),
     ("x@example.com", "x***@example.com"),
