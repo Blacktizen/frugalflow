@@ -10,7 +10,7 @@ flowchart TD
     B["brief_check.py<br/>brief_rules.py<br/>brief guard"]
     C["layers.py<br/>delegate_prep.py<br/>send_rules.py"]
     D["delegate.py<br/>delegation"]
-    E["verify_rules.py<br/>verify_sandbox.py<br/>external oracle"]
+    E["verify_rules.py<br/>verify_worktree.py<br/>external oracle"]
     F["guard_hook.py<br/>guard_rules.py<br/>receipt_rules.py"]
     G["journal_log.py<br/>one receipt line per delegation"]
     H["journal_add.py<br/>session_log.py<br/>session_chain.py<br/>r1_guard.py<br/>vault_check.py"]
@@ -52,9 +52,9 @@ flowchart TD
 
 `delegate.py` sends the task to the role's model and writes the result into the target file, replacing it only with a verified candidate. When invoked with `--verify` it retries the whole send until the external check passes.
 
-### E — verify_rules.py and verify_sandbox.py
+### E — verify_rules.py and verify_worktree.py
 
-`verify_rules.py` judges the check command before execution, accepting it, rewriting it to run on the candidate, or refusing it outright. `verify_sandbox.py` then runs the check in a temporary folder containing only the useful files, with no sensitive variables and a time limit, returning the exit status and a report of any write that reached the project.
+`verify_rules.py` judges the check command before execution, accepting it, rewriting it to run on the candidate, or refusing it outright. `verify_worktree.py` then runs the check in a temporary folder containing only the useful files, with no sensitive variables and a time limit, returning the exit status and a report of any write that reached the project.
 
 ### F — guard_hook.py, guard_rules.py, receipt_rules.py
 
@@ -92,7 +92,7 @@ flowchart TD
 | `send_rules.py` | decides what may leave for a model | the content and the trust level of the destination | allow, labels instead of personal data, or nothing when a secret is found |
 | `delegate.py` | sends the task to the role's model; with --verify retries until the check passes | a brief, a role, a target file, a check command | the target file, replaced only by a verified candidate |
 | `verify_rules.py` | judges the check command before sending | a check command | accepted, or rewritten to run on the candidate, or refused |
-| `verify_sandbox.py` | runs the check in a temporary folder with only the useful files, without sensitive variables, under a time limit | a candidate and a check command | the check's exit status and a report of any write into the project |
+| `verify_worktree.py` | runs the check in a temporary folder with only the useful files, without sensitive variables, under a time limit | a candidate and a check command | the check's exit status and a report of any write into the project |
 | `guard_hook.py` | the PreToolUse hook of Claude Code | a tool call | the decision, logged, with the refusal text |
 | `guard_rules.py` | decides whether a tool call passes | a tool call and the recent receipts | allow or deny |
 | `shell_rules.py` | decides whether a shell command passes | a shell command | allow or deny |

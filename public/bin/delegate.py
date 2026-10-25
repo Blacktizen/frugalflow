@@ -24,9 +24,9 @@ import run_limits
 import limits_files
 
 try:
-    import verify_sandbox
+    import verify_worktree
 except ImportError:
-    verify_sandbox = None
+    verify_worktree = None
 
 try:
     import journal_guard
@@ -116,8 +116,8 @@ def main():
         print("VERIFY NEEDS --out")
         sys.exit(2)
 
-    if args.verify and verify_sandbox is None:
-        sys.stderr.write("VERIFY REFUSED: verify_sandbox.py must be restored next to delegate.py; --verify is never run outside the sandbox\n")
+    if args.verify and verify_worktree is None:
+        sys.stderr.write("VERIFY REFUSED: verify_worktree.py must be restored next to delegate.py; --verify always runs in a temporary work folder (no system isolation)\n")
         sys.exit(2)
 
     guard_refusal = _refuse_protected_out(args)
@@ -320,7 +320,7 @@ def main():
                 fd = os.open(cand, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
                 with os.fdopen(fd, "w", encoding="utf-8") as f:
                     f.write(content)
-                code, output = verify_sandbox.run_isolated(verify_cmd, cand, args.out, os.getcwd(), args.verify_timeout)
+                code, output = verify_worktree.run_in_worktree(verify_cmd, cand, args.out, os.getcwd(), args.verify_timeout)
                 if code == 0:
                     os.replace(cand, args.out)
                     journal_log.conclude("success", None, ans["tokens_in"], ans["tokens_out"], ans["model"])
