@@ -1,6 +1,6 @@
 # FrugalFlow
 
-[![tests](https://github.com/Blacktizen/frugalflow/actions/workflows/tests.yml/badge.svg)](https://github.com/Blacktizen/frugalflow/actions/workflows/tests.yml)
+[![tests](../../actions/workflows/tests.yml/badge.svg)](../../actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](#quick-install)
 [![Status: beta](https://img.shields.io/badge/status-beta-orange.svg)](#status-beta-and-improving-in-the-open)
