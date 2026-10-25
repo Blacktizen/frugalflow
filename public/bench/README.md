@@ -72,6 +72,8 @@ Verdicts are strict: a result obtained on a set written after seeing earlier res
 | `reading/` | B6 | does the read guard `read_intake` cut input tokens? | 0.94x | not proven |
 | `memory/` | B7 | does resuming from a previous session cut tokens? | 1.86x as built (harmful), 0.77x after correction | not proven |
 
+The B3 pre-registered set (`oracle-prereg/`) keeps its task statements (`tasks/*/task.md` and the statement list in `B3-PREREG.md`) in their original language, French, which is the language of the measurement: they are data sent verbatim to the model, so the bench can be replayed identically. The pre-registration, results and deviations documents are in English.
+
 On a verification task, FrugalFlow is justified only where a bench shows it, and only on that bench's synthetic set (B1, B4, B5; B3 at its exact threshold, fragile). A verdict is not a guarantee.
 
 Replay commands are in each folder README, and the root README lists the offline report commands

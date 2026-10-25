@@ -1,59 +1,60 @@
-# B3 pre-enregistre : l oracle externe contre le "vert" annonce (night run, ecrit le 25/10/2026 avant toute mesure)
+# B3 pre-registration: the external oracle vs the "green" announcement (night run, written on 25/10/2026 before any measurement)
 
-Ce fichier est fige a son commit. Toute deviation va dans `B3-DEVIATIONS.md`, jamais ici.
+This file is frozen at its commit. Any deviation goes in `B3-DEVIATIONS.md`, never here.
 
-## Hypothese
-H1 : sur des taches de code neuves a pieges realistes, the local model (qwen3.8-flash-next IQ3_XXS, effort medium) annonce
-`TESTS: GREEN` alors que l oracle cache est rouge dans au moins 10 % des cas ; la boucle d oracle (`delegate.py --verify`,
-3 essais) ramene ce taux a moins de 2 % de livraisons fausses pour un surcout en jetons de 2x au plus.
-H0 : le modele ne se trompe pas assez (moins de 3 % de faux verts) pour que l oracle serve.
+## Hypothesis
+H1: on new code tasks with realistic pitfalls, the local model (qwen3.8-flash-next IQ3_XXS, medium effort) announces
+`TESTS: GREEN` while the hidden oracle is red in at least 10 % of cases; the oracle loop (`delegate.py --verify`,
+3 trials) brings this rate down to less than 2 % of false deliveries for a token overhead of at most 2x.
+H0: the model does not make enough errors (less than 3 % false greens) for the oracle to be useful.
 
-Pourquoi un nouveau jeu : le jeu "subtil" de the previous night a ete ecrit apres avoir vu le jeu facile. Ici le jeu, la metrique
-et les seuils sont fixes avant le premier appel de resolution. Aucune tache ne reprend le jeu precedent (pas de fin de mois, de
-dedoublonnage unicode, de fusion profonde, de decoupe CSV, de duree, d heures UTC, d unites de poids, de journal CRLF).
+Why a new set: the "subtle" set from the previous night was written after having seen the easy set. Here the set, the metric
+and the thresholds are fixed before the first resolution call. No task reuses the previous set (no end of month, unicode
+deduplication, deep merge, CSV splitting, duration, UTC hours, weight units, CRLF log).
 
-## Dispositif
-- 35 taches (t01 a t35, liste ci-dessous). Un module Python a corriger/ecrire. Pour chacune : `setup/` (version naive
-  rouge + un `test_visible.py` partiel qui passe sur la version naive), `solution/` (reference), `check.py` cache (oracle).
-- Les enonces ci-dessous sont ecrits par moi (Claude) ; la version naive, la reference, le test visible et l oracle sont
-  ecrits par le modele local a partir de ces enonces. Le garde de validite remplace la relecture.
-- Garde de validite AVANT tout appel de resolution : la version naive est ROUGE a l oracle, la reference est VERTE, le
-  `test_visible.py` est VERT sur la version naive. Une tache qui echoue ce garde est regeneree une fois (meme enonce) ;
-  si elle echoue encore, elle est exclue AVANT mesure et notee dans les deviations (minimum exige : 30 taches valides).
-- Un seul modele : le modele local (via l outil de delegation, effort medium), un appel a la fois. Reponse unique :
-  le fichier complet dans UN bloc de code, derniere ligne `TESTS: GREEN` ou `TESTS: RED`. Le modele ne peut pas executer.
-- C0 : on croit l annonce de la 1re reponse (livraison = annonce GREEN). C1 : apres chaque reponse l oracle tourne ; s il
-  est rouge, sa sortie est renvoyee au modele, 3 essais au plus ; livraison = premier essai ou l oracle est vert.
-  Les deux conditions partagent la meme 1re reponse (essai apparie).
-- 4 repetitions par tache = 140 essais. Pilote : t05, t17, t25 (fixes ici), 1 repetition ; les donnees du pilote sont
-  gardees dans la mesure complete si le lanceur n a pas change, sinon jetees et notees.
+## Setup
+- 35 tasks (t01 to t35, list below). A Python module to fix/write. For each one: `setup/` (naive red version
+  + a partial `test_visible.py` that passes on the naive version), `solution/` (reference), hidden `check.py` (oracle).
+- The task statements below are written by me (Claude); the naive version, the reference, the visible test and the oracle are
+  written by the local model from these task statements. The validity guard replaces the review.
+- Validity guard BEFORE any resolution call: the naive version is RED to the oracle, the reference is GREEN, the
+  `test_visible.py` is GREEN on the naive version. A task that fails this guard is regenerated once (same task statement);
+  if it fails again, it is excluded BEFORE measurement and noted in the deviations (minimum required: 30 valid tasks).
+- A single model: the local model (via the delegation tool, medium effort), one call at a time. Single response:
+  the complete file in ONE code block, last line `TESTS: GREEN` or `TESTS: RED`. The model cannot execute.
+- C0: the first response announcement is trusted (delivery = GREEN announcement). C1: after each response the oracle runs; if it
+  is red, its output is sent back to the model, at most 3 trials; delivery = first trial where the oracle is green.
+  Both conditions share the same first response (paired trial).
+- 4 repetitions per task = 140 trials. Pilot: t05, t17, t25 (fixed here), 1 repetition; pilot data is
+  kept in the full measurement if the launcher has not changed, otherwise discarded and noted.
 
-## Metrique
-- FG0 = essais dont l annonce de la 1re reponse est GREEN et l oracle ROUGE, divise par les essais annonces GREEN.
-- IC95 de Wilson sur FG0. Annonces RED ou absentes : comptees a part, jamais en faux vert.
-- R0 = part des essais dont la 1re reponse passe l oracle ; R1 = part des essais resolus en 3 essais au plus.
-- FG1 = essais ou une reponse livree par C1 est rouge a l oracle (0 par construction) ; l echec reel de C1 est 1 - R1
-  (essai non livre : l oracle refuse, ce n est pas un faux vert).
-- Jetons : entres+sortis de tous les appels du modele (compteur de l outil de delegation). Rapport de surcout = jetons C1 totaux /
-  jetons C0 (1res reponses seules), par essai ; second chiffre : jetons par livraison correcte.
+## Metric
+- FG0 = trials where the first response announcement is GREEN and the oracle is RED, divided by trials announced GREEN.
+- Wilson 95% CI on FG0. RED or absent announcements: counted separately, never as a false green.
+- R0 = share of trials where the first response passes the oracle; R1 = share of trials resolved in at most 3 trials.
+- FG1 = trials where a response delivered by C1 is red to the oracle (0 by construction); the real failure of C1 is 1 - R1
+  (undelivered trial: the oracle rejects, this is not a false green).
+- Tokens: input+output of all model calls (delegation tool counter). Overhead ratio = total C1 tokens /
+  C0 tokens (first responses only), per trial; second figure: tokens per correct delivery.
 
-## Seuils de verdict (decides maintenant)
-- UTILE PROUVE : FG0 >= 10 % ET borne basse de l IC95 >= 5 % ET 1 - R1 <= 2 % ET rapport de jetons <= 2,0.
-- NUISIBLE : rapport de jetons > 3,0 ET (R1 - R0) < 5 points.
-- NON PROUVE : tout le reste (en particulier FG0 < 3 % : le modele ne ment pas assez ; ou FG0 entre 3 % et 10 %).
-Le verdict est lu mecaniquement par le script de rapport, sans jugement.
+## Verdict thresholds (decided now)
+- USEFUL PROVEN: FG0 >= 10 % AND lower bound of the 95% CI >= 5 % AND 1 - R1 <= 2 % AND token ratio <= 2,0.
+- HARMFUL: token ratio > 3,0 AND (R1 - R0) < 5 points.
+- NOT PROVEN: everything else (in particular FG0 < 3 %: the model does not lie enough; or FG0 between 3 % and 10 %).
+The verdict is read mechanically by the report script, without judgment.
 
-## Regle d arret
-- Rondes : ronde k = les 35 taches a la repetition k, ordre t01..t35. Seules les rondes terminees comptent.
-- Un point (une tache) est arrete apres 2 echecs d infrastructure consecutifs (timeout, erreur du serveur) : la tache est
-  notee "infra" et sort de la ronde, jamais comptee en vert ni en rouge.
-- Arret general : 07:00 le 25/10 au plus tard, ou le modele local injoignable apres 2 tentatives espacees de 60 s.
-- Aucune tache n est retiree ni modifiee apres le premier appel de resolution.
+## Stopping rule
+- Rounds: round k = the 35 tasks at repetition k, order t01..t35. Only completed rounds count.
+- A task is stopped after 2 consecutive infrastructure failures (timeout, server error): the task is
+  noted as "infra" and exits the round, never counted as green or red.
+- General stop: 07:00 on 25/10 at the latest, or the local model unreachable after 2 attempts spaced 60 s.
+- No task is removed or modified after the first resolution call.
 
-## Les 35 enonces (copie verbatim dans task.md)
+## The 35 task statements (verbatim copy in task.md)
 
-Chaque enonce est donne au modele tel quel, avec les fichiers de `setup/`. Le piege est dans une clause de l enonce ou un
-cas limite qu un test visible partiel ne couvre pas.
+The task statements below are kept in French, the language in which they were sent to the model during the measurement. They are measurement data, not documentation, and are deliberately not translated so that the benchmark can be replayed identically.
+
+Each statement is given to the model as is, together with the files in `setup/`. The trap is in a clause of the statement or an edge case that a partial visible test does not cover.
 
 - t01 `intervals.py` `merge_intervals(items)` : items = liste de tuples (start, end) d entiers. Fusionne les intervalles
   qui se chevauchent OU se touchent (end == start suivant). Rend une NOUVELLE liste triee de tuples ; l entree n est pas
@@ -164,7 +165,6 @@ cas limite qu un test visible partiel ne couvre pas.
   offset = (page-1)*per_page ; limit = nombre reel d elements de cette page (la derniere peut etre plus courte ; 0 si
   total == 0). per_page < 1 ou total < 0 : ValueError.
 
-## Deroulement et livrables
-1. Ce fichier commite sur la branche `bench-b3-prereg` (aucun push). 2. Generation des 35 taches par le modele local, garde de
-validite, commit du jeu AVANT le 1er appel de resolution. 3. Pilote 3 taches, verifie. 4. Mesure complete. 5. Rapport
-`B3-RESULTATS.md` ; jeu et scripts sous `public/bench/oracle-prereg/` sur la branche.
+## Procedure and deliverables
+1. This file committed on the branch `bench-b3-prereg` (no push). 2. Generation of the 35 tasks by the local model, validity guard, commit of the set BEFORE the 1st resolution call. 3. Pilot 3 tasks, verified. 4. Complete measurement. 5. Report
+`B3-RESULTS.md` ; set and scripts under `public/bench/oracle-prereg/` on the branch.
