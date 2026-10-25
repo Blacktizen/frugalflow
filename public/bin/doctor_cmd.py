@@ -204,6 +204,11 @@ def _doctor(home, claude_dir, ollama_url, lmstudio_url):
     enabled, mode = _read_switch(home)
     if enabled:
         print("OK switch: FrugalFlow on, mode " + mode)
+        if mode != "observe":
+            print("OK guard mode: " + mode + " (a refused action is blocked)")
+        else:
+            print("WARN guard mode: OBSERVE - the guards log what they would refuse but do NOT block anything. "
+                  "Turn enforcement on: python3 " + os.path.join(BIN, "frugalflow.py") + " mode active")
     else:
         print("WARN switch: FrugalFlow off, mode " + mode + " (turn it on: python3 " + os.path.join(BIN, "frugalflow.py") + " on)")
 
@@ -347,6 +352,19 @@ def _autotest():
     rn = subprocess.run([sys.executable, script, "--notice"], capture_output=True, text=True)
     ok = rn.returncode == 0 and rn.stdout.startswith("NAME      doctor_cmd.py")
     results.append(("5 --notice prints the notice", ok, "rc=%d stdout=%r" % (rn.returncode, rn.stdout) if not ok else ""))
+
+    # Test 6: the effective guard mode is shown; observe gets a strong WARN, active an OK.
+    with tempfile.TemporaryDirectory() as tmp:
+        home, claude = os.path.join(tmp, "home"), os.path.join(tmp, "claude")
+        ok = init(tmp, home, claude).returncode == 0
+        d1 = run(tmp, home, claude)
+        pp = os.path.join(home, "preferences.json")
+        doc = json.load(open(pp, encoding="utf-8"))
+        doc["switch"]["mode"] = "active"
+        json.dump(doc, open(pp, "w", encoding="utf-8"))
+        d2 = run(tmp, home, claude)
+        ok = ok and "WARN guard mode: OBSERVE" in d1.stdout and "NOT block" in d1.stdout and "OK guard mode: active" in d2.stdout
+        results.append(("6 doctor shows the guard mode: WARN in observe, OK in active", ok, ""))
 
     all_pass = True
     for desc, passed, detail in results:

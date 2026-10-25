@@ -10,7 +10,7 @@ A paid assistant reads long files, drafts boilerplate, triages logs and judges t
 
 ## What you get
 
-108 small Python tools in `public/bin/`, Python 3 standard library only, each carrying `--notice` (its contract) and `--autotest`.
+108 small Python tools in `public/bin/`, Python 3.11 or newer, standard library only, each carrying `--notice` (its contract) and `--autotest`.
 
 - **Project memory.** `vault_new.py` mounts a vault; `vault_check.py` is the hard closing pass that verifies what is written is true; `reading_gate.py` attests a reading only when a restatement repeats every bearing line of the required pages.
 - **Append-only hash-chained journal.** `journal_add.py` appends one sealed entry after checking the existing chain. `session_log.py` and `session_chain.py` seal every session event with the sha256 of the previous line and compare the log with an anchor. `r1_guard.py` blocks the end of a turn while a state-changing command ran with no journal entry after it. `session_digest.py` is the closing pass.
@@ -79,7 +79,7 @@ Raw outputs of B3 (single-call) and B4 are published as reports, not as the raw 
 
 Prerequisites:
 
-- Python 3 (standard library only; no package to install).
+- Python 3.11 or newer (standard library only; no package to install). 3.11 is the floor because `import_betterleaks.py` reads TOML with `tomllib`.
 - Claude Code.
 - At least one delegated model: a local OpenAI-compatible server (LM Studio, vLLM, llama.cpp, Ollama) or a remote one with an API key kept in an environment variable (config files only name the variable).
 
@@ -92,7 +92,7 @@ python3 public/bin/frugalflow.py new-project demo --root ~/projects
 ```
 
 `doctor` prints one `OK`, `INFO` or `WARN` line per check; a `WARN` saying the engine does not answer is expected until your model server runs, and nothing else needs it for the tests below.
-`init` starts in `observe` mode: rules watch but do not bite. `python3 public/bin/frugalflow.py mode active` turns them on. See [`public/QUICKSTART.md`](public/QUICKSTART.md).
+`init` starts in `observe` mode: rules watch and log but **do not block anything**. `doctor` shows the effective guard mode on its own line and warns loudly while it is `observe`; `python3 public/bin/frugalflow.py mode active` turns enforcement on. See [`public/QUICKSTART.md`](public/QUICKSTART.md).
 
 To run the test suites:
 

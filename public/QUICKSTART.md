@@ -12,7 +12,7 @@ python3 public/bin/frugalflow.py doctor
 
 `--lmstudio-url` takes any OpenAI-compatible server (LM Studio, vLLM, llama.cpp, ...), with or without `/v1`.
 `init` writes four settings files in `~/.frugalflow` (models, preferences, guard, anonymization), the FrugalFlow block in
-`~/.claude/CLAUDE.md` and its hook in `~/.claude/settings.json`; it starts in `observe` mode.
+`~/.claude/CLAUDE.md` and its hook in `~/.claude/settings.json`; it starts in `observe` mode, where the guards log what they would refuse but block nothing (`doctor` prints a `WARN guard mode: OBSERVE` line until you run `mode active`). Python 3.11 or newer is required.
 When the server answered, `init` prints `SET local-reader endpoint ...`: the local model is ready.
 Otherwise edit `endpoint` and `name` of `local-reader` in `~/.frugalflow/models.json`, then run `doctor` again.
 
