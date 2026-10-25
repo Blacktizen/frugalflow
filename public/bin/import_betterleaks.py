@@ -9,6 +9,8 @@ import tempfile
 import subprocess
 import warnings
 
+from anon_rules import go_to_py
+
 USAGE = "usage: import_betterleaks.py --notice | --autotest | --toml FILE --out FILE"
 
 NOTICE = (
@@ -58,7 +60,7 @@ def convert(doc):
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                re.compile(regex_val)
+                re.compile(go_to_py(regex_val))
         except re.error:
             counts["nocompile"] += 1
             continue

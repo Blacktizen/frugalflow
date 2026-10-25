@@ -86,11 +86,37 @@ def load(doc):
     return (GENERIC_ANONYMIZABLE + anonymizable, GENERIC_IRREDUCIBLE + BETTERLEAKS + irreducible, [])
 
 
+def go_to_py(pattern):
+    # Go/RE2 writes end-of-text as \z; Python 3.11 and 3.12 refuse it and spell it \Z.
+    # An escaped backslash followed by z (two backslashes then z) is a literal \z and stays as is.
+    out = []
+    i = 0
+    n = len(pattern)
+    while i < n:
+        c = pattern[i]
+        if c == "\\":
+            nxt = pattern[i + 1] if i + 1 < n else ""
+            if nxt == "z":
+                out.append("\\Z")
+                i += 2
+            elif nxt:
+                out.append(c)
+                out.append(nxt)
+                i += 2
+            else:
+                out.append(c)
+                i += 1
+        else:
+            out.append(c)
+            i += 1
+    return "".join(out)
+
+
 # Secret rules by Zachary Rice, Betterleaks (MIT), refreshed with import_betterleaks.py.
 # A missing file raises at import: the commit gate stops instead of passing secrets.
 _BL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "betterleaks_rules.json")
 with open(_BL, encoding="utf-8") as _f:
-    BETTERLEAKS = [(r["regex"], "secret (Betterleaks " + r["id"] + ")")
+    BETTERLEAKS = [(go_to_py(r["regex"]), "secret (Betterleaks " + r["id"] + ")")
                    for r in json.loads(base64.b64decode(json.load(_f)["rules_b64"]))]
 
 
@@ -188,6 +214,22 @@ def _autotest():
         print("PASS 5: expected rc=0 and stdout startswith 'NAME      anon_rules.py' got rc=0, ok")
     else:
         print("FAIL 5: expected rc=0 got rc=" + str(proc.returncode))
+    all_pass = all_pass and ok
+
+    # Test 6
+    got6a = go_to_py("a\\z")
+    got6b = go_to_py("a\\\\z")
+    bad6 = []
+    for pat, _label in BETTERLEAKS:
+        try:
+            re.compile(pat)
+        except re.error:
+            bad6.append(pat)
+    ok = got6a == "a\\Z" and got6b == "a\\\\z" and not bad6
+    if ok:
+        print("PASS 6: expected go_to_py('a\\z')=='a\\Z', 'a\\\\z' unchanged, 0 BETTERLEAKS compile errors; got " + repr(got6a) + ", " + repr(got6b) + ", 0")
+    else:
+        print("FAIL 6: expected go_to_py('a\\z')=='a\\Z', 'a\\\\z' unchanged, 0 BETTERLEAKS compile errors; got " + repr(got6a) + ", " + repr(got6b) + ", " + str(len(bad6)))
     all_pass = all_pass and ok
 
     sys.exit(0 if all_pass else 1)

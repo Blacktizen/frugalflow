@@ -178,7 +178,14 @@ def _autotest():
               and R("sort -rn main.py") is False
               and R('echo "sort -rn big.jsonl"') is False)
         if not ok:
-            print(f"FAIL 3: expected [F,F,F,T,F,F,F], got [{R('git log | sort -rn')},{R('python3 run.py big.jsonl | sort -rn')},{R('sort -rn big.jsonl # manual-digest: checking one announced figure')},{R('sort -rn big.jsonl # manual-digest: short')},{R('grep -rln "sort -rn" big.jsonl')},{R('sort -rn main.py')},{R('echo "sort -rn big.jsonl"')}]")
+            got3 = [R("git log | sort -rn"),
+                    R("python3 run.py big.jsonl | sort -rn"),
+                    R("sort -rn big.jsonl # manual-digest: checking one announced figure"),
+                    R("sort -rn big.jsonl # manual-digest: short"),
+                    R('grep -rln "sort -rn" big.jsonl'),
+                    R("sort -rn main.py"),
+                    R('echo "sort -rn big.jsonl"')]
+            print("FAIL 3: expected [F,F,F,T,F,F,F], got [" + ",".join(str(v) for v in got3) + "]")
             all_pass = False
         else:
             print("PASS 3: exemptions, waivers, grep -r, non-ext and quoted commands all pass")
