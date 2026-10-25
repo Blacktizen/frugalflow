@@ -66,7 +66,7 @@ Verdicts are strict: a result obtained on a set written after seeing earlier res
 | `verify/` | B2 | does the check judge refuse checks that verify nothing? | 80.0 % of hollow checks on the first set, 47.6 % (10/21) on a fresh set | not proven |
 | `oracle/` | B3 | how often does a model announce green tests that fail the oracle? | 1.7 % (1/60) on these tasks, too easy to tell | not proven |
 | `agentic/` | B3 | does an outside oracle catch the false greens an agent announces? | 3.3 % and 8.3 % on the first set; 10.0 % on a second set written after seeing the first; 0 wrong delivered | not proven (promising; needs a pre-registered set) |
-| `fidelity/` | B4 | how much typography does a model lose, and does `fidelity.py` give it back? | 68.3 % of lines drift without the tool, 0 of 720 with it, no content changed | proven |
+| `fidelity/` | B4 | how much typography does a model lose, and does `fidelity.py` give it back? | 69.9 % of lines drift without the tool (498/712), 0 of 712 with it, no content changed | proven |
 | `brief/` | B5 | does a brief that passed the brief checker win more first attempts? | 24.4 % to 97.8 % (+73.3 points); the fault tested is a removed fact | proven, with that limit |
 | `reading/` | B6 | does the read guard `read_intake` cut input tokens? | 0.94x | not proven |
 | `memory/` | B7 | does resuming from a previous session cut tokens? | 1.86x as built (harmful), 0.77x after correction | not proven |

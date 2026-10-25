@@ -41,7 +41,7 @@ Seven per-tool benches (B1 to B7) ran on neutral made-up sets, each with a verdi
 | B1 | `anon_check.py` | Planted leaks delivered: 16.2 % (13/80) with the tool, 42.5 % (34/80) with a model reread alone, 100 % with no check; 0 false positives on 40 decoys | **Proven** |
 | B2 | `verify_rules.py` | Hollow checks refused: 80.0 % on the first set (6.7 % good checks wrongly refused); after two tuning loops 47.6 % (10/21) on a fresh set | **Not proven** |
 | B3 | external oracle (`delegate.py --verify`) | Model announced green on failing work: 1.7 % (1/60) on single-call tasks; 3.3 % and 8.3 % on agent tasks; 10.0 % (6/60) on a second set; after the oracle loop, 0 wrong delivered | **Not proven** |
-| B4 | `fidelity.py` | Lines with drifted typography: 68.3 % without the tool, 0.0 % (0/720) with it; no content line changed | **Proven** |
+| B4 | `fidelity.py` | Lines with drifted typography: 69.9 % (498/712) without the tool, 0.0 % (0/712) with it; no content line changed (replay counts, see the line-count note in `public/bench/fidelity/README.md`) | **Proven** |
 | B5 | `brief_check.py` | First-attempt success: 24.4 % with a faulty brief, 97.8 % with the corrected one (+73.3 points); 0 false refusals on 45 sound briefs | **Proven**, within the limit below |
 | B6 | `read_intake` read guard | Input tokens 0.94x of the unguarded run, same tasks solved | **Not proven** |
 | B7 | session note / resume | Tokens 1.86x with a vault to explore (harmful as built); 0.77x after correction, 4 of 10 projects at or under 0.7x | **Not proven** |
