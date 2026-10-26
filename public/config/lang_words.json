@@ -385,6 +385,15 @@
     "bench/oracle-prereg/tasks/t27/task.md",
     "bench/oracle-prereg/tasks/t28/task.md",
     "bench/oracle-prereg/tasks/t29/task.md",
-    "bench/oracle-prereg/tasks/t30/task.md"
+    "bench/oracle-prereg/tasks/t30/task.md",
+    "bench/multisession/harness/analyse_conformite.py",
+    "bench/multisession/harness/check_rules.py",
+    "bench/multisession/harness/report.py",
+    "bench/multisession/harness/run_chain.py",
+    "bench/multisession/harness/tpl/b_block.md",
+    "bench/multisession/harness/tpl/s1.md",
+    "bench/multisession/harness/tpl/sk.md",
+    "bench/multisession/results/conformity.md",
+    "bench/multisession/results/report.md"
   ]
 }
