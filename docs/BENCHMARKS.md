@@ -28,6 +28,21 @@ Seven per-tool benches ran on neutral made-up (synthetic) sets, each with a verd
 | B6 | `read_intake` read guard | Input tokens 0.94x of the unguarded run, same tasks solved | **Not proven** |
 | B7 | session note / resume | Tokens 1.86x with a vault to explore (harmful as built); 0.77x after correction, 4 of 10 projects at or under 0.7x | **Not proven** |
 
+## Multi-session project bench (memory across fresh-context sessions)
+
+Pre-registered, in [`public/bench/multisession/`](../public/bench/multisession/README.md): 25 Exercism Python exercises in one package, 5 sessions of 5 exercises, a fresh context each session, 4 chains (2 per condition), one local model. Project conventions are given in full in session 1 only.
+
+| | Assistant alone | FrugalFlow |
+|---|---|---|
+| Modules following the conventions, sessions 2-5, strict reading | 0 % (0/40) | **87.5 % (35/40)** |
+| Same, lenient reading | 37.5 % (15/40) | **87.5 % (35/40)** |
+| Exercises solved at session 5 (2 chains) | 25 and 20 of 25 | 25 and 25 of 25 |
+| Cumulative tokens at session 5 (mean) | about 4.04 M | about 6.54 M (about 1.6x) |
+
+**Result.** FrugalFlow kept the project's decisions from one session to the next, with test success equal within run-to-run noise (the one gap comes from an assistant chain whose first session left five stubs; without it the two tie). It does not yet save tokens: the cost verdict is *not proven*, and cutting the per-session cost is on the roadmap. The script's overall verdict is "useful proven (success)", carried by the conventions score and not by the tests.
+
+**Limits.** One model (a quantised local model), Python only, exercises the model probably knows, 2 repetitions per condition, a local server (tokens, not money), conformity read on the final project state. The strict reading alone does not measure memory (the assistant missed a convention from session 1, a final period); the lenient reading does, and the result holds under both. Deviations from the pre-registration are listed in the bench README. The Exercism exercises are not redistributed (the polyglot repository has no license file); the README gives the clone command and the extraction script.
+
 ## Why each verdict, plainly
 
 - **B1.** The criterion (30 points fewer leaks than no check) is a low bar, and the tool's rules file knows the planted private names while the reread does not, which favours the deterministic tool on names. Capital-letter names, split keys and base64 evaded both. Before one correction (documentation values such as `@example.com` and reserved IP blocks raised false alarms) the first 60-file run gave 3/20 false positives and was not proven; the verdict rests on the corrected tool and a 120-file set that includes 60 new files.
@@ -62,6 +77,7 @@ python3 public/bench/verify/run_b2.py report-propose --result public/bench/verif
 # B4  fresh run: gen_b4.py, run_b4.py run, then report (commands in public/bench/fidelity/README.md)
 # B5  recompute the table from the published runs
 python3 public/bench/brief/run_brief_bench.py report --out public/bench/brief
+# Multi-session: clone the exercises, then run_chain.py and report.py (commands in public/bench/multisession/README.md)
 # B6, B7  raw lines and per-run token files are published (reading/, memory/); no one-command report exists
 ```
 

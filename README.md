@@ -42,6 +42,8 @@ cd ~/projects/demo && frugalflow resume                              # 4. next d
 
 What this gives you is continuity and traceability: what was decided, why, and that nobody rewrote it afterwards. What it does **not** yet give is a proven saving of tokens when a session resumes: the resume bench (B7) did not reach its pre-set criterion, and it is on the roadmap below.
 
+> **Measured on a multi-session project: on 25 exercises run over 5 fresh-context sessions, FrugalFlow kept the project's decisions from one session to the next. 87.5 % of the modules followed the conventions set in earlier sessions, against 0 % (strict reading) and 37.5 % (lenient reading) without it, with the same test success. It does not yet save tokens (about 1.6x the tokens, cumulative); that is on the roadmap.** Protocol, raw per-session results and limits (one model, Python only, 2 repetitions, local model): [`public/bench/multisession/`](public/bench/multisession/README.md).
+
 AI coding agents are remarkable, and they have four habits that hurt: they bill every token at the premium rate, even for boilerplate; they say "all green" without proof; they let secrets and personal data slip into what they publish; and they forget everything between one session and the next.
 
 FrugalFlow is a toolkit around Claude Code that attacks those four problems together. The paid assistant keeps the part that needs judgment. Bulky mechanical work goes to a cheaper or local model. Nothing that model produces is accepted on its own word: an independent check decides, guards refuse what must not happen, a hash-chained journal records what did, and a project vault remembers it all for the next session.
@@ -111,6 +113,7 @@ On small tasks, the token economics are not there yet: on our 20-task bench, Fru
 ### Roadmap and where we need help
 
 - **Make delegation pay off.** Find the task sizes and mixes where handing work to a cheaper model beats working alone, and publish the bench either way. Larger real-world tasks are the missing data.
+- **Make the memory pay in tokens.** The multi-session bench shows the conventions are kept, at about 1.6x the cumulative tokens of the assistant alone. The next step is trimming the per-session cost (instruction block, journal, closing) until the memory costs less than it saves.
 - **Prove the resume saving (B7).** The memory is useful for continuity and traceability today; the token saving at session resume is not proven (the vault made the agent read more before correction, and the corrected version missed its 30 % criterion). A bench on larger real projects would settle it either way.
 - **Fewer wrong refusals.** Most early briefs were wrong and the guards refused wrongly at times. Every false refusal you report becomes a bench case and a fix.
 - **Wider benches.** The benches use small synthetic sets, one local model at a time, with oracles written by a model. More models, more tasks and independently written oracles would make every verdict stronger.
@@ -180,6 +183,7 @@ Every change keeps the tests green and adds a bench case when a refusal was wron
 - [`public/NOTICE.md`](public/NOTICE.md)
 - [`public/CREDITS.md`](public/CREDITS.md)
 - [`public/bench/README.md`](public/bench/README.md)
+- [`public/bench/multisession/README.md`](public/bench/multisession/README.md): the multi-session bench
 - [`public/examples/brief_template.md`](public/examples/brief_template.md)
 
 ## License
