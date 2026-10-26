@@ -13,7 +13,7 @@ USAGE = "usage: engine_lock.py --status NAME --slots N [--dir DIR] | --notice | 
 NOTICE = """NAME      engine_lock.py - lets at most N delegations run at once on one engine, with kernel file locks freed when their holder dies.
 READS     --dir, else FRUGALFLOW_HOME/locks, else ~/.frugalflow/locks: one lock file per slot.
 WRITES    empty slot files; --status prints how many slots are busy (0); bad arguments give 2.
-EXAMPLE   python3 engine_lock.py --status qwen3.8-27b --slots 4
+EXAMPLE   python3 engine_lock.py --status model-a --slots 2
 PITFALLS  2026-08-23 two delegations shared one engine and the measure was false; a slot is now required before sending.
           A lock held by a dead process never blocks: the kernel frees it."""
 

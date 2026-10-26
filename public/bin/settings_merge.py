@@ -4,13 +4,16 @@ import shlex
 import copy
 import subprocess
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import launcher
+
 
 class SettingsError(ValueError):
     pass
 
 
 def guard_command(python, bin_dir):
-    return shlex.quote(python) + " " + shlex.quote(os.path.join(bin_dir, "guard_hook.py")) + " --hook"
+    return launcher.command(bin_dir, python, "guard_hook") + " --hook"
 
 
 def is_ours(command, guard_path):
@@ -18,9 +21,7 @@ def is_ours(command, guard_path):
         parts = shlex.split(command)
     except ValueError:
         return False
-    if len(parts) < 3:
-        return False
-    if os.path.normpath(parts[1]) != os.path.normpath(guard_path):
+    if not launcher.names_tool(command, "guard_hook", os.path.dirname(guard_path)):
         return False
     return "--hook" in parts
 
@@ -100,7 +101,7 @@ def remove_hooks(settings, guard_path):
 
 
 def statusline_command(python, bin_dir, inner=None):
-    cmd = shlex.quote(python) + " " + shlex.quote(os.path.join(bin_dir, "statusline.py"))
+    cmd = launcher.command(bin_dir, python, "statusline")
     if inner is not None:
         cmd = cmd + " --inner " + shlex.quote(inner)
     return cmd
@@ -111,11 +112,7 @@ def is_our_statusline(command, bin_dir):
         parts = shlex.split(command)
     except ValueError:
         return False
-    if len(parts) < 2:
-        return False
-    if os.path.normpath(parts[1]) != os.path.normpath(os.path.join(bin_dir, "statusline.py")):
-        return False
-    return True
+    return launcher.names_tool(command, "statusline", bin_dir)
 
 
 def _statusline_shape(settings):

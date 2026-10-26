@@ -12,7 +12,7 @@ TOOL = os.path.join(
 
 KEY_LINE = "api" + "_key = " + chr(34) + "abcd1234efgh5678ijkl" + chr(34) + "\n"
 MAIL_LINE = "contact: dev" + "@acme-corp" + ".org\n"
-PEM_LINE = "-----BEGIN RSA PRIV" + "ATE KEY-----\n"
+PEM_LINE = "-----BEGIN RSA PRIV" + "ATE KEY-----\n" + "token = " + "ghp_" + "a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8\n"
 CLEAN_LINE = "def add(a, b):\n    return a + b\n"
 
 LEAKY = {
@@ -29,7 +29,7 @@ HEALTHY = {
     "src/two.py": CLEAN_LINE,
 }
 
-FOUND_3 = "FOUND 3 leak(s) in 3 file(s)"
+FOUND_3 = "FOUND 4 leak(s) in 3 file(s)"
 FOUND_1 = "FOUND 1 leak(s) in 1 file(s)"
 CLEAN_2 = "CLEAN: 2 file(s) scanned, no leak found"
 SECRET_VALUES = ["abcd1234efgh5678ijkl", "acme-corp", "BEGIN RSA"]
@@ -119,6 +119,7 @@ def main():
             ok = ok and "docs/notes.md:1" in r.stdout
             ok = ok and "deploy/id_rsa.pem:1" in r.stdout
             ok = ok and FOUND_3 in r.stdout
+            ok = ok and "secret secret" not in r.stdout
             ok = ok and "ignored.txt" not in r.stdout
             for sv in SECRET_VALUES:
                 if sv in r.stdout:

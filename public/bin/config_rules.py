@@ -109,7 +109,7 @@ def _check_secret(key, value, path, results):
 
 
 GOOD = {"schema_version": "1", "models": [
-    {"id": "a", "name": "m", "location": "local", "endpoint": "http://127.0.0.1:8000/v1", "context_window": 65536, "paid": False, "trust": "private", "key_env": ""},
+    {"id": "a", "name": "m", "location": "local", "endpoint": "http://127.0.0.1:9000/v1", "context_window": 65536, "paid": False, "trust": "private", "key_env": ""},
     {"id": "b", "name": "n", "location": "in_session", "paid": False, "trust": "private", "key_env": "REMOTE_KEY"}
 ], "roles": [{"name": "code", "model": "a"}]}
 

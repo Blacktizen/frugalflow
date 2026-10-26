@@ -74,14 +74,14 @@ def run_autotest():
     # Test 3
     r1 = estimate_prompt(3000, 2)
     r2 = estimate_prompt(3001, 2)
-    r3 = plan_max_tokens(8192, 3000, 2, 60000)
+    r3 = plan_max_tokens(8192, 3000, 2, 50000)
     r4 = plan_max_tokens(8192, 3000, 2, 4000)
     cond1 = r1 == 1640
     cond2 = r2 == 1641
     cond3 = r3 == (6552, None)
     cond4 = r4 == (4000, None)
     condition = cond1 and cond2 and cond3 and cond4
-    print(f"{'PASS' if condition else 'FAIL'} test 3: estimate_prompt(3000,2)==1640 (got {r1}), estimate_prompt(3001,2)==1641 (got {r2}), plan_max_tokens(8192,3000,2,60000)==(6552,None) (got {r3}), plan_max_tokens(8192,3000,2,4000)==(4000,None) (got {r4})")
+    print(f"{'PASS' if condition else 'FAIL'} test 3: estimate_prompt(3000,2)==1640 (got {r1}), estimate_prompt(3001,2)==1641 (got {r2}), plan_max_tokens(8192,3000,2,50000)==(6552,None) (got {r3}), plan_max_tokens(8192,3000,2,4000)==(4000,None) (got {r4})")
     if not condition:
         failures += 1
 

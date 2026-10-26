@@ -7,7 +7,7 @@ Does the read guard `read_intake` (through the hook) cut input tokens?
 ## Method
 
 Hook with only the `intake` check on, 8 log/inventory tasks x 3 repetitions, driven by
-deepseek-v4-pro. Condition C0 has the hook off, C1 has it on. The task files are 2 500
+a remote hosted model. Condition C0 has the hook off, C1 has it on. The task files are 2 500
 lines each (not 5-50 k), so the guard has only a moderate read to refuse.
 
 ## Results

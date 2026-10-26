@@ -216,14 +216,14 @@ NOTICE = (
 
 def _autotest():
     PREFS = {"schema_version": "1",
-             "verbosity": {"final_answer_words": 150, "step_message_words": 35},
-             "ceilings": {"max_trust": "trusted_third_party", "max_tries": 3, "max_output_tokens": 60000},
-             "splitting": {"max_proofs_per_task": 5, "max_brief_lines": 140},
+             "verbosity": {"final_answer_words": 120, "step_message_words": 30},
+             "ceilings": {"max_trust": "trusted_third_party", "max_tries": 3, "max_output_tokens": 50000},
+             "splitting": {"max_proofs_per_task": 4, "max_brief_lines": 100},
              "grouping": {"independent_calls_same_turn": True}}
 
     PROJECT = {"schema_version": "1", "ceilings": {"max_trust": "private", "max_tries": 2}}
 
-    LOOSE = {"schema_version": "1", "ceilings": {"max_trust": "untrusted_third_party", "max_tries": 9}, "splitting": {"max_brief_lines": 140}}
+    LOOSE = {"schema_version": "1", "ceilings": {"max_trust": "untrusted_third_party", "max_tries": 9}, "splitting": {"max_brief_lines": 100}}
 
     BAD_PREFS = {"schema_version": "1",
                  "verbosity": {"final_answer_words": 0, "step_message_words": 35, "colour": "red"},
@@ -263,14 +263,14 @@ def _autotest():
         all_pass = False
 
     # Test 4
-    expected_eff = [("verbosity.final_answer_words", 150, "preferences"), ("verbosity.step_message_words", 35, "preferences"), ("ceilings.max_trust", "private", "project"), ("ceilings.max_tries", 2, "project"), ("ceilings.max_output_tokens", 60000, "preferences"), ("splitting.max_proofs_per_task", 5, "preferences"), ("splitting.max_brief_lines", 140, "preferences"), ("grouping.independent_calls_same_turn", True, "preferences")]
+    expected_eff = [("verbosity.final_answer_words", 120, "preferences"), ("verbosity.step_message_words", 30, "preferences"), ("ceilings.max_trust", "private", "project"), ("ceilings.max_tries", 2, "project"), ("ceilings.max_output_tokens", 50000, "preferences"), ("splitting.max_proofs_per_task", 4, "preferences"), ("splitting.max_brief_lines", 100, "preferences"), ("grouping.independent_calls_same_turn", True, "preferences")]
     eff4, viol4 = tighten(PREFS, PROJECT)
     r4a = (eff4, viol4) == (expected_eff, [])
     eff5, viol5 = tighten(PREFS, LOOSE)
     expected_viol5 = ["project loosens ceilings.max_trust: untrusted_third_party > trusted_third_party", "project loosens ceilings.max_tries: 9 > 3"]
     r4b = viol5 == expected_viol5
     r4c = eff5[2] == ("ceilings.max_trust", "trusted_third_party", "preferences")
-    r4d = eff5[6] == ("splitting.max_brief_lines", 140, "project")
+    r4d = eff5[6] == ("splitting.max_brief_lines", 100, "project")
     if r4a and r4b and r4c and r4d:
         print("PASS test4: tighten produces correct effective values and violations")
     else:

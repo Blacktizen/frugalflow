@@ -5,6 +5,7 @@ from datetime import datetime, timezone, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import receipt_rules
+from example_defaults import setting
 
 IMAGES = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".tiff", ".heic"]
 DOCUMENTS = [".pdf", ".docx", ".xlsx", ".pptx", ".ipynb"]
@@ -47,14 +48,14 @@ def check(tool_name, tool_input, config, ctx):
     if st is None:
         return (False, "", [])
     lines, size = st
-    if declared_read(ctx.get("records"), path, ctx["now"], config.get("read_waiver_minutes", 15)):
+    if declared_read(ctx.get("records"), path, ctx["now"], setting(config, "guard", "read_waiver_minutes")):
         return (False, "", [])
     ext = os.path.splitext(path)[1].lower()
     if ext in config.get("intake_image_extensions", IMAGES):
         return (True, f"Read refused: {path} is an image, which would enter the context whole. To fix: have a local vision model describe it, or {DECLARE}", [path])
     if ext in config.get("intake_document_extensions", DOCUMENTS):
         return (True, f"Read refused: {path} is a {ext} document, which would enter the context whole. To fix: extract its text and have a local model digest it, or {DECLARE}", [path])
-    if lines > int(config.get("intake_max_lines", 400)) or size > int(config.get("intake_max_bytes", 60000)):
+    if lines > int(setting(config, "guard", "intake_max_lines")) or size > int(setting(config, "guard", "intake_max_bytes")):
         return (True, f"Read refused: {path} has {lines} lines ({size} bytes), too large to enter whole. To fix: read a targeted part (offset and limit), have a local model digest it, or {DECLARE}", [path])
     return (False, "", [])
 

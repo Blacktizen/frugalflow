@@ -26,9 +26,9 @@ NOTICE = (
 
 PREFS = {
     "schema_version": "1",
-    "verbosity": {"final_answer_words": 150, "step_message_words": 35},
+    "verbosity": {"final_answer_words": 120, "step_message_words": 30},
     "ceilings": {"max_trust": "private", "max_tries": 2, "max_output_tokens": 100},
-    "splitting": {"max_proofs_per_task": 5, "max_brief_lines": 400},
+    "splitting": {"max_proofs_per_task": 4, "max_brief_lines": 100},
     "grouping": {"independent_calls_same_turn": True},
 }
 
@@ -269,7 +269,7 @@ def test5_guard_example():
         shutil.rmtree(home, ignore_errors=True)
         return False, "Bash call passes (no deny)", "found 'deny' in output"
 
-    content = "\n".join(f"x{i} = {i}" for i in range(20))
+    content = "\n".join(f"x{i} = {i}" for i in range(40))
     write_call = json.dumps(
         {"tool_name": "Write", "tool_input": {"file_path": os.path.join(home, "a.py"), "content": content}}
     )

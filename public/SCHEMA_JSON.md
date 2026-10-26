@@ -14,6 +14,27 @@ secret. This page is the contract: every tool that reads a setting reads it from
 `--home` on the command line. Examples to copy: `config/models.example.json`,
 `config/preferences.example.json`, `config/project.example.json`.
 
+## Where the defaults live
+
+The code holds no default of its own. Every starting value is written in a documented
+`*.example.json` file of `config/`, and `frugalflow init` copies those files to your home
+unchanged (plus the on/off switch in `preferences.json` and the hint in `guard.json`). A key
+you leave out of your own file takes the value of the example. The values are neutral
+starting points, not recommendations: change them to suit your machine.
+
+| Example file | What it holds |
+|---|---|
+| `models.example.json` | placeholder models: a local one (its address is a placeholder to replace, `frugalflow setup` fills it when it finds an engine), a remote one, the assistant in session; the layers and the roles |
+| `preferences.example.json` | verbosity limits, ceilings (trust, tries, output size) and task splitting |
+| `project.example.json` | a per-project ceiling that tightens the preferences |
+| `guard.example.json` | the guard's thresholds, delays and file types |
+| `engines.example.json` | the usual local addresses of the engines `setup` and `init` look for |
+| `anonymization.example.json` | fictional names showing the format of the anonymization rules |
+| `model_notes.example.json` | an empty notebook of per-model pitfalls and measures |
+
+No key is ever wired to a provider by guess: `init` and `setup` name a detected `*_API_KEY`
+variable but never pair it with an endpoint.
+
 ## Secrets are never stored
 
 API keys live in **environment variables**. A model entry names the variable in `key_env`;
@@ -139,20 +160,20 @@ that names the file: the guard never runs blind. Example: `config/guard.example.
 | `delegation_logs` | list of paths | **required** | delegation logs whose receipts let a write pass; relative paths are under `FRUGALFLOW_HOME` |
 | `audit_log` | path | **required** | where each logged decision is appended, one JSON line |
 | `active` | boolean | `true` | `false` lets everything pass (so does `FRUGALFLOW_GUARD=0`) |
-| `line_threshold` | integer | `15` | a code write of this many lines or fewer needs no receipt |
-| `receipt_minutes` | integer | `60` | how long a delegation receipt stays valid |
+| `line_threshold` | integer | from `guard.example.json` | a code write of this many lines or fewer needs no receipt |
+| `receipt_minutes` | integer | from `guard.example.json` | how long a delegation receipt stays valid |
 | `delegate_tools` | list of strings | `[]` | command names that write code legitimately (they leave the receipt) |
 | `fix_hint` | string | `""` | appended to a refusal: how to delegate on this machine |
 | `checks` | list of strings | all | entry checks to run, among `quarantine_read`, `intake`, `digest`; an unknown name refuses every call |
-| `quarantine_minutes` | integer | `60` | a delegated file cannot be read during this time: run its test instead |
-| `read_waiver_minutes` | integer | `15` | how long a read declared in the delegation log stays valid |
+| `quarantine_minutes` | integer | from `guard.example.json` | a delegated file cannot be read during this time: run its test instead |
+| `read_waiver_minutes` | integer | from `guard.example.json` | how long a read declared in the delegation log stays valid |
 | `intake_active` | boolean | `true` | `false` turns the large-file read check off |
-| `intake_max_lines` | integer | `400` | a file longer than this is not read whole |
-| `intake_max_bytes` | integer | `60000` | same, in bytes |
+| `intake_max_lines` | integer | from `guard.example.json` | a file longer than this is not read whole |
+| `intake_max_bytes` | integer | from `guard.example.json` | same, in bytes |
 | `intake_document_extensions`, `intake_image_extensions` | lists of strings | built in | extensions the read check knows |
-| `digest_extensions` | list of strings | `[".md", ".log", ".txt", ".jsonl"]` | files a counting command (`sort`, `uniq -c`…) must hand to a model |
-| `digest_max_bytes` | integer | `98304` | below this size, counting by hand is allowed |
-| `digest_waiver` | string | `"manual-digest"` | a comment `# <waiver>: <reason>` lets one counting command pass, and is logged |
+| `digest_extensions` | list of strings | from `guard.example.json` | files a counting command (`sort`, `uniq -c`…) must hand to a model |
+| `digest_max_bytes` | integer | from `guard.example.json` | below this size, counting by hand is allowed |
+| `digest_waiver` | string | from `guard.example.json` | a comment `# <waiver>: <reason>` lets one counting command pass, and is logged |
 
 A checks list is the place to **loosen** the guard on purpose; every other key only says how
 strict each check is. The guard protects against the **agent**, not against a process running

@@ -9,8 +9,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ceilings
-
-DEFAULTS = {"tries": 3, "trust": "private"}
+import example_defaults
 
 
 def resolve(prefs, project, cli):
@@ -36,7 +35,7 @@ def resolve(prefs, project, cli):
             return (None, "CEILING: .frugalflow.json found but no preferences.json to tighten")
         return (
             {
-                "tries": cli["tries"] if cli["tries"] is not None else 3,
+                "tries": cli["tries"] if cli["tries"] is not None else example_defaults.get("preferences", "ceilings.max_tries"),
                 "max_tokens": cli["max_tokens"],
                 "trust": cli["trust"] if cli["trust"] is not None else "private",
             },
@@ -113,9 +112,9 @@ def _autotest():
     """Run the five built-in test cases. Returns 0 on success, 1 on failure."""
     PREFS = {
         "schema_version": "1",
-        "verbosity": {"final_answer_words": 150, "step_message_words": 35},
+        "verbosity": {"final_answer_words": 120, "step_message_words": 30},
         "ceilings": {"max_trust": "trusted_third_party", "max_tries": 2, "max_output_tokens": 100},
-        "splitting": {"max_proofs_per_task": 5, "max_brief_lines": 400},
+        "splitting": {"max_proofs_per_task": 4, "max_brief_lines": 100},
         "grouping": {"independent_calls_same_turn": True},
     }
     NONE = {"tries": None, "max_tokens": None, "trust": None}

@@ -6,6 +6,7 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import shell_rules
 import receipt_rules
+from example_defaults import setting
 
 LOG_UNREADABLE = "Code write refused: the delegation log cannot be read, so no receipt can be checked. To fix: repair the delegation log file named in the settings."
 
@@ -23,7 +24,7 @@ def decide(tool_name, tool_input, config, records, checks=(), judge=None, now=No
         judge = shell_rules.judge_command
     if now is None:
         now = datetime.now().astimezone()
-    minutes = config.get("receipt_minutes", 60)
+    minutes = setting(config, "guard", "receipt_minutes")
     hint = config.get("fix_hint", "")
 
     for name, fn in checks:
@@ -80,7 +81,7 @@ def decide(tool_name, tool_input, config, records, checks=(), judge=None, now=No
 
         if not is_code(path, config):
             return result("allow", None, [path], "")
-        if lines <= config.get("line_threshold", 15):
+        if lines <= setting(config, "guard", "line_threshold"):
             return result("allow", None, [path], "")
         if records is None:
             return result("deny", "log_unreadable", [path], LOG_UNREADABLE)

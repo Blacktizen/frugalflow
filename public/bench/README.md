@@ -33,9 +33,9 @@ million tokens used to compute the cost. `run-all` resumes where it stopped; `be
 
 ## Results
 
-Orchestrator: Claude Code driven by `deepseek-v4-pro` through the DeepSeek Anthropic-compatible endpoint, chosen to keep
+Orchestrator: Claude Code driven by a remote hosted model through an Anthropic-compatible endpoint, chosen to keep
 the bench affordable; anyone can rerun it with another orchestrator. Delegated model (`frugal` only): a local
-`qwen3.8-flash-next` (IQ3_XXS quantization, 131072-token window). Prices: DeepSeek off-peak list prices of the day,
+quantized open-weight model (mid-size context window). Prices: the remote provider's off-peak list prices of the day,
 0.66 USD per million input tokens, 0.022 cached, 1.98 output. 20 tasks, 3 conditions, 3 repetitions: 180 runs per bench.
 
 | Bench | `alone` solved / cost per solved task | `discipline` | `frugal` |

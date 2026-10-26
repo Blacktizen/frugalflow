@@ -6,7 +6,7 @@ delegated model returns the file and ends with `TESTS: GREEN` or `TESTS: RED`. T
 - C0: believe the announcement (first answer only).
 - C1: run the oracle, give its verdict back to the model, up to 3 attempts.
 
-12 tasks x 5 repetitions, a local `qwen3.8-flash-next` (IQ3_XXS) at medium effort:
+12 tasks x 5 repetitions, a local quantized model at medium effort:
 
 | | result |
 |---|---|

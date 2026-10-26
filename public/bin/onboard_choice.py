@@ -123,8 +123,6 @@ def apply_choice(doc, choice):
         m = find_model("remote-coder")
         if m is not None:
             m["key_env"] = key_env
-            if key_env == "DEEPSEEK_API_KEY":
-                m["endpoint"] = "https://api.deepseek.com/v1"
     return result
 
 
@@ -138,9 +136,9 @@ FINDINGS = [
 ]
 
 DOC = {"models": [
-    {"id": "local-reader", "name": "qwen",
-     "endpoint": "http://127.0.0.1:8000/v1", "key_env": ""},
-    {"id": "remote-coder", "name": "deepseek-v4-pro",
+    {"id": "local-reader", "name": "alpha-7b",
+     "endpoint": "http://127.0.0.1:9/v1", "key_env": ""},
+    {"id": "remote-coder", "name": "beta-pro",
      "endpoint": "https://api.example.com/v1", "key_env": "FRUGALFLOW_REMOTE_KEY"},
 ]}
 
@@ -246,18 +244,18 @@ def _run_autotest():
         ok5 = False
     if r5b["models"][1]["key_env"] != "MY_API_KEY":
         ok5 = False
-    if r5b["models"][1]["name"] != "deepseek-v4-pro":
+    if r5b["models"][1]["name"] != "beta-pro":
         ok5 = False
     if r5b["models"][0] != DOC["models"][0]:
         ok5 = False
 
-    # (c) key with DEEPSEEK
+    # (c) a detected key names the variable only; the endpoint is never guessed from it
     ch5c = {"kind": "key", "endpoint": "", "model": "",
-            "key_env": "DEEPSEEK_API_KEY"}
+            "key_env": "ZZ_API_KEY"}
     r5c = apply_choice(DOC, ch5c)
-    if r5c["models"][1]["key_env"] != "DEEPSEEK_API_KEY":
+    if r5c["models"][1]["key_env"] != "ZZ_API_KEY":
         ok5 = False
-    if r5c["models"][1]["endpoint"] != "https://api.deepseek.com/v1":
+    if r5c["models"][1]["endpoint"] != DOC["models"][1]["endpoint"]:
         ok5 = False
 
     # (d) none: equal but not same object

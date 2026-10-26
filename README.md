@@ -27,7 +27,7 @@ frugalflow setup           # guided: detects your engines, backs up, writes, run
 - **Journal at the gesture.** Every commit, merge or decision writes its entry right away. A guard (`r1_guard.py`, with `journal_guard.py`) blocks the end of a turn while a state-changing command ran with no entry after it.
 - **A chained journal, tamper-evident.** `journal_add.py` appends sealed entries after checking the chain; `session_log.py` seals every session event with the hash of the previous line; `session_chain.py` verifies the chain. Edit one line afterwards and the chain says so.
 - **A closing pass** (`vault_check.py`) checks the vault invariants: pages, log, index, sources, commits.
-- **Resuming** (`session_note.py` puts a verdict on an action; `session_summary.py` records a summary at the end of a session and shows it once at the next start).
+- **Resuming** (`frugalflow resume` prints, from the vault and the sealed log, a text to paste into a new session: where the project stands, the open todos, the recent decisions, the pages to reread; `session_note.py` puts a verdict on an action; `session_summary.py` records a summary at the end of a session and shows it once at the next start).
 
 A concrete run, four steps (a clone's `public/bin/` holds the tools; `frugalflow new-project` works from the installed command too):
 
@@ -37,10 +37,12 @@ cd ~/projects/demo && claude                                         # 2. work: 
 python3 public/bin/journal_add.py --vault ~/projects/demo/vault --title "Parser fixed" \
   --field "Decision=resolve pages by name" --field "Why=a moved page bricked the gate"
 python3 public/bin/vault_check.py --vault ~/projects/demo/vault --repo ~/projects/demo   # 3. close: VAULT OK or the failed checks
-cd ~/projects/demo && claude                                         # 4. next day: the last summary is shown at start, the vault holds the decisions
+cd ~/projects/demo && frugalflow resume                              # 4. next day: a handoff text built from the vault and the sealed log; paste it into the new session
 ```
 
 What this gives you is continuity and traceability: what was decided, why, and that nobody rewrote it afterwards. What it does **not** yet give is a proven saving of tokens when a session resumes: the resume bench (B7) did not reach its pre-set criterion, and it is on the roadmap below.
+
+> **Measured on a multi-session project: on 25 exercises run over 5 fresh-context sessions, FrugalFlow kept the project's decisions from one session to the next. 87.5 % of the modules followed the conventions set in earlier sessions, against 0 % (strict reading) and 37.5 % (lenient reading) without it, with the same test success. It does not yet save tokens (about 1.6x the tokens, cumulative); that is on the roadmap.** Protocol, raw per-session results and limits (one model, Python only, 2 repetitions, local model): [`public/bench/multisession/`](public/bench/multisession/README.md).
 
 AI coding agents are remarkable, and they have four habits that hurt: they bill every token at the premium rate, even for boilerplate; they say "all green" without proof; they let secrets and personal data slip into what they publish; and they forget everything between one session and the next.
 
@@ -61,6 +63,17 @@ The goals of the project:
 - **Measure in the open.** Every figure comes with its bench, its limits, and its raw runs, the disappointing ones included.
 
 The way of working behind it is written down in [`docs/METHOD.md`](docs/METHOD.md). It is the part we think is most reusable, with or without our tools.
+
+## Built with FrugalFlow
+
+FrugalFlow is made first for long projects: the kind that runs over days, weeks or months, where a session ends and another must pick up exactly where the last one stopped. It was built that way, with its own method. Counted by script from the project's own files, over 11 weeks:
+
+- **956** hash-chained journal entries, each written at the moment of the decision, never rebuilt afterwards;
+- **201** numbered todos, **93** of them checked off, the others still open and still visible;
+- **745** commits, each one through the project's own gates;
+- **224** working sessions logged (session logging began after the journal did), many of them resumed from a written handoff rather than from memory.
+
+The refusal counts are left out on purpose: our logs mix real use with refusals provoked by the test suite, and we will publish them once the two are separated. A short task in a single sitting needs none of this. The longer the project, the more the vault pays back.
 
 ## What you get
 
@@ -100,6 +113,7 @@ On small tasks, the token economics are not there yet: on our 20-task bench, Fru
 ### Roadmap and where we need help
 
 - **Make delegation pay off.** Find the task sizes and mixes where handing work to a cheaper model beats working alone, and publish the bench either way. Larger real-world tasks are the missing data.
+- **Make the memory pay in tokens.** The multi-session bench shows the conventions are kept, at about 1.6x the cumulative tokens of the assistant alone. The next step is trimming the per-session cost (instruction block, journal, closing) until the memory costs less than it saves.
 - **Prove the resume saving (B7).** The memory is useful for continuity and traceability today; the token saving at session resume is not proven (the vault made the agent read more before correction, and the corrected version missed its 30 % criterion). A bench on larger real projects would settle it either way.
 - **Fewer wrong refusals.** Most early briefs were wrong and the guards refused wrongly at times. Every false refusal you report becomes a bench case and a fix.
 - **Wider benches.** The benches use small synthetic sets, one local model at a time, with oracles written by a model. More models, more tasks and independently written oracles would make every verdict stronger.
@@ -169,6 +183,7 @@ Every change keeps the tests green and adds a bench case when a refusal was wron
 - [`public/NOTICE.md`](public/NOTICE.md)
 - [`public/CREDITS.md`](public/CREDITS.md)
 - [`public/bench/README.md`](public/bench/README.md)
+- [`public/bench/multisession/README.md`](public/bench/multisession/README.md): the multi-session bench
 - [`public/examples/brief_template.md`](public/examples/brief_template.md)
 
 ## License

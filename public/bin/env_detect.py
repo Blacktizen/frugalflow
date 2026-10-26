@@ -4,8 +4,11 @@ import json
 import subprocess
 import urllib.request
 
-OLLAMA_URL = "http://127.0.0.1:11434"
-LMSTUDIO_URL = "http://127.0.0.1:1234"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import example_defaults
+
+OLLAMA_URL = example_defaults.get("engines", "ollama.url")
+LMSTUDIO_URL = example_defaults.get("engines", "lmstudio.url")
 
 _NO_PROXY_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 

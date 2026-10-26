@@ -41,7 +41,7 @@ if "Ginette" in t:
 print("NONE")
 '''
 
-MODELS = '{"models": [{"id": "m1", "name": "qwen-stub"}], "roles": [{"name": "documents", "model": "m1"}]}'
+MODELS = '{"models": [{"id": "m1", "name": "stub-model"}], "roles": [{"name": "documents", "model": "m1"}]}'
 
 
 def home():
@@ -285,7 +285,7 @@ def _t1(d):
         return f"lines {len(lines)} != 1"
     if lines[0]["status"] != "clean":
         return f"status {lines[0]['status']}"
-    if lines[0]["model"] != "qwen-stub":
+    if lines[0]["model"] != "stub-model":
         return f"model {lines[0]['model']}"
     expected_sha = hashlib.sha256(b"x = 1\n").hexdigest()
     if lines[0]["sha256"] != expected_sha:

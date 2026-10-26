@@ -324,9 +324,9 @@ def _SETUP(home, logs_text):
 
 def _PREFS(enabled, mode):
     return {"schema_version": "1",
-            "verbosity": {"final_answer_words": 150, "step_message_words": 35},
-            "ceilings": {"max_trust": "trusted_third_party", "max_tries": 3, "max_output_tokens": 60000},
-            "splitting": {"max_proofs_per_task": 5, "max_brief_lines": 140},
+            "verbosity": {"final_answer_words": 120, "step_message_words": 30},
+            "ceilings": {"max_trust": "trusted_third_party", "max_tries": 3, "max_output_tokens": 50000},
+            "splitting": {"max_proofs_per_task": 4, "max_brief_lines": 100},
             "grouping": {"independent_calls_same_turn": True},
             "switch": {"enabled": enabled, "mode": mode}}
 

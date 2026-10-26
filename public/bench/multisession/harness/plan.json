@@ -1,0 +1,8 @@
+{
+ "pilot": [["proverb","affine-cipher"],["pig-latin","bottle-song"]],
+ "main": [["list-ops","phone-number","two-bucket","grade-school","beer-song"],
+          ["wordy","variable-length-quantity","transpose","book-store","robot-name"],
+          ["go-counting","simple-linked-list","food-chain","scale-generator","dominoes"],
+          ["sgf-parsing","tree-building","bowling","connect","zebra-puzzle"],
+          ["pov","forth","dot-dsl","poker","zipper"]]
+}
