@@ -5,7 +5,7 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](#quick-install)
 [![Status: beta](https://img.shields.io/badge/status-beta-orange.svg)](#status-beta-and-improving-in-the-open)
 
-**Let your AI coding assistant delegate the grunt work to cheaper or local models, under mechanical control, with memory and a paper trail.**
+**Your AI coding assistant forgets your project between sessions, and pays for its own mistakes. FrugalFlow gives it a memory per project, and guards that stop the waste before it is billed.**
 
 ![Terminal demo: install, scan finds a planted key, setup --yes, doctor is green](docs/demo.svg)
 
@@ -17,17 +17,24 @@ frugalflow scan .          # needs no model: finds secrets and private data in 3
 frugalflow setup           # guided: detects your engines, backs up, writes, runs doctor
 ```
 
-## Two pillars
+## What it does, in three lines
 
-**1. Delegation under control.** Bulky mechanical work goes to a cheaper or local model; nothing it produces is accepted on its own word, an independent check decides, and guards refuse what must not happen.
+1. **It remembers.** Every project gets a vault: rules, todo, and a sealed journal written at the moment a decision is made. A reading gate makes the assistant restate the project's rules before it writes code, and `frugalflow resume` hands the next session where the last one stopped.
+2. **It refuses waste before it is paid.** A broken brief is refused before it costs a token (`brief_check`), a "done" with no proof is refused (an independent check decides), a secret or a private path never leaves your machine (`scan`, `anon_check`).
+3. **It proves instead of claiming.** Every figure below comes with its bench, its limits and its raw runs, the disappointing ones included.
 
-**2. Memory per project: your AI assistant no longer forgets from one session to the next.** Every project gets its own vault, and what happens in it is written down at the moment it happens, in a journal you can check:
+## Measured
 
-- **A vault per project** (`vault_new.py`): rules, todo, index, sources and a sealed log, mounted in one command.
-- **Journal at the gesture.** Every commit, merge or decision writes its entry right away. A guard (`r1_guard.py`, with `journal_guard.py`) blocks the end of a turn while a state-changing command ran with no entry after it.
-- **A chained journal, tamper-evident.** `journal_add.py` appends sealed entries after checking the chain; `session_log.py` seals every session event with the hash of the previous line; `session_chain.py` verifies the chain. Edit one line afterwards and the chain says so.
-- **A closing pass** (`vault_check.py`) checks the vault invariants: pages, log, index, sources, commits.
-- **Resuming** (`frugalflow resume` prints, from the vault and the sealed log, a text to paste into a new session: where the project stands, the open todos, the recent decisions, the pages to reread; `session_note.py` puts a verdict on an action; `session_summary.py` records a summary at the end of a session and shows it once at the next start).
+| Promise | Bench | Result |
+|---|---|---|
+| Keeps the project's decisions across fresh sessions | 25 exercises, 5 sessions, fresh context each time | **87.5 %** of the modules follow the conventions set in earlier sessions, against **0 %** (strict) or 37.5 % (lenient) without it; same tests passed |
+| Stops a wasted task before it runs | 45 sound and faulty briefs | first-attempt success **24.4 % → 97.8 %** once the brief is fixed; 0 false refusals |
+| Catches a false "all green" | 30 pre-registered tasks, 4 repetitions | 10 % of announcements were false; **all caught**, 0 wrong result delivered |
+| Stops leaks before publication | 80 planted leaks, 40 decoys | **16.2 %** delivered with the tool, 42.5 % with a model rereading alone, 100 % with no check |
+
+**What it does not do yet: lower your total token bill.** The memory has a cost paid at every session (instructions, journal, closing): about 1.6x the cumulative tokens over 5 sessions, and more than the assistant alone on small one-shot tasks. Making the memory pay for itself is the first item of the roadmap. Details, protocols and raw runs: [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md).
+
+## A project with memory, in four steps
 
 A concrete run, four steps (a clone's `public/bin/` holds the tools; `frugalflow new-project` works from the installed command too):
 
@@ -40,15 +47,13 @@ python3 public/bin/vault_check.py --vault ~/projects/demo/vault --repo ~/project
 cd ~/projects/demo && frugalflow resume                              # 4. next day: a handoff text built from the vault and the sealed log; paste it into the new session
 ```
 
-What this gives you is continuity and traceability: what was decided, why, and that nobody rewrote it afterwards. What it does **not** yet give is a proven saving of tokens when a session resumes: the resume bench (B7) did not reach its pre-set criterion, and it is on the roadmap below.
-
-> **Measured on a multi-session project: on 25 exercises run over 5 fresh-context sessions, FrugalFlow kept the project's decisions from one session to the next. 87.5 % of the modules followed the conventions set in earlier sessions, against 0 % (strict reading) and 37.5 % (lenient reading) without it, with the same test success. It does not yet save tokens (about 1.6x the tokens, cumulative); that is on the roadmap.** Protocol, raw per-session results and limits (one model, Python only, 2 repetitions, local model): [`public/bench/multisession/`](public/bench/multisession/README.md).
-
-AI coding agents are remarkable, and they have four habits that hurt: they bill every token at the premium rate, even for boilerplate; they say "all green" without proof; they let secrets and personal data slip into what they publish; and they forget everything between one session and the next.
-
-FrugalFlow is a toolkit around Claude Code that attacks those four problems together. The paid assistant keeps the part that needs judgment. Bulky mechanical work goes to a cheaper or local model. Nothing that model produces is accepted on its own word: an independent check decides, guards refuse what must not happen, a hash-chained journal records what did, and a project vault remembers it all for the next session.
+Made for long projects, the kind that runs over days or weeks. A short task in a single sitting needs none of this.
 
 Python 3.11+, standard library only, no dependency to install.
+
+## Also inside: delegation under control
+
+Bulky mechanical work can go to a cheaper or local model. Nothing it produces is accepted on its own word: an independent check decides (`delegate.py --verify`), guards refuse a code write that cannot point to a successful delegation, and a hash-chained journal records what happened.
 
 ## Why we built it
 
