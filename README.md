@@ -5,7 +5,7 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](#quick-install)
 [![Status: beta](https://img.shields.io/badge/status-beta-orange.svg)](#status-beta-and-improving-in-the-open)
 
-**Your AI coding assistant forgets your project between sessions, and pays for its own mistakes. FrugalFlow gives it a memory per project, and guards that stop the waste before it is billed.**
+**Your AI coding assistant forgets your project between sessions, and pays for its own mistakes. FrugalFlow gives it a memory per project, and guards that stop the waste before it is billed. It even keeps a free model on your project's rules.**
 
 ![Terminal demo: install, scan finds a planted key, setup --yes, doctor is green](docs/demo.svg)
 
@@ -27,12 +27,12 @@ frugalflow setup           # guided: detects your engines, backs up, writes, run
 
 | Promise | Bench | Result |
 |---|---|---|
-| Keeps the project's decisions across fresh sessions | 25 exercises, 5 sessions, fresh context each time | **87.5 %** of the modules follow the conventions set in earlier sessions, against **0 %** (strict) or 37.5 % (lenient) without it; same tests passed |
+| Keeps the project's decisions across fresh sessions | 25 exercises, 5 fresh-context sessions, 3 replicas on 2 models | **on a model that forgets, 30/40 modules keep the conventions against 0/40 without it** (free hosted model; 3 of the 4 rules, the 4th broken by the model in both conditions, a reading chosen after the data); first bench, local model: 87.5 % against 37.5 %; on a model that already rereads its own code, no difference (40/40 both) |
 | Stops a wasted task before it runs | 45 sound and faulty briefs | first-attempt success **24.4 % → 97.8 %** once the brief is fixed; 0 false refusals |
 | Catches a false "all green" | 30 pre-registered tasks, 4 repetitions | 10 % of announcements were false; **all caught**, 0 wrong result delivered |
 | Stops leaks before publication | 80 planted leaks, 40 decoys | **16.2 %** delivered with the tool, 42.5 % with a model rereading alone, 100 % with no check |
 
-**What it does not do yet: lower your total token bill.** The memory has a cost paid at every session (instructions, journal, closing): about 1.6x the cumulative tokens over 5 sessions, and more than the assistant alone on small one-shot tasks. Making the memory pay for itself is the first item of the roadmap. Details, protocols and raw runs: [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md).
+**What it does not do yet: lower your total token bill.** On these short exercises the memory costs 2.2 to 2.5 times the tokens, on every model tried. The cost is the number of turns the protocol makes the assistant play, each one rereading the whole context; a variant where hooks do the work (reading injected at start, closing in a Stop hook) was the cheapest at every measure, −18 % over 4 runs against 4, not yet above the noise. Making the memory pay for itself is the first item of the roadmap. Details, protocols and raw runs: [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) and [`public/bench/multisession/replicas-2026-10/`](public/bench/multisession/replicas-2026-10/README.md).
 
 ## A project with memory, in four steps
 
