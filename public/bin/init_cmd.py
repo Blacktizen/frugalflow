@@ -9,10 +9,12 @@ import urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import claude_block
 import settings_merge
+import banner_merge
 import env_detect
 import ceilings
 
 BIN = os.path.dirname(os.path.abspath(__file__))
+BANNER_COMMAND = settings_merge.launcher.command(BIN, sys.executable, "session_banner")
 
 USAGE = (
     "usage: init_cmd.py [--mode observe|active|silent] [--remove] "
@@ -198,8 +200,9 @@ def _init(mode, home, claude_dir, ollama_url, lmstudio_url):
             settings_doc, settings_merge.guard_command(sys.executable, BIN)
         )
         new_settings, sl_changed = settings_merge.add_statusline(new_settings, sys.executable, BIN)
-        settings_changed = hook_changed or sl_changed
-    except settings_merge.SettingsError as e:
+        new_settings, banner_changed = banner_merge.add_banner(new_settings, BANNER_COMMAND)
+        settings_changed = hook_changed or sl_changed or banner_changed
+    except (settings_merge.SettingsError, banner_merge.BannerError) as e:
         print("REFUSED: " + os.path.join(claude_dir, "settings.json") + " cannot be read as settings (" + str(e) + "). Nothing was written.")
         return 6
 
@@ -314,8 +317,9 @@ def _remove(home, claude_dir):
             settings_doc, os.path.join(BIN, "guard_hook.py")
         )
         new_settings, sl_changed = settings_merge.remove_statusline(new_settings, BIN)
-        settings_changed = settings_changed or sl_changed
-    except settings_merge.SettingsError as e:
+        new_settings, banner_changed = banner_merge.remove_banner(new_settings, BANNER_COMMAND)
+        settings_changed = settings_changed or sl_changed or banner_changed
+    except (settings_merge.SettingsError, banner_merge.BannerError) as e:
         print("REFUSED: " + os.path.join(claude_dir, "settings.json") + " cannot be read as settings (" + str(e) + "). Nothing was written.")
         return 6
 

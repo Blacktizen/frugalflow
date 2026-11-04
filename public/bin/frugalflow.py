@@ -34,7 +34,8 @@ USAGE = (
     "  lint BRIEF [--trust private|untrusted_third_party] [--waiver REASON] | --explain RULE_ID | --check-examples [--examples FILE]\n"
     "  config [set KEY VALUE]\n"
     "  on | off | mode MODE\n"
-    "  display statusline|turn-line|summary on|off\n"
+    "  display statusline|turn-line|summary|banner on|off\n"
+    "  memory decline [PATH]   (never ask again to build the memory of this folder)\n"
     "  options: --home DIR --claude-dir DIR --ollama-url URL --lmstudio-url URL (any OpenAI-compatible server, with or without /v1)"
 )
 
@@ -62,11 +63,12 @@ def hooks_config(bin_dir, python, project=None):
     log = launcher.command(bin_dir, python, "session_log")
     guard = launcher.command(bin_dir, python, "r1_guard")
     summary_show = launcher.command(bin_dir, python, "session_summary") + " --show"
+    banner = launcher.command(bin_dir, python, "session_banner")
     summary_record = launcher.command(bin_dir, python, "session_summary") + " --record-hook"
     receipt = launcher.command(bin_dir, python, "usage_report") + " --hook"
     cfg = {
         "hooks": {
-            "SessionStart": [{"hooks": [hook(log), hook(summary_show)]}],
+            "SessionStart": [{"hooks": [hook(log), hook(summary_show), hook(banner)]}],
             "UserPromptSubmit": [{"hooks": [hook(log)]}],
             "PreToolUse": [{"matcher": "*", "hooks": [hook(log)]}],
             "PostToolUse": [{"matcher": "*", "hooks": [hook(log)]}],
@@ -494,6 +496,10 @@ def main():
 
     if command == "notes":
         sys.exit(run_notes(args[1:]))
+
+    if command == "memory" and len(args) > 1 and args[1] == "decline":
+        path = os.path.join(BIN, "session_banner.py")
+        os.execv(sys.executable, [sys.executable, path, "decline"] + args[2:])
 
     sys.stdout.write(USAGE + "\n")
     sys.exit(2)
