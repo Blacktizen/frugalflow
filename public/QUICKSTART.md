@@ -39,6 +39,8 @@ Otherwise edit `endpoint` and `name` of `local-reader` in `~/.frugalflow/models.
 
 Settings: `frugalflow.py config` lists every preference with its meaning; `frugalflow.py mode active` turns the rules on.
 
+Every session then opens with one line: FrugalFlow is active, and where its settings are. In a project folder that has no memory yet, the assistant asks you once whether to build it, with the exact command; `frugalflow memory decline` stops the question for that folder, and `frugalflow display banner off` turns the line off. The hook never blocks a session: on any error it stays silent.
+
 ## 2. A project
 
 ```bash

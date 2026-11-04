@@ -36,6 +36,7 @@ MEANING = {
     "display.statusline": "show the FrugalFlow segment in the status line",
     "display.turn_line": "one short line when a call would have been avoided (observe mode)",
     "display.summary": "the session summary",
+    "display.banner": "one line at session start: FrugalFlow is active, where its settings are; asks once to build a new project's memory",
 }
 
 KNOWN = set()
@@ -46,11 +47,13 @@ KNOWN.add("switch.mode")
 KNOWN.add("display.statusline")
 KNOWN.add("display.turn_line")
 KNOWN.add("display.summary")
+KNOWN.add("display.banner")
 
 DISPLAY_NAMES = {
     "statusline": "display.statusline",
     "turn-line": "display.turn_line",
     "summary": "display.summary",
+    "banner": "display.banner",
 }
 
 
@@ -126,7 +129,7 @@ def _show(doc):
     print("switch.enabled = " + json.dumps(enabled, ensure_ascii=False) + "  # " + MEANING["switch.enabled"])
     print("switch.mode = " + json.dumps(mode, ensure_ascii=False) + "  # " + MEANING["switch.mode"])
     display = ceilings.display_state(doc)
-    for key in ("display.statusline", "display.turn_line", "display.summary"):
+    for key in ("display.statusline", "display.turn_line", "display.summary", "display.banner"):
         print(key + " = " + json.dumps(display[key.split(".", 1)[1]], ensure_ascii=False) + "  # " + MEANING[key])
     return 0
 

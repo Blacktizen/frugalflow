@@ -68,8 +68,10 @@ def _check_display(doc):
         errors.append("display must be an object")
         return errors
     for k in display:
-        if k not in ("statusline", "turn_line", "summary"):
+        if k not in ("statusline", "turn_line", "summary", "banner"):
             errors.append("unknown key display." + k)
+    if "banner" in display and not isinstance(display["banner"], bool):
+        errors.append("display.banner must be true or false")
     for k in ("statusline", "turn_line", "summary"):
         if k not in display:
             errors.append("display." + k + " is missing")
@@ -169,8 +171,10 @@ def switch_state(doc):
 def display_state(doc):
     display = doc.get("display")
     if display is None:
-        return {"statusline": True, "turn_line": True, "summary": True}
-    return {k: display[k] for k in ("statusline", "turn_line", "summary")}
+        return {"statusline": True, "turn_line": True, "summary": True, "banner": True}
+    state = {k: display[k] for k in ("statusline", "turn_line", "summary")}
+    state["banner"] = display.get("banner", True)
+    return state
 
 
 def tighten(prefs, project):
@@ -328,8 +332,10 @@ def _autotest():
           and validate_preferences(BAD_DISPLAY2) == ["display.turn_line is missing", "display.summary is missing"]
           and validate_preferences(BAD_DISPLAY3) == ["display must be an object"]
           and validate_project(PROJECT_DISPLAY) == ["a project may not set display"]
-          and display_state(PREFS) == {"statusline": True, "turn_line": True, "summary": True}
-          and display_state(PREFS_DISPLAY) == {"statusline": False, "turn_line": True, "summary": False})
+          and display_state(PREFS) == {"statusline": True, "turn_line": True, "summary": True, "banner": True}
+          and display_state(PREFS_DISPLAY) == {"statusline": False, "turn_line": True, "summary": False, "banner": True}
+          and validate_preferences(dict(PREFS_DISPLAY, display=dict(PREFS_DISPLAY["display"], banner=False))) == []
+          and validate_preferences(dict(PREFS_DISPLAY, display=dict(PREFS_DISPLAY["display"], banner="no"))) == ["display.banner must be true or false"])
     if r7:
         print("PASS test7: display optional, exact keys, refused in project, display_state defaults")
     else:
