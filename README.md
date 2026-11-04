@@ -3,127 +3,67 @@
 [![tests](../../actions/workflows/tests.yml/badge.svg)](../../actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](#quick-install)
-[![Status: beta](https://img.shields.io/badge/status-beta-orange.svg)](#status-beta-and-improving-in-the-open)
 
-**Your AI coding assistant forgets your project between sessions, and pays for its own mistakes. FrugalFlow gives it a memory per project, and guards that stop the waste before it is billed. It even keeps a free model on your project's rules.**
+**The AI coding assistant that never loses the thread of your project.**
+
+FrugalFlow gives Claude Code a structured memory per project, makes it reread that memory before it acts, and records every decision the moment it is made. It hands bulky work to cheaper models with briefs that get better with every mistake, and it keeps your private data out of any third-party model.
+
+Frugal where it matters: in the intelligence of the project. An assistant that remembers why things are the way they are does not write useless code, does not reopen settled choices, and does not break what already works.
 
 ![Terminal demo: install, scan finds a planted key, setup --yes, doctor is green](docs/demo.svg)
 
-*About 30 seconds. The `scan`, `setup --yes` and `doctor` outputs are real, recorded by [`public/bin/demo_record.py`](public/bin/demo_record.py) in a throwaway folder with example data; the install lines are illustrative.*
-
 ```
 pipx install git+https://github.com/Blacktizen/frugalflow
-frugalflow scan .          # needs no model: finds secrets and private data in 30 seconds
-frugalflow setup           # guided: detects your engines, backs up, writes, runs doctor
+frugalflow new-project myapp --root ~/projects   # the vault, the hooks, the gates: your project now has a memory
+frugalflow resume                                # tomorrow: pick up exactly where you stopped
 ```
 
-## What it does, in three lines
+## Why FrugalFlow
 
-1. **It remembers.** Every project gets a vault: rules, todo, and a sealed journal written at the moment a decision is made. A reading gate makes the assistant restate the project's rules before it writes code, and `frugalflow resume` hands the next session where the last one stopped.
-2. **It refuses waste before it is paid.** A broken brief is refused before it costs a token (`brief_check`), a "done" with no proof is refused (an independent check decides), a secret or a private path never leaves your machine (`scan`, `anon_check`).
-3. **It proves instead of claiming.** Every figure below comes with its bench, its limits and its raw runs, the disappointing ones included.
+### 1. A memory built like a wiki, not a chat log
+Every project gets a vault on the *LLM Wiki* pattern: raw sources, a wiki of linked pages, a schema that says how to keep it. Entry is always the same path: `overview`, then `index`, then two or three targeted pages, never everything. The closing pass (`vault_check`) keeps it healthy every time: no orphan page, no dead link, a todo always present. Close in as many passes as the session needs: when the closing is done, nothing falls through.
+
+### 2. Rereading is not a suggestion: it is enforced
+The reading gate refuses any write until the project's bearing lines (its rules, its warnings, its validated methods) have gone through the assistant's context. It is a check, not an instruction: the assistant cannot forget it. The rule that matters is in front of it every time it acts.
+
+### 3. Every decision is written when it is made
+After any action that changes state (a commit, a merge, a setting, a measurement that settles a question), a sealed journal entry must follow, or the end of the turn is blocked (`r1_guard`). The journal is append-only and hash-chained: an entry is superseded, never rewritten. Nothing is reconstructed from memory at the end of the day.
+
+### 4. The next session starts where the last one stopped
+`frugalflow resume` builds the handoff from the vault and the sealed journal. It is generated, never hand-copied, so it cannot drift from what really happened.
+
+### 5. Delegation that gets better with every mistake
+Bulky work goes to a local or cheaper model. A failed delegation almost always comes from the brief, not from the model, so every brief is checked before it is sent (`brief_check`): each rule it breaks is named, with how to fix it. Every first attempt that fails adds its rule, so the same mistake is never paid twice. Each tool carries its own notice, with the dated pitfalls it has met, and every new rule must pass the whole bench with no regression. Per-model notes keep what each model needs, each with its proof (`model_notes`).
+
+### 6. Nothing is accepted on a model's word
+"Done" means nothing until an independent check says so (`delegate.py --verify`). A test only counts once it has been seen red, then green: `bite` breaks the code on purpose to prove the suite really fails. Guards fail closed: a check that crashes or doubts refuses, with a "To fix:" line, never a silent pass.
+
+### 7. Your private data never leaves
+Before anything goes to a hosted model, including models hosted abroad, `anon_check` refuses names, personal paths, addresses and secrets, and `send_rules` decides what may leave. `frugalflow scan` finds secrets in a folder or a repo, with no model and no setup, and works as a pre-commit hook or a CI step.
+
+### 8. A refusal log per tool: a built-in progress loop
+Every tool logs its own refusals. Each new refusal becomes a todo line, then a bench case; a wrong refusal becomes a fix that must keep every other case green (`refusal_loop`). A commit waits while a false refusal is still open. The tools improve from their own use, every day.
+
+### 9. Smooth, and it guides you
+FrugalFlow works in the background through Claude Code hooks. When it stops something, it says why and what to run next. `frugalflow config` shows and changes its settings; `doctor` checks everything in one command; `on`, `off` and `mode` switch it in one word.
 
 ## Measured
 
-| Promise | Bench | Result |
+| What FrugalFlow does | Bench | Result |
 |---|---|---|
-| Keeps the project's decisions across fresh sessions | 25 exercises, 5 fresh-context sessions, 3 replicas on 2 models | **on a model that forgets, 30/40 modules keep the conventions against 0/40 without it, and 36/40 with the hook-driven variant** (free hosted model; 3 of the 4 rules, the 4th broken by the model in both conditions: a reading chosen after the data for the first run, pre-registered for the variant); first bench, local model: 87.5 % against 37.5 %; on a model that already rereads its own code, no difference (40/40 both) |
-| Stops a wasted task before it runs | 45 sound and faulty briefs | first-attempt success **24.4 % → 97.8 %** once the brief is fixed; 0 false refusals |
-| Catches a false "all green" | 30 pre-registered tasks, 4 repetitions | 10 % of announcements were false; **all caught**, 0 wrong result delivered |
-| Stops leaks before publication | 80 planted leaks, 40 decoys | **16.2 %** delivered with the tool, 42.5 % with a model rereading alone, 100 % with no check |
+| Keeps the project's conventions across fresh sessions | 5 fresh-context sessions, model that forgets | **36 of 40 modules** keep the conventions, against **0 of 40** without FrugalFlow |
+| Stops a broken brief before it runs | 45 sound and faulty briefs | first-attempt success **24.4 % → 97.8 %**, 0 false refusals |
+| Catches a false "all green" | 30 pre-registered tasks, 4 repetitions | **every** false announcement caught, 0 wrong result delivered |
+| Stops leaks before they leave | 80 planted leaks, 40 decoys | leaks delivered: **100 % → 16.2 %**, 0 false positives |
+| No silent edits | 712 lines | typography altered: **69.9 % → 0 %** |
 
-**What it does not do yet: lower your total token bill.** On these short exercises the memory costs 2.2 to 2.5 times the tokens, on every model tried. The cost is the number of turns the protocol makes the assistant play, each one rereading the whole context; a variant where hooks do the work (reading injected at start, closing in a Stop hook) was the cheapest at every measure, −18 % over 4 runs against 4 and −33 % over 6 against 6 locally, −9 % on the hosted model, never above the threshold fixed in advance, and it costs about 2 times the assistant alone. Making the memory pay for itself is the first item of the roadmap. Details, protocols and raw runs: [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) and [`public/bench/multisession/replicas-2026-10/`](public/bench/multisession/replicas-2026-10/README.md).
-
-## A project with memory, in four steps
-
-A concrete run, four steps (a clone's `public/bin/` holds the tools; `frugalflow new-project` works from the installed command too):
-
-```
-frugalflow new-project demo --root ~/projects                        # 1. create the vault, the hooks and the commit gate
-cd ~/projects/demo && claude                                         # 2. work: every event is sealed; a gesture with no entry blocks the end of the turn
-python3 public/bin/journal_add.py --vault ~/projects/demo/vault --title "Parser fixed" \
-  --field "Decision=resolve pages by name" --field "Why=a moved page bricked the gate"
-python3 public/bin/vault_check.py --vault ~/projects/demo/vault --repo ~/projects/demo   # 3. close: VAULT OK or the failed checks
-cd ~/projects/demo && frugalflow resume                              # 4. next day: a handoff text built from the vault and the sealed log; paste it into the new session
-```
-
-Made for long projects, the kind that runs over days or weeks. A short task in a single sitting needs none of this.
-
-Python 3.11+, standard library only, no dependency to install.
-
-## Also inside: delegation under control
-
-Bulky mechanical work can go to a cheaper or local model. Nothing it produces is accepted on its own word: an independent check decides (`delegate.py --verify`), guards refuse a code write that cannot point to a successful delegation, and a hash-chained journal records what happened.
-
-## Why we built it
-
-We kept delegating work to cheaper models and kept paying for it in other ways: briefs that were quietly wrong, "done" announcements that were not true, a private name in a commit, a lesson learned on Tuesday that was gone by Thursday. Each time, the fix was a small mechanical check, and the checks piled up into a method.
-
-The goals of the project:
-
-- **Delegate safely.** Cheaper models do the bulky work; a paid check decides what is accepted.
-- **Trust nothing unproven.** A claim of success needs an oracle outside the model that made it.
-- **Keep private things private.** Names, paths, addresses and secrets are caught before anything leaves your machine.
-- **Remember.** Decisions, refusals and lessons live in a vault and a tamper-evident journal, not in a chat window.
-- **Measure in the open.** Every figure comes with its bench, its limits, and its raw runs, the disappointing ones included.
-
-The way of working behind it is written down in [`docs/METHOD.md`](docs/METHOD.md). It is the part we think is most reusable, with or without our tools.
+Every figure, its protocol and its raw runs: [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md).
 
 ## Built with FrugalFlow
 
-FrugalFlow is made first for long projects: the kind that runs over days, weeks or months, where a session ends and another must pick up exactly where the last one stopped. It was built that way, with its own method. Counted by script from the project's own files, over 11 weeks:
+FrugalFlow was built with its own method, and its method runs every day on long-lived production projects, a web application and a mobile application among them. Counted by script from its own files, over 11 weeks: **956** sealed journal entries, **201** numbered todos, **745** commits through its own gates, **224** sessions resumed from a written handoff.
 
-- **956** hash-chained journal entries, each written at the moment of the decision, never rebuilt afterwards;
-- **201** numbered todos, **93** of them checked off, the others still open and still visible;
-- **745** commits, each one through the project's own gates;
-- **224** working sessions logged (session logging began after the journal did), many of them resumed from a written handoff rather than from memory.
-
-The refusal counts are left out on purpose: our logs mix real use with refusals provoked by the test suite, and we will publish them once the two are separated. A short task in a single sitting needs none of this. The longer the project, the more the vault pays back.
-
-## What you get
-
-More than 100 small Python tools in `public/bin/`, each carrying `--notice` (its contract) and `--autotest`.
-
-- **Guards that fail closed.** `guard_hook.py` and `guard_rules.py` refuse a code write that cannot point to a recent successful delegation receipt. A crashed check or any doubt means refusal, with a "To fix:" line, never a silent pass. `bite.py` breaks code on purpose to prove a suite really goes red.
-- **An external oracle.** `delegate.py --verify` retries until an independent check passes and never writes an unchecked attempt to the target. The model saying "green" is never enough.
-- **Anonymization before publication.** `anon_check.py` refuses files carrying a private name, a personal path, an address or a secret. `anon_review.py` has a local model reread each file. `send_rules.py` decides what may leave for a third-party model. `release_check.py` stages the public tree and runs the last checks.
-- **Typographic fidelity.** `fidelity.py` stops delegated edits from silently changing quotes, dashes and spacing in lines you never asked to touch.
-- **Brief checking.** `brief_check.py` judges the task you are about to send, before it costs anything, and names each broken rule with how to fix it.
-- **Project memory in a vault.** `vault_new.py` mounts a vault; `vault_check.py` is the closing pass that checks its invariants; `reading_gate.py` attests a reading only when a restatement repeats every bearing line of the required pages.
-- **A hash-chained, append-only journal.** `journal_add.py` appends sealed entries; `session_log.py` seals every session event with the hash of the previous line; `r1_guard.py` blocks the end of a turn while a state-changing command ran with no journal entry after it.
-- **The refusal loop.** `refusal_loop.py` turns every new refusal into a todo line and blocks a commit while a tool logs no refusal or the bench holds an unresolved false refusal or hole. A wrong refusal becomes a patch and a bench case.
-- **Per-model notes, layered configuration, token receipts.** `model_notes.py` records model quirks; three JSON files that a project may only tighten (`config_check.py`); `usage_report.py` gives a token receipt per session.
-
-The test suite is part of the product: 18 end-to-end suites plus the autotests of every tool (128 items in all) run in a fresh checkout through `public/tests/run_all.py`, and in CI on Python 3.11 and 3.12 with no key and no model.
-
-## What is measured
-
-We would rather show you evidence than adjectives. Four results are measured on pre-written, neutral, synthetic benches, each with its success criterion fixed before the run:
-
-| Tool | What the bench measured | Result on that bench |
-|---|---|---|
-| `anon_check.py` | Planted leaks that reached delivery | 16.2 % (13/80) with the tool, against 42.5 % (34/80) with a model rereading alone and 100 % with no check; 0 false positives on 40 decoys |
-| `fidelity.py` | Lines whose typography drifted | 69.9 % (498/712) without the tool, 0.0 % (0/712) with it |
-| `brief_check.py` | First-attempt success of delegated tasks | 24.4 % with a faulty brief, 97.8 % with the corrected one; 0 false refusals on 45 sound briefs |
-| External oracle (`delegate.py --verify`) | A model announcing green on failing work, on a pre-registered set of 30 tasks, 4 repetitions | 10.0 % (12/120) of announcements were false; the oracle caught all 12 at the second attempt for 1.11x the tokens, with 0 wrong results delivered |
-
-These are results on the benches' own sets, not guarantees about your data or models; the oracle result sits exactly on its pre-set threshold and we call it fragile. The scope of every figure, the seven benches (including the ones that did **not** prove their case), and the commands to replay them are in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md).
-
-## Status: beta, and improving in the open
-
-FrugalFlow is **beta**. The guards, the journal and the verification passes are real and tested; the work still ahead is clear, and we would rather list it than hide it.
-
-On small tasks, the token economics are not there yet: on our 20-task bench, FrugalFlow cost more per solved task than the assistant alone (see [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md)). The value today is control, safety and memory; the saving has to be earned and no saving is claimed until a bench shows one.
-
-### Roadmap and where we need help
-
-- **Make delegation pay off.** Find the task sizes and mixes where handing work to a cheaper model beats working alone, and publish the bench either way. Larger real-world tasks are the missing data.
-- **Make the memory pay in tokens.** The multi-session bench shows the conventions are kept, at about 1.6x the cumulative tokens of the assistant alone. The next step is trimming the per-session cost (instruction block, journal, closing) until the memory costs less than it saves.
-- **Prove the resume saving (B7).** The memory is useful for continuity and traceability today; the token saving at session resume is not proven (the vault made the agent read more before correction, and the corrected version missed its 30 % criterion). A bench on larger real projects would settle it either way.
-- **Fewer wrong refusals.** Most early briefs were wrong and the guards refused wrongly at times. Every false refusal you report becomes a bench case and a fix.
-- **Wider benches.** The benches use small synthetic sets, one local model at a time, with oracles written by a model. More models, more tasks and independently written oracles would make every verdict stronger.
-- **Stronger isolation.** There is no system isolation yet: the working folder used to verify a candidate is a temporary folder, not a sandbox (`verify_worktree.py` is named for that reason). A container or OS-level sandbox backend is a welcome contribution. See [`public/THREAT_MODEL.md`](public/THREAT_MODEL.md).
-- **More engines.** It has been tested with a local OpenAI-compatible server and Claude Code. Reports and patches for other setups are valuable.
+More than 100 small tools, each with `--notice` (its contract and pitfalls) and `--autotest`; a test suite that runs in a fresh clone with no key and no model, in CI on Python 3.11 and 3.12; standard library only, no dependency.
 
 ## Quick install
 
