@@ -853,6 +853,7 @@ def _git_is_reader(args):
         return False
     return not any(a == "-o" or a.startswith("--output") for a in args[1:])
 
+
 def _strict_reader(head, args):
     """Return True when the head is a plain reader, or a reader with read-only options."""
     if head in READER_HEADS:
@@ -1043,11 +1044,32 @@ def _whitelist_touches(command, sp, protected, cwd):
                 if v not in out:
                     out.append(v)
         elif head == "git":
-            # Git has complex subcommands; rely on word-by-word analysis (zone_word)
-            # and strict reader check. The GENERAL RULE full-text check would catch
-            # commit messages, diff output refs, etc. which are not file operations.
-            if zone_word is not None and not _strict_reader(head, args):
-                if zone_word not in out:
+            # Parse git global options (-C, --git-dir, --work-tree, -c) to find effective dir
+            import git_vault_rules
+            gitg = git_vault_rules.parse_git(args, cwd_now)
+            wcwd = gitg["dir"] if (gitg["dir"] is not None and not unreadable) else cwd_now
+            # Re-evaluate zone_word using wcwd for word classification
+            zone_word = None
+            dollar = False
+            for w in words[i + 1:]:
+                c = _word_class(w, wcwd, unreadable, protected, cwd, markers)
+                if c == "unknown":
+                    dollar = True
+                elif c == "zone" and zone_word is None:
+                    zone_word = w
+            head_dollar = "$" in words[i]
+            if head_dollar:
+                dollar = True
+            # Always check git-specific refusals (C4, C10, C19) - they apply even to readers
+            # the zone is a vault only (dir, its parents, or a vault within 3 levels);
+            # an unreadable cwd is judged fail closed: any file under it counts as a zone
+            is_zone = (lambda p: True) if unreadable else (lambda p: False)
+            for reason in git_vault_rules.git_refusals(args, cwd_now, is_zone):
+                if reason not in out:
+                    out.append(reason)
+            # Also apply strict reader check for non-git-specific zone touches
+            if not _strict_reader("git", gitg["sub"]):
+                if zone_word is not None and zone_word not in out:
                     out.append(zone_word)
         else:
             if zone_word is not None and not _strict_reader(head, args):
