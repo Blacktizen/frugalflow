@@ -949,6 +949,13 @@ def _whitelist_touches(command, sp, protected, cwd):
                 v = zone_word if zone_word is not None else "<unknown>"
                 if v not in out:
                     out.append(v)
+            # Also check inline code for protected paths directly (covers os.system etc.)
+            for code in unproven_c + unproven_h:
+                if _interp_touches(code, cwd_now, unreadable, protected, cwd, markers):
+                    v = zone_word if zone_word is not None else "<unknown>"
+                    if v not in out:
+                        out.append(v)
+                    break
         elif head in ("sh", "bash", "zsh") and "-c" in args:
             k = args.index("-c")
             code = args[k + 1] if k + 1 < len(args) else ""
@@ -963,10 +970,32 @@ def _whitelist_touches(command, sp, protected, cwd):
                 v = zone_word if zone_word is not None else "<unknown>"
                 if v not in out:
                     out.append(v)
+        elif head == "php" and "-r" in args:
+            k = args.index("-r")
+            code = args[k + 1] if k + 1 < len(args) else ""
+            if _interp_touches(code, cwd_now, unreadable, protected, cwd, markers):
+                v = zone_word if zone_word is not None else "<unknown>"
+                if v not in out:
+                    out.append(v)
+        elif head == "git":
+            # Git has complex subcommands; rely on word-by-word analysis (zone_word)
+            # and strict reader check. The GENERAL RULE full-text check would catch
+            # commit messages, diff output refs, etc. which are not file operations.
+            if zone_word is not None and not _strict_reader(head, args):
+                if zone_word not in out:
+                    out.append(zone_word)
         else:
             if zone_word is not None and not _strict_reader(head, args):
                 if zone_word not in out:
                     out.append(zone_word)
+            # GENERAL RULE: any segment whose full text names a protected path is a touch,
+            # unless its head is a proven reader (whitelist readers, proven python, json.tool).
+            segment_names_zone = any(_component_in(s, m) for m in markers)
+            is_proven_reader = _strict_reader(head, args) or _proven_python_reader(s, bodies) or _json_tool_strict(s)
+            if segment_names_zone and not is_proven_reader:
+                v = zone_word if zone_word is not None else "<unknown>"
+                if v not in out:
+                    out.append(v)
             if head == "awk":
                 prog = next((a for a in args if not a.startswith("-")), "")
                 if not _awk_is_reader(args) and _interp_touches(prog, cwd_now, unreadable, protected, cwd, markers):
@@ -1027,8 +1056,9 @@ def _whitelist_touches(command, sp, protected, cwd):
                             out.append("<unknown>")
         prev_contact = zone_word is not None or dollar
     # a heredoc body read by an interpreter that is not a shell is
-    # not cut into shell commands; node, perl and ruby keep exactly the verdict
-    # their inline code already has: a protected name in it is a contact.
+    # not cut into shell commands; any non-proven-reader head makes its
+    # body a contact if the body names a protected path. Shell heredocs are
+    # handled recursively by touched() and are skipped here.
     import shell_split
     import shell_targets
 
@@ -1036,13 +1066,41 @@ def _whitelist_touches(command, sp, protected, cwd):
         line = b.get("line", "")
         if not line:
             continue
+        # Skip shell heredocs: they are judged as commands by the recursive
+        # touched() call in the main function.
+        if _shell_read_heredoc(b):
+            continue
         local = shell_split.split_segments(line)
         owner = next((x for x in local if "<<" in x), line)
         try:
             head = shell_targets.judge_segment(owner, {"code_extensions": JOURNAL_EXTS, "delegate_tools": []}).get("head", "")
         except Exception:
             head = ""
-        if head in ("node", "ruby", "perl"):
+        # Parse owner segment for args to check proven reader status
+        try:
+            owner_words = shlex.split(owner)
+        except ValueError:
+            owner_words = owner.split()
+        owner_head = ""
+        owner_args = []
+        if owner_words:
+            j = 0
+            while j < len(owner_words) and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", owner_words[j]):
+                j += 1
+            if j < len(owner_words) and owner_words[j] == "env":
+                j += 1
+                while j < len(owner_words) and (
+                        owner_words[j].startswith("-")
+                        or re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", owner_words[j])):
+                    j += 1
+            if j < len(owner_words) and owner_words[j] not in STRUCT_KW:
+                while j < len(owner_words) and owner_words[j] in STRIP_KW:
+                    j += 1
+                if j < len(owner_words):
+                    owner_head = os.path.basename(owner_words[j])
+                    owner_args = owner_words[j + 1:]
+        is_proven = _strict_reader(owner_head, owner_args) or _proven_python_reader(owner, bodies) or _json_tool_strict(owner)
+        if not is_proven:
             if _interp_touches(b.get("body", ""), cwd_now, unreadable, protected, cwd, markers):
                 if "<unknown>" not in out:
                     out.append("<unknown>")
