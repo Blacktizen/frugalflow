@@ -33,6 +33,7 @@ NOTICE = (
     "          2026-10-04 an observed refusal in observe mode now prints one short systemMessage line when display.turn_line is on; it never says deny.\n"
     "          2026-11-05 a vault that asks for a reading only showed its lines when the gate was asked, so its first write passed untouched.\n"
     "          The reading gate now runs as a check of this hook: it refuses that write once, shows the bearing lines, and attests its own refusal, so the identical write right after is accepted.\n"
+    "          2026-11-05 the journal layer now covers the user's Claude settings file and each vault's journal (log.md beside a SCHEMA.md or an overview.md); its refusal puts To fix: on its own line.\n"
 )
 
 
@@ -236,9 +237,10 @@ def run_hook(stdin_text):
                 "deny",
                 "journal",
                 touched_paths,
-                "Guard refused: this call writes, removes, moves or links the guard's own logs ("
+                "Guard refused: this call writes, removes, moves or links the guard's own logs "
+                "or a protected user file ("
                 + ", ".join(touched_paths)
-                + "). To fix: never touch these files; read them only.",
+                + ").\nTo fix: never touch these files; read them only.",
             )
 
     # 2026-11-05: the user's settings belong to the user; the assistant never changes them,
