@@ -10,8 +10,37 @@ import datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import session_log
 import r1_rules
+import chain_rules
 
 COMMIT = re.compile(r"\bgit\s+(?:-C\s+\S+\s+)?commit\b")
+
+
+def entry_landed(command, entry, response):
+    """Return True if the journal_add call actually landed an entry with the given title."""
+    try:
+        rel_path = r1_rules.landed_in(response)
+        if not rel_path:
+            return False
+        title = r1_rules.title_of(command)
+        if not title:
+            return False
+        vaults = r1_rules.log_vaults(command)
+        if not vaults:
+            return False
+        cwd = entry.get("cwd", "")
+        for vault in vaults:
+            vault_path = vault
+            if not os.path.isabs(vault_path):
+                vault_path = os.path.normpath(os.path.join(cwd, vault_path))
+            target_file = os.path.join(vault_path, rel_path)
+            if os.path.exists(target_file):
+                with open(target_file, "r") as handle:
+                    content = handle.read()
+                    if title in content:
+                        return True
+        return False
+    except Exception:
+        return False
 
 USAGE = "usage: r1_guard.py [--session SESSION] | --notice | --autotest   (no argument: Stop hook mode, reads the hook payload on stdin)"
 
@@ -89,7 +118,7 @@ def reason(missing):
 def run_hook(text):
     payload = json.loads(text)
     session = payload["session_id"]
-    missing = r1_rules.missing_log(load_entries(session), exempt)
+    missing = r1_rules.missing_log(load_entries(session), exempt, landed=entry_landed)
     if not missing:
         return ""
     if payload.get("stop_hook_active"):
@@ -110,8 +139,11 @@ def before(ident, command, cwd):
     return {"ts": datetime.datetime.now().astimezone().isoformat(timespec="seconds"), "cwd": cwd, "event": "tool_before", "tool": "Bash", "id": ident, "input": json.dumps({"command": command})}
 
 
-def after(ident):
-    return {"event": "tool_after", "tool": "Bash", "id": ident}
+def after(ident, response=""):
+    entry = {"event": "tool_after", "tool": "Bash", "id": ident}
+    if response:
+        entry["response"] = response
+    return entry
 
 
 def autotest():
@@ -191,8 +223,27 @@ def autotest():
         else:
             proc_4a = subprocess.run([sys.executable, __file__, "--session", "s1"], capture_output=True, text=True, env=env)
             ok_4a = proc_4a.returncode == 6 and "R1 MISSING: 1" in proc_4a.stdout
-            session_log.append("s1", before("b2", LOG, base))
-            session_log.append("s1", after("b2"))
+
+            # Create a valid vault with a proper log.md for the real journal_add.py call
+            valid_vault = os.path.join(base, "valid_vault")
+            os.makedirs(os.path.join(valid_vault, "vault"))
+            # Write a genesis entry to log.md so journal_add.py can append to it
+            import chain_rules
+            genesis_entry = chain_rules.render(chain_rules.GENESIS, "2026-09-26 00:00", "setup", [("Decision", "created")])
+            with open(os.path.join(valid_vault, "vault", "log.md"), "w") as handle:
+                handle.write("# Log\n\n" + genesis_entry)
+
+            # Run REAL journal_add.py to the valid vault and capture its output
+            journal_add_path = os.path.join(os.path.dirname(__file__), "journal_add.py")
+            proc_journal = subprocess.run(
+                [sys.executable, journal_add_path, "--vault", os.path.join(valid_vault, "vault"), "--title", "t1", "--field", "Decision=d"],
+                capture_output=True, text=True, env=env
+            )
+            journal_output = proc_journal.stdout.strip()
+
+            session_log.append("s1", before("b2", "python3 " + journal_add_path + " --vault " + os.path.join(valid_vault, "vault") + " --title t1 --field Decision=d", base))
+            session_log.append("s1", after("b2", journal_output))
+
             proc_4b = subprocess.run([sys.executable, __file__, "--session", "s1"], capture_output=True, text=True, env=env)
             ok_4b = proc_4b.returncode == 0 and "R1 OK s1" in proc_4b.stdout
             proc_4c = subprocess.run([sys.executable, __file__], input=json.dumps({"session_id": "s1"}), capture_output=True, text=True, env=env)
@@ -255,7 +306,7 @@ def main():
             print(USAGE)
             sys.exit(2)
         session_id = args[1]
-        missing = r1_rules.missing_log(load_entries(session_id), exempt)
+        missing = r1_rules.missing_log(load_entries(session_id), exempt, landed=entry_landed)
         if not missing:
             print("R1 OK " + session_id)
             sys.exit(0)

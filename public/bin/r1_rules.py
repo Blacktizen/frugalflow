@@ -20,6 +20,10 @@ VAULT_ARG = re.compile(r"--vault\s+(\S+)")
 CD_ARG = re.compile(r"(?:^|[;&|\n]\s*)cd\s+(\"[^\"]*\"|'[^']*'|\S+)")
 GIT_DIR_ARG = re.compile(r"\bgit\s+-C\s+(\"[^\"]*\"|'[^']*'|\S+)")
 
+APPENDED = re.compile(r"APPENDED entry \d+ to ([^\s\\\"]+)")
+
+TITLE_ARG = re.compile(r'--title\s+("([^"]*)"|\'([^\']*)\'|(\S+))')
+
 
 def effective_command(command):
     text = shell_quotes.extract_heredocs(command)[0]
@@ -43,6 +47,28 @@ def strip_outer_quotes(value):
     if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
         return value[1:-1]
     return value
+
+
+def landed_in(response):
+    """Return the filename from an APPENDED response, or empty string if not found."""
+    match = APPENDED.search(response)
+    if match:
+        return match.group(1)
+    return ""
+
+
+def title_of(command):
+    """Return the --title value from a journal_add command, or empty string."""
+    match = TITLE_ARG.search(command)
+    if match:
+        # Group 2: double-quoted content, Group 3: single-quoted content, Group 4: unquoted
+        if match.group(2) is not None:
+            return match.group(2)
+        if match.group(3) is not None:
+            return match.group(3)
+        if match.group(4) is not None:
+            return match.group(4)
+    return ""
 
 
 def log_vaults(command):
@@ -94,13 +120,26 @@ def executed_commands(entries):
     return result
 
 
-def missing_log(entries, exempt=None):
+def missing_log(entries, exempt=None, landed=None):
+    # Build a map from tool_after id to response
+    after_responses = {}
+    for entry in entries:
+        if entry.get("event") == "tool_after" and entry.get("tool") == "Bash":
+            after_id = entry.get("id")
+            if after_id:
+                # The response is in the entry itself, not in a separate field
+                after_responses[after_id] = entry.get("response", "")
+
     result = []
     for entry, command in executed_commands(entries):
         if gesture_in(command) != "" and (exempt is None or exempt(command, entry) is False):
             result.append(" ".join(command.split())[:120])
         if is_log_call(command):
-            result = []
+            entry_id = entry.get("id")
+            response = after_responses.get(entry_id, "")
+            if landed_in(response):
+                if landed is None or landed(command, entry, response):
+                    result = []
     return result
 
 
@@ -128,15 +167,21 @@ def _autotest():
     def before(ident, command):
         return {"event": "tool_before", "tool": "Bash", "id": ident, "input": json.dumps({"command": command})}
 
-    def after(ident):
-        return {"event": "tool_after", "tool": "Bash", "id": ident}
+    def after(ident, response=""):
+        entry = {"event": "tool_after", "tool": "Bash", "id": ident}
+        if response:
+            entry["response"] = response
+        return entry
 
     LOG = "python3 public/bin/journal_add.py --vault /w/vault --title t --field Decision=d"
+    LOG_SUCCESS = 'APPENDED entry 1 to log.md'
+    LOG_FAIL = 'missing page: log.md'
     RUN_GESTURE = [{"event": "prompt"}, before("a1", "git commit -m fix"), after("a1")]
-    GESTURE_THEN_LOG = RUN_GESTURE + [before("b2", LOG), after("b2")]
-    LOG_THEN_GESTURE = [before("b2", LOG), after("b2"), before("c3", "git push"), after("c3")]
+    GESTURE_THEN_LOG = RUN_GESTURE + [before("b2", LOG), after("b2", LOG_SUCCESS)]
+    LOG_THEN_GESTURE = [before("b2", LOG), after("b2", LOG_SUCCESS), before("c3", "git push"), after("c3")]
     NOT_RUN = [before("d4", "git push")]
     MENTION = RUN_GESTURE + [before("e5", "grep -n vault public/bin/journal_add.py"), after("e5")]
+    GESTURE_THEN_LOG_FAIL = RUN_GESTURE + [before("f6", LOG), after("f6", LOG_FAIL)]
 
     failures = 0
 
@@ -173,7 +218,7 @@ def _autotest():
         failures += 1
 
     # Test 3
-    expected3 = [["git commit -m fix"], [], ["git push"], [], ["git commit -m fix"], []]
+    expected3 = [["git commit -m fix"], [], ["git push"], [], ["git commit -m fix"], [], ["git commit -m fix"]]
     got3 = [
         missing_log(RUN_GESTURE),
         missing_log(GESTURE_THEN_LOG),
@@ -181,6 +226,7 @@ def _autotest():
         missing_log(NOT_RUN),
         missing_log(MENTION),
         missing_log(RUN_GESTURE, exempt=lambda command, entry: True),
+        missing_log(GESTURE_THEN_LOG_FAIL),  # LOG with failure response should NOT clear
     ]
     if got3 == expected3:
         print("PASS 3 missing_log: expected " + repr(expected3) + " got " + repr(got3))
@@ -229,6 +275,20 @@ def _autotest():
         print("PASS 5 subprocess: expected True got True")
     else:
         print("FAIL 5 subprocess: expected True got False notice_rc=" + str(proc_notice.returncode) + " bogus_rc=" + str(proc_bogus.returncode))
+        failures += 1
+
+    # Test 6: landed_in and title_of
+    expected6 = ["log.md", "", "my title", ""]
+    got6 = [
+        landed_in('APPENDED entry 1 to log.md'),
+        landed_in('missing page: log.md'),
+        title_of('python3 journal_add.py --title "my title" --field x=y'),
+        title_of('python3 journal_add.py --field x=y'),
+    ]
+    if got6 == expected6:
+        print("PASS 6 landed_in/title_of: expected " + repr(expected6) + " got " + repr(got6))
+    else:
+        print("FAIL 6 landed_in/title_of: expected " + repr(expected6) + " got " + repr(got6))
         failures += 1
 
     return 0 if failures == 0 else 1

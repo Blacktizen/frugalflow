@@ -35,7 +35,7 @@ def hook(env, payload):
     return tool(env, "session_log.py", stdin=json.dumps(payload))
 
 
-def ran(env, session, ident, command, cwd):
+def ran(env, session, ident, command, cwd, stdout=""):
     """Simulate a shell command: PreToolUse then PostToolUse hooks."""
     code_pre, _ = hook(env, {
         "session_id": session, "cwd": cwd, "hook_event_name": "PreToolUse",
@@ -45,7 +45,7 @@ def ran(env, session, ident, command, cwd):
     code_post, _ = hook(env, {
         "session_id": session, "cwd": cwd, "hook_event_name": "PostToolUse",
         "tool_name": "Bash", "tool_use_id": ident,
-        "tool_response": {"stdout": ""},
+        "tool_response": {"stdout": stdout},
     })
     return code_pre == 0 and code_post == 0
 
@@ -114,7 +114,8 @@ def steps(tmp):
         ok = False
         flag_a = ran(env, "s1", "a2", "git commit -m fix", project)
         code_a, out_a = tool(env, "r1_guard.py", stdin=json.dumps({"session_id": "s1"}))
-        flag_b = ran(env, "s1", "a3", log_call, project)
+        code_j, out_j = tool(env, "journal_add.py", "--vault", vault, "--title", "fixed", "--field", "Decision=d")
+        flag_b = code_j == 0 and ran(env, "s1", "a3", log_call, project, stdout=out_j)
         code_b, out_b = tool(env, "r1_guard.py", stdin=json.dumps({"session_id": "s1"}))
         ok = (
             flag_a
