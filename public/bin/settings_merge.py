@@ -13,7 +13,7 @@ class SettingsError(ValueError):
 
 
 def guard_command(python, bin_dir):
-    return launcher.command(bin_dir, python, "guard_hook") + " --hook"
+    return launcher.command(bin_dir, python, "guard_hook") + " --hook || exit 2"
 
 
 def is_ours(command, guard_path):
@@ -23,7 +23,14 @@ def is_ours(command, guard_path):
         return False
     if not launcher.names_tool(command, "guard_hook", os.path.dirname(guard_path)):
         return False
-    return "--hook" in parts
+    if "--hook" not in parts:
+        return False
+    # Accept both old form (ends with --hook) and new form (ends with --hook || exit 2)
+    if parts[-1] == "--hook":
+        return True
+    if len(parts) >= 4 and parts[-4] == "--hook" and parts[-3] == "||" and parts[-2] == "exit" and parts[-1] == "2":
+        return True
+    return False
 
 
 def _check_shape(settings):
@@ -52,15 +59,32 @@ def _check_shape(settings):
                 raise SettingsError("each hook entry must be a dict")
 
 
-def add_hooks(settings, command):
+def add_hooks(settings, command, guard_path=None):
     _check_shape(settings)
     new = copy.deepcopy(settings)
     hooks = new.setdefault("hooks", {})
     pre = hooks.setdefault("PreToolUse", [])
-    for group in pre:
-        for entry in group.get("hooks", []):
-            if entry.get("command") == command:
-                return new, False
+    if guard_path is not None:
+        # Replace any existing hook entry where is_ours is true
+        changed = False
+        for group in pre:
+            gh = group.get("hooks")
+            if not isinstance(gh, list):
+                continue
+            for entry in gh:
+                if isinstance(entry, dict) and is_ours(entry.get("command", ""), guard_path):
+                    if entry.get("command") == command:
+                        return new, False
+                    entry["command"] = command
+                    changed = True
+        if changed:
+            return new, True
+    else:
+        # Original behavior: check for exact command match
+        for group in pre:
+            for entry in group.get("hooks", []):
+                if entry.get("command") == command:
+                    return new, False
     pre.append({"matcher": "*", "hooks": [{"type": "command", "command": command}]})
     return new, True
 
@@ -199,8 +223,11 @@ def _autotest():
 
     # Test 1
     parts = shlex.split(cmd)
-    ok = len(parts) == 3 and parts[2] == "--hook" and is_ours(cmd, guard_path) is True
-    results.append(("1 guard_command builds [python, guard_hook.py, --hook] and is_ours accepts it", ok,
+    # The command may be 'frugalflow run guard_hook --hook || exit 2' (7 tokens)
+    # or 'python /path/guard_hook.py --hook || exit 2' (6 tokens)
+    # Check that it ends with ' || exit 2' and is_ours accepts it
+    ok = len(parts) >= 6 and parts[-3:] == ["||", "exit", "2"] and is_ours(cmd, guard_path) is True
+    results.append(("1 guard_command builds shlex tokens ending with ' || exit 2' and is_ours accepts it", ok,
                     "cmd=%r parts=%r" % (cmd, parts) if not ok else ""))
 
     # Test 2
@@ -265,45 +292,63 @@ def _autotest():
           and is_ours("python3 " + guard_path + " --other", guard_path) is False)
     results.append(("8 is_ours rejects split errors, other paths and a missing --hook", ok, ""))
 
-    # Test 9
+    # Test 9: is_ours accepts both old form (without || exit 2) and new form (with || exit 2)
+    old_form = python + " " + shlex.quote(guard_path) + " --hook"
+    new_form = old_form + " || exit 2"
+    ok = is_ours(old_form, guard_path) is True and is_ours(new_form, guard_path) is True
+    results.append(("9 is_ours accepts both old and new command forms", ok, "old=%r new=%r" % (old_form, new_form) if not ok else ""))
+
+    # Test 10: add_hooks with guard_path replaces old form with new form, no duplicate
+    settings_old = {"hooks": {"PreToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": old_form}]}]}}
+    replaced, changed10 = add_hooks(settings_old, new_form, guard_path=guard_path)
+    expected_replaced = {"hooks": {"PreToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": new_form}]}]}}
+    ok = changed10 is True and replaced == expected_replaced
+    results.append(("10 add_hooks with guard_path replaces old form with new form", ok, "replaced=%r" % replaced if not ok else ""))
+
+    # Test 11: add_hooks with guard_path is idempotent when command already matches
+    again11, changed11 = add_hooks(replaced, new_form, guard_path=guard_path)
+    ok = changed11 is False and again11 == replaced
+    results.append(("11 add_hooks with guard_path is idempotent when command matches", ok, "changed=%r" % changed11 if not ok else ""))
+
+    # Test 12: --notice prints the notice
     r = subprocess.run([sys.executable, os.path.abspath(__file__), "--notice"], capture_output=True, text=True)
     ok = r.returncode == 0 and r.stdout.startswith("NAME      settings_merge.py")
-    results.append(("9 --notice prints the notice", ok, "rc=%d stdout=%r" % (r.returncode, r.stdout) if not ok else ""))
+    results.append(("12 --notice prints the notice", ok, "rc=%d stdout=%r" % (r.returncode, r.stdout) if not ok else ""))
 
-    # Test 10: a foreign status line is wrapped with --inner and padding kept, then removed back to the exact original.
+    # Test 13: a foreign status line is wrapped with --inner and padding kept, then removed back to the exact original.
     fixture = {"model": "opus", "statusLine": {"type": "command", "command": "bash -c 'echo \"$PWD\"'", "padding": 0}}
     inner_cmd = "bash -c 'echo \"$PWD\"'"
-    wrapped, changed10 = add_statusline(fixture, python, bin_dir)
+    wrapped, changed13 = add_statusline(fixture, python, bin_dir)
     expected_wrapped = {"model": "opus", "statusLine": {"type": "command",
                                                          "command": statusline_command(python, bin_dir, inner=inner_cmd),
                                                          "padding": 0}}
-    back10, changed10b = remove_statusline(wrapped, bin_dir)
-    ok = (changed10 is True and wrapped == expected_wrapped
-          and changed10b is True and back10 == fixture)
-    results.append(("10 add_statusline wraps a foreign line (inner kept, padding kept) and remove_statusline restores it",
-                    ok, "wrapped=%r back=%r" % (wrapped, back10) if not ok else ""))
+    back13, changed13b = remove_statusline(wrapped, bin_dir)
+    ok = (changed13 is True and wrapped == expected_wrapped
+          and changed13b is True and back13 == fixture)
+    results.append(("13 add_statusline wraps a foreign line (inner kept, padding kept) and remove_statusline restores it",
+                    ok, "wrapped=%r back=%r" % (wrapped, back13) if not ok else ""))
 
-    # Test 11: a settings dict without statusLine: add then remove yields the original; a second add is a no-op.
+    # Test 14: a settings dict without statusLine: add then remove yields the original; a second add is a no-op.
     bare = {"model": "opus"}
-    added11, changed11 = add_statusline(bare, python, bin_dir)
-    back11, changed11b = remove_statusline(added11, bin_dir)
-    again11, changed11c = add_statusline(added11, python, bin_dir)
-    ok = (changed11 is True
-          and added11 == {"model": "opus", "statusLine": {"type": "command", "command": statusline_command(python, bin_dir)}}
-          and changed11b is True and back11 == bare
-          and changed11c is False and again11 == added11)
-    results.append(("11 add then remove restores a bare dict and a second add is a no-op",
-                    ok, "added=%r back=%r again=%r changed=%r/%r" % (added11, back11, again11, changed11, changed11c) if not ok else ""))
+    added14, changed14 = add_statusline(bare, python, bin_dir)
+    back14, changed14b = remove_statusline(added14, bin_dir)
+    again14, changed14c = add_statusline(added14, python, bin_dir)
+    ok = (changed14 is True
+          and added14 == {"model": "opus", "statusLine": {"type": "command", "command": statusline_command(python, bin_dir)}}
+          and changed14b is True and back14 == bare
+          and changed14c is False and again14 == added14)
+    results.append(("14 add then remove restores a bare dict and a second add is a no-op",
+                    ok, "added=%r back=%r again=%r changed=%r/%r" % (added14, back14, again14, changed14, changed14c) if not ok else ""))
 
-    # Test 12: a statusLine that is not a command dict is refused.
+    # Test 15: a statusLine that is not a command dict is refused.
     try:
         add_statusline({"statusLine": "x"}, python, bin_dir)
-        ok12 = False
-        detail12 = "add_statusline accepted {'statusLine': 'x'}"
+        ok15 = False
+        detail15 = "add_statusline accepted {'statusLine': 'x'}"
     except SettingsError:
-        ok12 = True
-        detail12 = ""
-    results.append(("12 add_statusline refuses a non-dict statusLine", ok12, detail12))
+        ok15 = True
+        detail15 = ""
+    results.append(("15 add_statusline refuses a non-dict statusLine", ok15, detail15))
 
     all_pass = True
     for desc, passed, detail in results:
