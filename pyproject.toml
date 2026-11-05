@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "frugalflow"
-version = "0.1.1"
+version = "0.1.2"
 description = "A memory per project for your AI coding assistant, and guards that stop the waste before it is billed. Standard library only."
 readme = "README.md"
 requires-python = ">=3.11"
