@@ -44,7 +44,7 @@ def file_stat(path):
     return (lines, size)
 
 
-def build(settings, records, cwd=None, now=None, stat=None):
+def build(settings, records, cwd=None, now=None, stat=None, mode=None):
     if cwd is not None and isinstance(cwd, str) and cwd:
         ctx_cwd = cwd
     else:
@@ -54,6 +54,7 @@ def build(settings, records, cwd=None, now=None, stat=None):
         "records": records,
         "now": now if now is not None else datetime.datetime.now().astimezone(),
         "stat": stat if stat is not None else file_stat,
+        "mode": mode,
     }
     names = settings.get("checks", [n for n, _ in CHECKS])
     result = []

@@ -148,7 +148,7 @@ def check(tool_name, tool_input, config, ctx):
             "Read refused: "
             + refused[0]
             + " was just produced by a delegation; run its test, do not read its code. "
-            + "To fix: run the file or its --autotest, or declare the read in the delegation log (kind read, target, time, reason).",
+            + "To fix: run the file or its --autotest instead of reading its code; to read it anyway, ask the user.",
             refused,
         )
     return (False, "", [])
@@ -208,7 +208,7 @@ def _autotest():
         and len(r1) == 3
         and r1[0] is True
         and "To fix:" in r1[1]
-        and "kind read" in r1[1]
+        and "ask the user" in r1[1]
         and r1[2] == ["/w/new.py"]
         and R("Read", {"file_path": "new.py"})[0] is True
         and R("Read", {"file_path": "/w/failed.py"})[0] is True
@@ -219,7 +219,7 @@ def _autotest():
     if ok1:
         lines.append("PASS test 1: read refusals for produced code files")
     else:
-        lines.append("FAIL test 1: expected (True, reason with 'To fix:' and 'kind read', ['/w/new.py']), got %s" % (r1,))
+        lines.append("FAIL test 1: expected (True, reason with 'To fix:' and 'ask the user',['/w/new.py']), got %s" % (r1,))
         all_ok = False
 
     # --- Test 2 ---

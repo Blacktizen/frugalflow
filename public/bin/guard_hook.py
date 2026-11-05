@@ -305,7 +305,7 @@ def run_hook(stdin_text):
             res = guard_rules.result("allow", None, [], "")
     else:
         try:
-            res = guard_rules.decide(tool, inp, settings, records, guard_checks.build(settings, records, payload.get("cwd")))
+            res = guard_rules.decide(tool, inp, settings, records, guard_checks.build(settings, records, payload.get("cwd"), mode=mode))
         except Exception as e:
             res = guard_rules.result(
                 "deny",

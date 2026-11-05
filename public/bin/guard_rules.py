@@ -97,7 +97,7 @@ def decide(tool_name, tool_input, config, records, checks=(), judge=None, now=No
         elif v == "no_fingerprint":
             return result("deny", "no_fingerprint", [path], f"Code write refused: the receipt for {path} has no fingerprint. To fix: delegate again with an output file, which records the fingerprint.")
         else:
-            return result("deny", "divergent", [path], f"Code write refused: the content differs from what was delegated for {path}. To fix: write the delegated file as it is, or declare the edit in the delegation log (kind edit, target, reason).")
+            return result("deny", "divergent", [path], f"Code write refused: the content differs from what was delegated for {path}. To fix: write the delegated file as it is, or re-delegate the change with `frugalflow run delegate --role NAME --file TASK --out FILE --verify CMD`, or ask the user to make this edit by hand.")
 
     return result("allow", None, [], "")
 
