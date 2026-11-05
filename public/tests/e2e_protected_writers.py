@@ -7,14 +7,17 @@ import tempfile
 NOTICE = (
     "NAME      e2e_protected_writers.py - end-to-end test that the guard "
     "hook refuses writes to protected paths (preferences.json, models.json, "
-    "guard.json, delegations.jsonl).\n"
+    "guard.json, delegations.jsonl) and vault journals (log.md beside "
+    "overview.md or SCHEMA.md).\n"
     "READS     the guard_hook.py in ../bin; the temporary home directory.\n"
     "WRITES    only in temporary folders, always removed. Exit 0 all "
     "steps pass, 1 a step failed, 2 usage.\n"
     "EXAMPLE   python3 e2e_protected_writers.py\n"
     "PITFALLS  2026-11-05 deno/lua/osascript/Rscript/tclsh/awk writers were "
     "not covered: they can overwrite preferences.json without the hook "
-    "seeing a Python-level write.\n"
+    "seeing a Python-level write. 2026-11-05 git add/commit of a vault "
+    "journal (log.md) are readers and must not be refused; only write/move/remove "
+    "verbs that target the journal are denied.\n"
 )
 
 HOOK = os.path.join(
@@ -41,6 +44,14 @@ def call_guard(h, tool_name, tool_input):
 def write_fixtures(h, mode):
     p = os.path.join(h, "preferences.json")
     m = os.path.join(h, "models.json")
+    # Vault directory V = h/vault with overview.md and log.md (L)
+    v = os.path.join(h, "vault")
+    os.makedirs(v, exist_ok=True)
+    with open(os.path.join(v, "overview.md"), "w"):
+        pass
+    l = os.path.join(v, "log.md")
+    with open(l, "w"):
+        pass
     with open(os.path.join(h, "guard.json"), "w") as f:
         json.dump(
             {
@@ -56,7 +67,7 @@ def write_fixtures(h, mode):
     content = '{"switch": {"enabled": true, "mode": "' + mode + '"}}'
     with open(p, "w") as f:
         f.write(content)
-    return p, m, content
+    return p, m, l, content
 
 
 def deny_cases():
@@ -88,6 +99,20 @@ def deny_cases():
         ("y", "tclsh <<EOF\nset f [open {P} w]; puts $f x; close $f\nEOF", True),
         ("z", "awk 'BEGIN{{print > \"{P}\"}}'", True),
         ("aa", "git config --file {P} core.bare true", True),
+        # Git write verbs targeting P (preferences.json) - must be denied
+        ("ab", "git checkout -- {P}", True),
+        ("ac", "git restore {P}", True),
+        ("ad", "git mv {P} {H}/x.json", True),
+        ("ae", "git rm {P}", True),
+        ("af", "git stash push -- {P}", True),
+        ("ag", "git log > {P}", True),
+        # Git write verbs targeting L (vault log.md) - must be denied
+        ("ah", "git checkout -- {L}", True),
+        ("ai", "git restore {L}", True),
+        ("aj", "git mv {L} {V}/x.md", True),
+        ("ak", "git rm {L}", True),
+        ("al", "git status > {L}", True),
+        ("am", "git blame {L} > {P}", True),
     ]
 
 
@@ -98,6 +123,20 @@ def allow_cases():
         ("w", "grep x {P}", False),
         ("x", "jq . {P}", False),
         ("y", "python3 -c \"print(open('{P}').read())\"", False),
+        # Git readers and index/history for P (preferences.json) - must be allowed
+        ("za", "git add {P}", False),
+        ("zb", "git commit -m x {P}", False),
+        ("zc", "git diff {P}", False),
+        ("zd", "git log {P}", False),
+        ("ze", "git show {P}", False),
+        # Git readers and index/history for L (vault log.md) - must be allowed
+        ("zf", "git add {L}", False),
+        ("zg", "git commit -m x {L}", False),
+        ("zh", "git status {L}", False),
+        ("zi", "git blame {L}", False),
+        # Control: non-protected path, same verbs - must be allowed
+        ("zj", "git add notes.txt", False),
+        ("zk", "git commit -m x notes.txt", False),
     ]
 
 
@@ -107,10 +146,11 @@ def run_e2e():
 
     for label, cmd_tpl, expected_deny in deny_cases():
         h = tempfile.mkdtemp(prefix="b2home-", dir="/tmp")
-        P, M, _ = write_fixtures(h, "active")
+        P, M, L, _ = write_fixtures(h, "active")
         G = os.path.join(h, "guard.json")
+        V = os.path.join(h, "vault")
 
-        cmd = cmd_tpl.format(P=P, M=M, G=G)
+        cmd = cmd_tpl.format(P=P, M=M, G=G, H=h, V=V, L=L)
         got = call_guard(h, "Bash", {"command": cmd})
         case_num += 1
         expected_str = "deny" if expected_deny else "allow"
@@ -123,10 +163,11 @@ def run_e2e():
 
     for label, cmd_tpl, expected_deny in allow_cases():
         h = tempfile.mkdtemp(prefix="b2home-", dir="/tmp")
-        P, M, _ = write_fixtures(h, "active")
+        P, M, L, _ = write_fixtures(h, "active")
         G = os.path.join(h, "guard.json")
+        V = os.path.join(h, "vault")
 
-        cmd = cmd_tpl.format(P=P, M=M, G=G)
+        cmd = cmd_tpl.format(P=P, M=M, G=G, H=h, V=V, L=L)
         got = call_guard(h, "Bash", {"command": cmd})
         case_num += 1
         expected_str = "deny" if expected_deny else "allow"

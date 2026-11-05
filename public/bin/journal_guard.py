@@ -368,7 +368,10 @@ def _zone_rel(path, protected, cwd):
         px = normal(x, cwd)
         if p == px or p.startswith(px + os.sep) or px.startswith(p + os.sep):
             return True
-    return False
+    # Vault journals (log.md beside SCHEMA.md or overview.md) are protected
+    # wherever they sit on the filesystem. Only exact match counts; a parent
+    # of a vault journal is not itself a vault journal.
+    return is_vault_journal(p)
 
 def _zone_markers(protected):
     """Return the protected names: the fixed zone names and the dotted basenames."""
@@ -515,7 +518,9 @@ def _reaches_zone(p, protected, cwd):
         px = normal(x, cwd)
         if pp == px or pp.startswith(px + os.sep):
             return True
-    return False
+    # Vault journals (log.md beside SCHEMA.md or overview.md) are protected
+    # wherever they sit on the filesystem.
+    return is_vault_journal(pp)
 
 def _word_names_zone(w, protected, cwd, markers):
     """Return True when a word of the command names a protected path.
@@ -780,7 +785,8 @@ def _find_is_reader(args):
 
 # 2026-11-05: `cd $W && git diff --stat` was refused as a journal write; a read-only
 # git subcommand writes nothing unless it is given an output file.
-GIT_READERS = {"diff", "log", "status", "show", "rev-parse", "blame", "shortlog", "describe", "ls-files"}
+# add and commit are index/history operations that do not write the file itself.
+GIT_READERS = {"add", "commit", "diff", "log", "status", "show", "rev-parse", "blame", "shortlog", "describe", "ls-files"}
 
 def _git_is_reader(args):
     """Return True for a read-only git subcommand with no output file option."""
