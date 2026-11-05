@@ -932,6 +932,13 @@ def _whitelist_touches(command, sp, protected, cwd):
                 v = zone_word if zone_word is not None else "<unknown>"
                 if v not in out:
                     out.append(v)
+            # Also check inline code for protected paths directly (covers os.system etc.)
+            for code in unproven_c + unproven_h:
+                if _interp_touches(code, cwd_now, unreadable, protected, cwd, markers):
+                    v = zone_word if zone_word is not None else "<unknown>"
+                    if v not in out:
+                        out.append(v)
+                    break
         elif head in ("sh", "bash", "zsh") and "-c" in args:
             k = args.index("-c")
             code = args[k + 1] if k + 1 < len(args) else ""
@@ -941,6 +948,13 @@ def _whitelist_touches(command, sp, protected, cwd):
                     out.append(v)
         elif head in ("perl", "node", "ruby", "osascript") and "-e" in args:
             k = args.index("-e")
+            code = args[k + 1] if k + 1 < len(args) else ""
+            if _interp_touches(code, cwd_now, unreadable, protected, cwd, markers):
+                v = zone_word if zone_word is not None else "<unknown>"
+                if v not in out:
+                    out.append(v)
+        elif head == "php" and "-r" in args:
+            k = args.index("-r")
             code = args[k + 1] if k + 1 < len(args) else ""
             if _interp_touches(code, cwd_now, unreadable, protected, cwd, markers):
                 v = zone_word if zone_word is not None else "<unknown>"
