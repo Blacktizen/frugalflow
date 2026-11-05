@@ -2,6 +2,8 @@ import os
 import sys
 import json
 import subprocess
+import shutil
+import shlex
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import claude_block
@@ -199,6 +201,57 @@ def _doctor(home, claude_dir, ollama_url, lmstudio_url):
         print("OK status line: FrugalFlow segment in place")
     else:
         print("WARN status line: FrugalFlow segment missing (" + fix + ")")
+
+    # 6c hook interpreter exists
+    settings_path = os.path.join(claude_dir, "settings.json")
+    if os.path.isfile(settings_path):
+        try:
+            with open(settings_path, encoding="utf-8") as f:
+                doc = json.load(f)
+        except (OSError, ValueError):
+            doc = None
+        if isinstance(doc, dict):
+            hooks = doc.get("hooks")
+            if isinstance(hooks, dict):
+                pre = hooks.get("PreToolUse")
+                if isinstance(pre, list):
+                    guard_path = os.path.join(BIN, "guard_hook.py")
+                    for group in pre:
+                        if not isinstance(group, dict):
+                            continue
+                        entries = group.get("hooks")
+                        if not isinstance(entries, list):
+                            continue
+                        for entry in entries:
+                            if not isinstance(entry, dict):
+                                continue
+                            if settings_merge.is_ours(entry.get("command", ""), guard_path):
+                                cmd = entry.get("command", "")
+                                try:
+                                    parts = shlex.split(cmd)
+                                except ValueError:
+                                    parts = []
+                                if parts:
+                                    first = parts[0]
+                                    if os.path.isabs(first):
+                                        if not os.path.exists(first):
+                                            fails += 1
+                                            print("FAIL hook interpreter does not exist: " + first + " (" + fix + ")")
+                                        else:
+                                            print("OK hook interpreter exists: " + first)
+                                    elif first == "frugalflow":
+                                        if shutil.which("frugalflow") is None:
+                                            fails += 1
+                                            print("FAIL hook interpreter does not exist: frugalflow (" + fix + ")")
+                                        else:
+                                            print("OK hook interpreter exists: frugalflow")
+                                    else:
+                                        resolved = shutil.which(first)
+                                        if resolved is None:
+                                            fails += 1
+                                            print("FAIL hook interpreter does not exist: " + first + " (" + fix + ")")
+                                        else:
+                                            print("OK hook interpreter exists: " + first)
 
     # 7 switch
     enabled, mode = _read_switch(home)

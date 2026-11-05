@@ -196,8 +196,9 @@ def _init(mode, home, claude_dir, ollama_url, lmstudio_url):
     # Step 2: read settings.json and compute the added hook and status line.
     try:
         settings_path, settings_raw, settings_doc = _read_settings(claude_dir)
+        guard_path = os.path.join(BIN, "guard_hook.py")
         new_settings, hook_changed = settings_merge.add_hooks(
-            settings_doc, settings_merge.guard_command(sys.executable, BIN)
+            settings_doc, settings_merge.guard_command(sys.executable, BIN), guard_path=guard_path
         )
         new_settings, sl_changed = settings_merge.add_statusline(new_settings, sys.executable, BIN)
         new_settings, banner_changed = banner_merge.add_banner(new_settings, BANNER_COMMAND)
@@ -475,11 +476,11 @@ def _autotest():
                 raw_settings = f.read()
             ok = (text.count(claude_block.BEGIN) == 1
                   and text.count(claude_block.END) == 1
-                  and raw_settings.count("guard_hook.py") == 1
-                  and raw_settings.count("statusline.py") == 1)
+                  and raw_settings.count("guard_hook") == 1
+                  and raw_settings.count("statusline") == 1)
             got = "begin=%d end=%d hook=%d statusline=%d" % (
                 text.count(claude_block.BEGIN), text.count(claude_block.END),
-                raw_settings.count("guard_hook.py"), raw_settings.count("statusline.py"))
+                raw_settings.count("guard_hook"), raw_settings.count("statusline"))
         if ok:
             for name in ("models", "preferences", "guard", "anonymization"):
                 if not os.path.isfile(os.path.join(home, name + ".json")):
