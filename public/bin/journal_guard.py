@@ -133,6 +133,7 @@ def under(p, px):
     return same_path(p, px) or fold(p).startswith(fold(px) + os.sep)
 
 VAULT_MARKERS = ("SCHEMA.md", "overview.md")
+ATTESTATION_NAME = ".reading.json"
 
 CLAUDE_SETTINGS_NAMES = ("settings.json", "settings.local.json")
 
@@ -165,6 +166,9 @@ def is_vault_journal(path):
 def is_protected(path, protected, cwd):
     """Return True if path is protected."""
     p = normal(path, cwd)
+    # The reading-gate attestation file is protected regardless of `checks`.
+    if os.path.basename(p).casefold() == ATTESTATION_NAME or os.path.basename(path).casefold() == ATTESTATION_NAME:
+        return True
     for x in protected:
         if under(p, normal(x, cwd)):
             return True
