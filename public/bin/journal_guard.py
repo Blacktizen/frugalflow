@@ -435,6 +435,21 @@ def _target_unreadable(t):
     """Return True when a target text cannot be read: <unknown>, a subshell or an expansion."""
     return t == "<unknown>" or "__SUB__" in t or "$" in t
 
+def _collect_unreadable(t):
+    """Return True when a collected write target cannot be resolved to one path:
+    an expansion, a subshell, a glob or a brace group."""
+    return _target_unreadable(t) or any(ch in t for ch in "`*?{(")
+
+def _resolved_target(t, cwd):
+    """Resolve a write target to an absolute realpath; "<unknown>" when it cannot."""
+    try:
+        p = _expand_tilde(t)
+        if not os.path.isabs(p):
+            p = os.path.join(cwd, p)
+        return os.path.realpath(p)
+    except Exception:
+        return "<unknown>"
+
 def _dotted_zone_names(protected):
     """Return the basename of each protected path that carries a dot."""
     return [os.path.basename(x) for x in protected if "." in os.path.basename(x)]
@@ -1156,12 +1171,20 @@ def _whitelist_touches(command, sp, protected, cwd):
                     out.append("<unknown>")
     return out
 
-def touched(tool, tool_input, protected, cwd, depth=0):
+def touched(tool, tool_input, protected, cwd, depth=0, collect=None):
     """Return the list of protected paths touched by the tool call.
-    depth counts the nested judgings of heredoc bodies; it never exceeds 3."""
+    depth counts the nested judgings of heredoc bodies; it never exceeds 3.
+    collect: when a list is passed, every write target of the call - protected
+    or not, whatever its extension - is added to it as a resolved absolute
+    path, "<unknown>" when it cannot be resolved; the protected verdict below
+    is left untouched."""
     try:
         if tool in FILE_TOOLS:
             p = tool_input.get("file_path") or tool_input.get("notebook_path")
+            if collect is not None and isinstance(p, str) and p:
+                rp = _resolved_target(p, cwd)
+                if rp not in collect:
+                    collect.append(rp)
             if isinstance(p, str) and is_protected(p, protected, cwd):
                 return [p]
             return []
@@ -1237,19 +1260,34 @@ def touched(tool, tool_input, protected, cwd, depth=0):
                 # a word that is only a redirection operator is never a path.
                 if _is_redir_op(dest):
                     return
-                # a literal non-code file name is a data write, not a
-                # protected touch, even from an unreadable directory.
-                if _non_code_suffix(dest):
+                if collect is None:
+                    # a literal non-code file name is a data write, not a
+                    # protected touch, even from an unreadable directory.
+                    if _non_code_suffix(dest):
+                        return
+                elif _collect_unreadable(dest):
+                    # collecting: a target nobody can resolve is <unknown>,
+                    # and every resolvable target counts, protected or not.
+                    if "<unknown>" not in collect:
+                        collect.append("<unknown>")
                     return
                 if os.path.isabs(dest) or dest.startswith("~"):
                     full = dest
                 else:
                     if unreadable_local:
-                        if "<unknown>" not in result:
+                        if collect is not None:
+                            if "<unknown>" not in collect:
+                                collect.append("<unknown>")
+                        elif "<unknown>" not in result:
                             result.append("<unknown>")
                         return
                     full = os.path.join(cwd_local, dest)
                 shell_dests.add(dest)
+                if collect is not None:
+                    rp = _resolved_target(full, cwd_local)
+                    if rp not in collect:
+                        collect.append(rp)
+                    return
                 if (is_protected(full, protected, cwd)
                         or (parent and _parent_zone(full))) and dest not in result:
                     result.append(dest)
@@ -1341,7 +1379,12 @@ def touched(tool, tool_input, protected, cwd, depth=0):
                             continue
                         written = python_write_proof.written_paths(code)
                         if written is None:
-                            if unreadable_local or is_protected(cwd_local, protected, cwd):
+                            if collect is not None:
+                                # collecting: inline code that writes on a path
+                                # nobody can resolve is <unknown>.
+                                if "<unknown>" not in collect:
+                                    collect.append("<unknown>")
+                            elif unreadable_local or is_protected(cwd_local, protected, cwd):
                                 if "<unknown>" not in result:
                                     result.append("<unknown>")
                             # inline python that builds a protected
@@ -1366,11 +1409,14 @@ def touched(tool, tool_input, protected, cwd, depth=0):
                         if module == "json.tool":
                             pos = _json_tool_positionals(rest)
                             if pos is None or len(pos) > 2:
-                                if "<unknown>" not in result:
+                                if collect is not None:
+                                    if "<unknown>" not in collect:
+                                        collect.append("<unknown>")
+                                elif "<unknown>" not in result:
                                     result.append("<unknown>")
                             elif len(pos) == 2:
                                 d = pos[1]
-                                if _target_unreadable(d) and any(_component_in(d, n) for n in _dotted_zone_names(protected)):
+                                if collect is None and _target_unreadable(d) and any(_component_in(d, n) for n in _dotted_zone_names(protected)):
                                     if "<unknown>" not in result:
                                         result.append("<unknown>")
                                 else:
@@ -1418,6 +1464,40 @@ def touched(tool, tool_input, protected, cwd, depth=0):
                     scan(list(sp2.get("segments", [])), sp2.get("bodies", []))
             except Exception:
                 pass
+
+        # collecting: the targets of the first-level judging (shell_rules)
+        # carry no cd tracking. When the command moves the folder with cd or
+        # pushd, the resolution of scan() stands: a relative target scan has
+        # judged is already collected; one it did not judge is a doubt -
+        # <unknown>. Without a move, the target is resolved from the cwd.
+        if collect is not None:
+            has_move = False
+            for s in segs:
+                try:
+                    words0 = shlex.split(s)
+                except ValueError:
+                    words0 = s.split()
+                if words0 and os.path.basename(words0[0]) in ("cd", "pushd"):
+                    has_move = True
+                    break
+            for t in targets:
+                if t == "<unknown>":
+                    if "<unknown>" not in collect:
+                        collect.append("<unknown>")
+                    continue
+                if _is_redir_op(t):
+                    continue
+                if _collect_unreadable(t):
+                    if "<unknown>" not in collect:
+                        collect.append("<unknown>")
+                    continue
+                if has_move and not os.path.isabs(_expand_tilde(t)) and t not in shell_dests:
+                    if "<unknown>" not in collect:
+                        collect.append("<unknown>")
+                    continue
+                rp = _resolved_target(t, cwd)
+                if rp not in collect:
+                    collect.append(rp)
 
         # a journal read by proven inline code is a read, not a touch:
         # a target named only by the code is dropped; a target that a shell tool of
@@ -1504,16 +1584,32 @@ def touched(tool, tool_input, protected, cwd, depth=0):
                 if not body.strip():
                     continue
                 if not _heredoc_is_quoted(b) and ("$(" in body or "`" in body):
+                    if collect is not None and "<unknown>" not in collect:
+                        collect.append("<unknown>")
                     if "<unknown>" not in result:
                         result.append("<unknown>")
                     continue
-                for t in touched("Bash", {"command": body}, protected, cwd, depth + 1):
+                for t in touched("Bash", {"command": body}, protected, cwd, depth + 1, collect):
                     if t not in result:
                         result.append(t)
 
         return result
     except Exception:
+        if collect is not None and "<unknown>" not in collect:
+            collect.append("<unknown>")
         return ["<unknown>"]
+
+def write_targets(tool, tool_input, cwd):
+    """Return every write target of the call as a resolved absolute path
+    (realpath), cd and pushd tracked; "<unknown>" for a target the analysis
+    cannot resolve; [] for a call that writes nothing (cat, ls)."""
+    collect = []
+    try:
+        touched(tool, tool_input, [], cwd, collect=collect)
+    except Exception:
+        if "<unknown>" not in collect:
+            collect.append("<unknown>")
+    return collect
 
 def run_autotest():
     """Run built-in tests and return True if all pass."""
