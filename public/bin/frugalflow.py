@@ -45,7 +45,8 @@ NOTICE = (
     "WRITES    what the subcommand writes: new-project mounts the vault and hooks, init writes the CLAUDE.md block, the settings hook and the settings files. The exit code is the subcommand's; 2 on usage.\n"
     "EXAMPLE   python3 frugalflow.py new-project demo --root ~/projects\n"
     "PITFALLS  2026-09-22 vaults made by hand forgot the todo or the index, and hooks were wired later, or never.\n"
-    "          The log and its guard are wired at creation, in the project settings, never in the user settings.\n"
+    "          new-project wires the session log and R1 in the project settings, <project>/.claude/settings.json.\n"
+    "          init wires the guard and the status line in the user settings, ~/.claude/settings.json.\n"
     "          2026-10-05 a newcomer read --root as the project folder and got DIR/NAME/NAME: the usage now says DIR/NAME.\n"
     "          2026-10-05 a project tool refused for weeks without a trace: new-project now lays the refusal log loop, the bench and the commit gate.\n"
 )
