@@ -200,6 +200,15 @@ def bash_attestations(tool_input, cwd):
     return result
 
 
+def _attest_rendered(vault, pages, ctx):
+    """Attest a refusal only when the guard really renders it (mode active).
+
+    In observe mode the refusal becomes an allow: no restitution reaches the
+    assistant, so attesting it would let the next write pass without a reading."""
+    if isinstance(ctx, dict) and ctx.get("mode") == "active":
+        attest_refusal(vault, pages)
+
+
 def check(tool_name, tool_input, config, ctx):
     """Refuse the first write into a gated vault and attest it; refuse any hand-write of the attestation."""
     cwd = ctx.get("cwd") if isinstance(ctx, dict) else None
@@ -225,7 +234,7 @@ def check(tool_name, tool_input, config, ctx):
         code, _message = status(vault, pages)
         if code == 0:
             return (False, "", [])
-        attest_refusal(vault, pages)
+        _attest_rendered(vault, pages, ctx)
         return (True, refusal_text(vault, pages), [path])
 
     if tool_name == "Bash":
@@ -257,7 +266,7 @@ def check(tool_name, tool_input, config, ctx):
                 if code != 0:
                     # refused once, like a named write: the refusal delivers the
                     # lines, so the next gesture passes (no endless loop).
-                    attest_refusal(vault, pages)
+                    _attest_rendered(vault, pages, ctx)
                     return (True, refusal_text(vault, pages), [target])
                 continue
             vault = gated_vault(target, cwd)
@@ -277,7 +286,7 @@ def check(tool_name, tool_input, config, ctx):
             code, _message = status(vault, pages)
             if code == 0:
                 continue
-            attest_refusal(vault, pages)
+            _attest_rendered(vault, pages, ctx)
             return (True, refusal_text(vault, pages), [target])
 
     return (False, "", [])

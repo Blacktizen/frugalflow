@@ -201,7 +201,7 @@ def decide(tool_name, tool_input, config, records, checks=(), judge=None, now=No
             r["lines"] = lines
             return r
         else:
-            r = result("deny", "divergent", [path], f"Code write refused: the content differs from what was delegated for {path}. To fix: write the delegated file as it is, or declare the edit in the delegation log (kind edit, target, reason).")
+            r = result("deny", "divergent", [path], f"Code write refused: the content differs from what was delegated for {path}. To fix: write the delegated file as it is, or re-delegate the change with `frugalflow run delegate --role NAME --file TASK --out FILE --verify CMD`, or ask the user to make this edit by hand.")
             r["lines"] = lines
             return r
 
