@@ -182,6 +182,61 @@ def is_bash_write_audit(audit):
     return audit and audit.startswith("shell_write")
 
 
+def always_on_checks(res, tool, inp, payload, home, settings):
+    """Run the journal and settings CLI guard checks that must execute in all modes.
+    Returns the possibly updated res dict."""
+    # Journal guard check (runs in all modes including off)
+    if res["decision"] != "deny":
+        try:
+            if journal_guard is None:
+                raise RuntimeError("journal_guard cannot be imported")
+            cwd = payload.get("cwd")
+            if not (cwd is not None and isinstance(cwd, str) and cwd):
+                cwd = os.getcwd()
+            protected = journal_guard.protected_paths(home, settings)
+            touched_paths = journal_guard.touched(tool, inp, protected, cwd)
+        except Exception as e:
+            touched_paths = ["(the protected-files check failed: %s)" % e]
+        if touched_paths:
+            res = guard_rules.result(
+                "deny",
+                "journal",
+                touched_paths,
+                "Guard refused: this call writes, removes, moves or links the guard's own logs "
+                "or a protected user file ("
+                + ", ".join(touched_paths)
+                + ").\nTo fix: never touch these files; read them only.",
+            )
+
+    # Settings CLI guard check
+    # 2026-11-05: the user's settings belong to the user; the assistant never changes them,
+    # whatever the mode (frugalflow off/on/mode/config set... run by the assistant is refused).
+    if res["decision"] != "deny":
+        try:
+            import settings_cli_guard
+            refuse_s, reason_s = settings_cli_guard.verdict(tool, inp)
+        except Exception as e:
+            refuse_s, reason_s = True, ("Guard refused: the settings check failed (%s). "
+                                        "To fix: report this command; nothing passes while the guard fails." % e)
+        if refuse_s:
+            res = guard_rules.result("deny", "settings", [], reason_s)
+
+    return res
+
+
+def block_out(res, tool, inp, stdin_text, home, audit_written):
+    """Handle a deny decision: log the block and return the deny JSON."""
+    try:
+        import block_log
+        spec = {"argv": [sys.executable, os.path.abspath(__file__), "--hook"], "stdin": stdin_text, "env": {"FRUGALFLOW_REPLAY": "1"}, "blocked_if": {"stdout_contains": '"deny"'}}
+        ver = hashlib.sha256(open(guard_rules.__file__, "rb").read()).hexdigest()[:12]
+        if not os.environ.get("FRUGALFLOW_REPLAY") == "1":
+            block_log.record_block("guard", res["audit"] or "deny", {"tool_name": tool, "tool_input": inp}, res["reason"], ver, spec, home=home)
+    except Exception:
+        print("block log cannot be written", file=sys.stderr)
+    return (deny_json(res["reason"]), audit_written)
+
+
 def run_hook(stdin_text):
     # 2026-11-05: this layer failed open (import error or exception = nothing protected);
     # it now refuses, like every other check.
@@ -227,9 +282,13 @@ def run_hook(stdin_text):
 
     # Disarmed mode (FRUGALFLOW_GUARD=0 or settings.active=False)
     if os.environ.get("FRUGALFLOW_GUARD") == "0" or settings.get("active", True) is False:
-        # In disarmed mode, audit all writes with "disarmed" label (existing behavior)
+        # In disarmed mode, run always-on checks (journal, settings) with "disarmed" label for writes
+        res = guard_rules.result("allow", "disarmed" if is_write_tool(tool) else None, [], "")
+        res = always_on_checks(res, tool, inp, payload, home, settings)
+        if res["decision"] == "deny":
+            write_audit(home, settings, tool, res)
+            return block_out(res, tool, inp, stdin_text, home, True)
         if is_write_tool(tool):
-            res = guard_rules.result("allow", "disarmed", [], "")
             write_audit(home, settings, tool, res)
         return ("", True)
 
@@ -260,41 +319,8 @@ def run_hook(stdin_text):
             observed_reason = res["reason"]
             res = guard_rules.result("allow", "observed:" + str(res["audit"]), res["targets"], res["reason"])
 
-    # Journal guard check (runs in all modes including off)
-    if res["decision"] != "deny":
-        try:
-            if journal_guard is None:
-                raise RuntimeError("journal_guard cannot be imported")
-            cwd = payload.get("cwd")
-            if not (cwd is not None and isinstance(cwd, str) and cwd):
-                cwd = os.getcwd()
-            protected = journal_guard.protected_paths(home, settings)
-            touched_paths = journal_guard.touched(tool, inp, protected, cwd)
-        except Exception as e:
-            touched_paths = ["(the protected-files check failed: %s)" % e]
-        if touched_paths:
-            res = guard_rules.result(
-                "deny",
-                "journal",
-                touched_paths,
-                "Guard refused: this call writes, removes, moves or links the guard's own logs "
-                "or a protected user file ("
-                + ", ".join(touched_paths)
-                + ").\nTo fix: never touch these files; read them only.",
-            )
-
-    # Settings CLI guard check
-    # 2026-11-05: the user's settings belong to the user; the assistant never changes them,
-    # whatever the mode (frugalflow off/on/mode/config set... run by the assistant is refused).
-    if res["decision"] != "deny":
-        try:
-            import settings_cli_guard
-            refuse_s, reason_s = settings_cli_guard.verdict(tool, inp)
-        except Exception as e:
-            refuse_s, reason_s = True, ("Guard refused: the settings check failed (%s). "
-                                        "To fix: report this command; nothing passes while the guard fails." % e)
-        if refuse_s:
-            res = guard_rules.result("deny", "settings", [], reason_s)
+    # Always-on checks (journal guard, settings CLI guard) — run in all modes including off
+    res = always_on_checks(res, tool, inp, payload, home, settings)
 
     # At this point, res["decision"] is either "allow" or "deny"
     # Check audit log writability for write operations in active/observe modes
@@ -365,14 +391,7 @@ def run_hook(stdin_text):
                 audit_written = False
 
     if res["decision"] == "deny":
-        try:
-            import block_log
-            spec = {"argv": [sys.executable, os.path.abspath(__file__), "--hook"], "stdin": stdin_text, "env": {"FRUGALFLOW_REPLAY": "1"}, "blocked_if": {"stdout_contains": '"deny"'}}
-            ver = hashlib.sha256(open(guard_rules.__file__, "rb").read()).hexdigest()[:12]
-            if not replaying: block_log.record_block("guard", res["audit"] or "deny", {"tool_name": tool, "tool_input": inp}, res["reason"], ver, spec, home=home)
-        except Exception:
-            print("block log cannot be written", file=sys.stderr)
-        return (deny_json(res["reason"]), audit_written)
+        return block_out(res, tool, inp, stdin_text, home, audit_written)
 
     if observed_reason is not None and turn_line_enabled(home):
         return (json.dumps({"systemMessage": turn_message(observed_reason)}, ensure_ascii=False), audit_written)
