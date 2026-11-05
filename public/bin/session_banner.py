@@ -7,7 +7,7 @@ import subprocess
 
 BANNER_TEMPLATE = (
     "FrugalFlow is {status} (mode: {mode}). Settings: "
-    "`frugalflow config` \u00b7 health check: `frugalflow doctor`"
+    "`frugalflow config` · health check: `frugalflow doctor`"
 )
 
 PROJECT_SUFFIXES = frozenset(
@@ -15,6 +15,11 @@ PROJECT_SUFFIXES = frozenset(
 )
 
 REPEAT_SENTENCE = " Repeat that line to the user in one sentence in your first reply."
+
+NOT_WIRED_MESSAGE = (
+    "FrugalFlow banner only: the guard is NOT wired (no guard.json in the FrugalFlow home, "
+    "or no guard hook in ~/.claude/settings.json). Nothing is blocked. Check: `frugalflow doctor`."
+)
 
 
 def resolve_home(args_home=None):
@@ -95,6 +100,49 @@ def is_declined(cwd, home_dir):
         return False
 
 
+def guard_wired(home_dir):
+    """Return True if both guard.json exists in FrugalFlow home AND
+    ~/.claude/settings.json contains a PreToolUse hook with guard_hook --hook."""
+    # Check guard.json exists in FrugalFlow home
+    guard_path = os.path.join(home_dir, "guard.json")
+    if not os.path.isfile(guard_path):
+        return False
+
+    # Check ~/.claude/settings.json for the hook
+    settings_path = os.path.join(os.path.expanduser("~"), ".claude", "settings.json")
+    try:
+        with open(settings_path, "r", encoding="utf-8") as fh:
+            settings = json.load(fh)
+    except Exception:
+        return False
+
+    if not isinstance(settings, dict):
+        return False
+
+    hooks = settings.get("hooks")
+    if not isinstance(hooks, dict):
+        return False
+
+    pre_tool_use = hooks.get("PreToolUse")
+    if not isinstance(pre_tool_use, list):
+        return False
+
+    for group in pre_tool_use:
+        if not isinstance(group, dict):
+            continue
+        hook_list = group.get("hooks")
+        if not isinstance(hook_list, list):
+            continue
+        for hook in hook_list:
+            if not isinstance(hook, dict):
+                continue
+            command = hook.get("command")
+            if isinstance(command, str) and "guard_hook" in command and "--hook" in command:
+                return True
+
+    return False
+
+
 def run_hook():
     try:
         raw = sys.stdin.read()
@@ -119,7 +167,11 @@ def run_hook():
         mode = switch.get("mode", "active")
         status = "active" if enabled else "off"
 
-        banner_line = BANNER_TEMPLATE.format(status=status, mode=mode)
+        wired = guard_wired(home_dir)
+        if wired:
+            banner_line = BANNER_TEMPLATE.format(status=status, mode=mode)
+        else:
+            banner_line = NOT_WIRED_MESSAGE
 
         project = is_project(cwd)
         memory = has_memory(cwd)
@@ -235,6 +287,30 @@ def run_autotest():
             '{"switch": {"enabled": true, "mode": "active"}, '
             '"display": {"statusline": true, "turn_line": true, "summary": true, "banner": true}}'
         )
+    # Create guard.json for wired tests
+    with open(os.path.join(ff_home, "guard.json"), "w", encoding="utf-8") as fh:
+        fh.write('{}')
+
+    # Set up fake HOME with settings.json containing the guard hook
+    home_tmp = os.path.join(base, "HOME_TMP")
+    os.makedirs(os.path.join(home_tmp, ".git"))
+    with open(os.path.join(home_tmp, "main.py"), "w", encoding="utf-8") as fh:
+        fh.write('print("hi")')
+    claude_dir = os.path.join(home_tmp, ".claude")
+    os.makedirs(claude_dir)
+    settings_json = {
+        "hooks": {
+            "PreToolUse": [
+                {
+                    "hooks": [
+                        {"command": "python3 -m frugalflow.guard_hook --hook pre_tool_use"}
+                    ]
+                }
+            ]
+        }
+    }
+    with open(os.path.join(claude_dir, "settings.json"), "w", encoding="utf-8") as fh:
+        json.dump(settings_json, fh)
 
     p_vault = os.path.join(base, "P_VAULT")
     os.makedirs(os.path.join(p_vault, "vault"))
@@ -246,11 +322,6 @@ def run_autotest():
     parent_tmp = os.path.join(base, "PARENT_TMP")
     p_new = os.path.join(parent_tmp, "project-new")
     os.makedirs(os.path.join(p_new, ".git"))
-
-    home_tmp = os.path.join(base, "HOME_TMP")
-    os.makedirs(os.path.join(home_tmp, ".git"))
-    with open(os.path.join(home_tmp, "main.py"), "w", encoding="utf-8") as fh:
-        fh.write('print("hi")')
 
     def make_env(extra=None):
         env = dict(os.environ)
@@ -371,6 +442,71 @@ def run_autotest():
            "exit 0 empty stdout for both",
            "broken {} {} missing {} {}".format(
                rc5a, repr(out5a), rc5b, repr(out5b)))
+
+    # P6: no guard.json -> banner contains NOT wired, no "active"
+    ff_home_no_guard = os.path.join(base, "FF_HOME_NO_GUARD")
+    os.makedirs(ff_home_no_guard)
+    with open(os.path.join(ff_home_no_guard, "preferences.json"), "w", encoding="utf-8") as fh:
+        fh.write(
+            '{"switch": {"enabled": true, "mode": "active"}, '
+            '"display": {"statusline": true, "turn_line": true, "summary": true, "banner": true}}'
+        )
+    # No guard.json created
+    rc6, out6 = run_hook_proc(stdin_json(p_vault), {"FRUGALFLOW_HOME": ff_home_no_guard})
+    ok6 = rc6 == 0 and out6 != ""
+    if ok6:
+        try:
+            obj6 = json.loads(out6)
+            sysmsg = obj6.get("systemMessage", "")
+            ok6 = ("active" not in sysmsg) and ("NOT wired" in sysmsg)
+        except Exception:
+            ok6 = False
+    report(ok6, "P6 no guard.json -> NOT wired banner",
+           "exit 0, systemMessage contains NOT wired, no 'active'",
+           "exit {} out {}".format(rc6, out6[:200]))
+
+    # P7: guard.json present, settings.json absent or without hook -> NOT wired
+    ff_home_guard_only = os.path.join(base, "FF_HOME_GUARD_ONLY")
+    os.makedirs(ff_home_guard_only)
+    with open(os.path.join(ff_home_guard_only, "preferences.json"), "w", encoding="utf-8") as fh:
+        fh.write(
+            '{"switch": {"enabled": true, "mode": "active"}, '
+            '"display": {"statusline": true, "turn_line": true, "summary": true, "banner": true}}'
+        )
+    with open(os.path.join(ff_home_guard_only, "guard.json"), "w", encoding="utf-8") as fh:
+        fh.write('{}')
+    # Use a HOME without .claude/settings.json
+    home_no_settings = os.path.join(base, "HOME_NO_SETTINGS")
+    os.makedirs(os.path.join(home_no_settings, ".git"))
+    with open(os.path.join(home_no_settings, "main.py"), "w", encoding="utf-8") as fh:
+        fh.write('print("hi")')
+    # No .claude directory
+    rc7, out7 = run_hook_proc(stdin_json(p_vault), {"FRUGALFLOW_HOME": ff_home_guard_only, "HOME": home_no_settings})
+    ok7 = rc7 == 0 and out7 != ""
+    if ok7:
+        try:
+            obj7 = json.loads(out7)
+            sysmsg = obj7.get("systemMessage", "")
+            ok7 = ("active" not in sysmsg) and ("NOT wired" in sysmsg)
+        except Exception:
+            ok7 = False
+    report(ok7, "P7 guard.json but no settings.json hook -> NOT wired",
+           "exit 0, systemMessage contains NOT wired, no 'active'",
+           "exit {} out {}".format(rc7, out7[:200]))
+
+    # P8: guard.json present AND settings.json with guard_hook --hook -> "FrugalFlow is active"
+    # This is already covered by P1/P3/P4a but let's make it explicit
+    rc8, out8 = run_hook_proc(stdin_json(p_vault))
+    ok8 = rc8 == 0 and out8 != ""
+    if ok8:
+        try:
+            obj8 = json.loads(out8)
+            ok8 = "FrugalFlow is active (mode: active)" in obj8.get("systemMessage", "")
+        except Exception:
+            ok8 = False
+    report(ok8, "P8 guard.json + settings.json with hook -> active banner",
+           "exit 0, systemMessage contains 'FrugalFlow is active'",
+           "exit {} out {}".format(rc8, out8[:200]))
 
     sys.exit(0 if all_ok else 1)
 
