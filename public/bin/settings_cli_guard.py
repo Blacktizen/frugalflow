@@ -289,10 +289,12 @@ def _do_check():
 
 
 def _do_notice():
-    print("NAME: settings_cli_guard")
-    print("READS: a shell command string from the Bash tool input")
-    print("WRITES: none (pure decision)")
-    print("EXAMPLE: settings_cli_guard.py --check 'frugalflow off'  ->  exit 10")
+    print("NAME      settings_cli_guard.py - refuses a shell command, run by the assistant, that changes FrugalFlow settings.")
+    print("READS     the command string of a Bash tool call.")
+    print("WRITES    nothing: FREE (exit 0) or REFUSED: <segments> (exit 10).")
+    print("EXAMPLE   python3 settings_cli_guard.py --check 'frugalflow off'")
+    print("PITFALLS  2026-11-05 the assistant could turn the guard off with frugalflow off; the settings belong to the user.")
+    print("          2026-11-05 xargs frugalflow passed: the subcommand came from stdin; a launcher naming frugalflow is refused.")
     sys.exit(0)
 
 
