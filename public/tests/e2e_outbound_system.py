@@ -23,6 +23,15 @@ NOTICE = (
 
 def run(port, role, system):
     home = S.make_home(port, None, None, with_rules=False)
+    if role == "code":
+        # The private control needs a private layer: the only local, private model.
+        with open(os.path.join(home, "models.json"), "r") as f:
+            mdoc = json.load(f)
+        mdoc["models"][0]["location"] = "local"
+        mdoc["models"][0]["trust"] = "private"
+        mdoc["models"][0]["sampling"] = {"temperature": 0.7}
+        with open(os.path.join(home, "models.json"), "w") as f:
+            json.dump(mdoc, f)
     with open(os.path.join(home, "anonymization.json"), "w") as f:
         json.dump({
             "anonymizable": [{"pattern": "\\b" + NAME + "\\b", "label": "person", "tag": "PERSON"}],

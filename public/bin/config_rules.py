@@ -64,6 +64,9 @@ def validate_models(doc):
         if trust not in TRUST:
             errors.append(P + ".trust must be one of private, trusted_third_party, untrusted_third_party")
 
+        if entry.get("location") == "remote" and trust == "private":
+            errors.append(P + ".location remote may not have trust private")
+
         key_env = entry.get("key_env")
         if not isinstance(key_env, str):
             errors.append(P + ".key_env must name an environment variable or be empty")
