@@ -25,12 +25,14 @@ HOME = os.environ.get("FRUGALFLOW_HOME") or os.path.expanduser("~/.frugalflow")
 NOTICE = (
     "NAME      guard_hook.py - the PreToolUse hook: reads the tool call, asks guard_rules for the decision, logs it and prints the refusal.\n"
     "READS     stdin (the tool call); FRUGALFLOW_HOME/guard.json, else ~/.frugalflow/guard.json; FRUGALFLOW_HOME/preferences.json (the switch); the delegation logs it names; the size of the files its entry checks ask about.\n"
-    "WRITES    one JSON line per logged decision to the audit log it names; each refusal, replayable, to blocks/guard.jsonl; the refusal on stdout, and in observe mode one short systemMessage turn line when display.turn_line is on. Always exits 0.\n"
+    "WRITES    one JSON line per logged decision to the audit log it names; each refusal, replayable, to blocks/guard.jsonl; the refusal on stdout, and in observe mode one short systemMessage turn line when display.turn_line is on; the reading gate's own attestation (<vault>/.reading.json) when it refuses the first write into a vault that asks for a reading. Always exits 0.\n"
     "EXAMPLE   echo '{\"tool_name\": \"Read\", \"tool_input\": {}}' | python3 guard_hook.py --hook\n"
     "PITFALLS  2026-09-25 the old hook let the call through when its input was unreadable or a module was missing, and never logged its shell refusals.\n"
     "          Every doubt now refuses with a \"To fix:\" line, and shell refusals are logged like the others.\n"
     "          2026-10-03 the switch lived only in the assistant's memory, which never bites; the hook now reads preferences.json on every call so off and observe are real.\n"
     "          2026-10-04 an observed refusal in observe mode now prints one short systemMessage line when display.turn_line is on; it never says deny.\n"
+    "          2026-11-05 a vault that asks for a reading only showed its lines when the gate was asked, so its first write passed untouched.\n"
+    "          The reading gate now runs as a check of this hook: it refuses that write once, shows the bearing lines, and attests its own refusal, so the identical write right after is accepted.\n"
 )
 
 
