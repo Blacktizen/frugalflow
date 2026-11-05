@@ -10,6 +10,7 @@ check still makes into the project folder is reported instead of applied.
 """
 
 import ast
+import hashlib
 import os
 import re
 import shlex
@@ -110,16 +111,16 @@ def command_files(verify_cmd, project_dir):
     return result
 
 
-def snapshot(project_dir):
-    """Walk project_dir and map each relative path to (st_mtime_ns, st_size),
-    or return None once the file count exceeds MAX_WATCH."""
+def snapshot(project_dir, max_watch=MAX_WATCH):
+    """Walk project_dir and map each relative path to (st_mtime_ns, st_size, sha256_hex),
+    or return None once the file count exceeds max_watch."""
     result = {}
     count = 0
     for dirpath, dirnames, filenames in os.walk(project_dir):
         dirnames[:] = [dirname for dirname in dirnames if dirname not in SKIP_DIRS]
         for filename in filenames:
             count += 1
-            if count > MAX_WATCH:
+            if count > max_watch:
                 return None
             full = os.path.join(dirpath, filename)
             relative = os.path.relpath(full, project_dir)
@@ -127,7 +128,15 @@ def snapshot(project_dir):
                 stat_result = os.stat(full)
             except OSError:
                 continue
-            result[relative] = (stat_result.st_mtime_ns, stat_result.st_size)
+            # Compute SHA-256 of file content in chunks
+            sha256 = hashlib.sha256()
+            try:
+                with open(full, "rb") as f:
+                    for chunk in iter(lambda: f.read(65536), b""):
+                        sha256.update(chunk)
+            except OSError:
+                continue
+            result[relative] = (stat_result.st_mtime_ns, stat_result.st_size, sha256.hexdigest())
     return result
 
 
@@ -142,9 +151,9 @@ def changed(before, after):
     return sorted(result)
 
 
-def run_in_worktree(verify_cmd, candidate_path, out_path, project_dir, timeout):
+def run_in_worktree(verify_cmd, candidate_path, out_path, project_dir, timeout, max_watch=MAX_WATCH):
     """Run verify_cmd in a temporary folder and report any write it makes
-    into project_dir."""
+    into project_dir. Refuse if project has more than max_watch files."""
     work = tempfile.mkdtemp(prefix="frugalflow-verify-")
     try:
         name = os.path.basename(out_path)
@@ -161,7 +170,9 @@ def run_in_worktree(verify_cmd, candidate_path, out_path, project_dir, timeout):
         env["FRUGALFLOW_CANDIDATE"] = os.path.join(work, name)
         env["PYTHONPYCACHEPREFIX"] = os.path.join(work, ".pycache")
         env["PYTHONDONTWRITEBYTECODE"] = "1"
-        before = snapshot(project_dir)
+        before = snapshot(project_dir, max_watch=max_watch)
+        if before is None:
+            return (126, "VERIFY REFUSED: the project has more than %d files, the write check cannot cover it" % max_watch)
         proc = subprocess.Popen(
             verify_cmd,
             shell=True,
@@ -181,7 +192,7 @@ def run_in_worktree(verify_cmd, candidate_path, out_path, project_dir, timeout):
                 pass
             proc.communicate()
             return (124, "VERIFY TIMEOUT after " + str(timeout) + " s")
-        written = changed(before, snapshot(project_dir))
+        written = changed(before, snapshot(project_dir, max_watch=max_watch))
         if written:
             return (125, "VERIFY WROTE TO THE PROJECT: " + ", ".join(written[:5]))
         return (proc.returncode, output or "")
@@ -190,7 +201,7 @@ def run_in_worktree(verify_cmd, candidate_path, out_path, project_dir, timeout):
 
 
 def autotest():
-    """Run the five checks and return 0 when all pass, otherwise 1."""
+    """Run the eight checks and return 0 when all pass, otherwise 1."""
     passed = 0
     project_dir = tempfile.mkdtemp(prefix="frugalflow-autotest-")
     try:
@@ -278,9 +289,74 @@ def autotest():
         if ok:
             passed += 1
 
+        # Test 6: file modified at same size with restored mtime is detected via SHA-256.
+        test6_dir = tempfile.mkdtemp(prefix="frugalflow-test6-")
+        try:
+            test_file = os.path.join(test6_dir, "test.txt")
+            with open(test_file, "w", encoding="utf-8") as f:
+                f.write("original content")
+            before_snap = snapshot(test6_dir, max_watch=10)
+            # Modify file to same size, restore mtime
+            stat_before = os.stat(test_file)
+            with open(test_file, "w", encoding="utf-8") as f:
+                f.write("modified contnt")  # same length (16 chars)
+            os.utime(test_file, ns=(stat_before.st_atime_ns, stat_before.st_mtime_ns))
+            after_snap = snapshot(test6_dir, max_watch=10)
+            diff = changed(before_snap, after_snap)
+            ok = (len(diff) == 1 and diff[0] == "test.txt")
+            got = "diff=%r" % (diff,)
+            print("%s test 6: expected changed() to detect same-size restored-mtime modification; got %s" % ("PASS" if ok else "FAIL", got))
+            if ok:
+                passed += 1
+        finally:
+            shutil.rmtree(test6_dir, ignore_errors=True)
+
+        # Test 7: tree exceeding max_watch is refused explicitly (code 126, message contains REFUSED).
+        test7_dir = tempfile.mkdtemp(prefix="frugalflow-test7-")
+        try:
+            # Create 7 files with max_watch=5
+            for i in range(7):
+                with open(os.path.join(test7_dir, "f%d.txt" % i), "w") as f:
+                    f.write("x")
+            # Create a candidate file for run_in_worktree
+            cand = os.path.join(test7_dir, "cand.py")
+            with open(cand, "w") as f:
+                f.write("pass\n")
+            out = os.path.join(test7_dir, "out.py")
+            marker = os.path.join(test7_dir, "marker.txt")
+            # Command that would create a marker if executed
+            res = run_in_worktree('touch "' + marker + '"', cand, out, test7_dir, 30, max_watch=5)
+            marker_exists = os.path.exists(marker)
+            ok = (res[0] == 126 and "REFUSED" in res[1] and not marker_exists)
+            got = "code=%r msg=%r marker_exists=%r" % (res[0], res[1], marker_exists)
+            print("%s test 7: expected code 126 with REFUSED, command not run; got %s" % ("PASS" if ok else "FAIL", got))
+            if ok:
+                passed += 1
+        finally:
+            shutil.rmtree(test7_dir, ignore_errors=True)
+
+        # Test 8: tree under max_watch works (3 files, max_watch=5, command 'true').
+        test8_dir = tempfile.mkdtemp(prefix="frugalflow-test8-")
+        try:
+            for i in range(3):
+                with open(os.path.join(test8_dir, "f%d.txt" % i), "w") as f:
+                    f.write("x")
+            cand = os.path.join(test8_dir, "cand.py")
+            with open(cand, "w") as f:
+                f.write("pass\n")
+            out = os.path.join(test8_dir, "out.py")
+            res = run_in_worktree('true', cand, out, test8_dir, 30, max_watch=5)
+            ok = (is_pair(res) and res[0] == 0)
+            got = "code=%r" % (res[0] if is_pair(res) else res)
+            print("%s test 8: expected code 0 for tree under max_watch; got %s" % ("PASS" if ok else "FAIL", got))
+            if ok:
+                passed += 1
+        finally:
+            shutil.rmtree(test8_dir, ignore_errors=True)
+
     finally:
         shutil.rmtree(project_dir, ignore_errors=True)
-    return 0 if passed == 5 else 1
+    return 0 if passed == 8 else 1
 
 
 def main(argv):
