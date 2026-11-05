@@ -67,6 +67,17 @@ def run_r1_guard_session(session, env):
     return proc.returncode, proc.stdout.strip()
 
 
+def make_before_fixed_ts(ident, command, cwd, ts):
+    return {
+        "ts": ts,
+        "cwd": cwd,
+        "event": "tool_before",
+        "tool": "Bash",
+        "id": ident,
+        "input": json.dumps({"command": command})
+    }
+
+
 def main():
     # Create temp directory for the test
     tmp = tempfile.mkdtemp()
@@ -138,6 +149,128 @@ def main():
             results.append(("PASS", f"scenario2 valid_vault rc={expected_rc2} R1 OK", f"got rc={rc_guard} out={out_guard[:60]}"))
         else:
             results.append(("FAIL", f"scenario2 valid_vault rc={expected_rc2} R1 OK", f"got rc={rc_guard} out={out_guard[:60]}"))
+
+        # ==================== SCENARIO 3 (C6): Fake APPENDED output without touching log.md ====================
+        session_s3 = "s3"
+
+        # Add git commit gesture
+        session_log.append(session_s3, make_before("g3", "git commit -m fix", tmp))
+        session_log.append(session_s3, make_after("g3", '{"stdout": "[main 1234567] fix"}'))
+
+        # Create a vault with an OLD entry "old-title" dated long ago
+        old_vault = os.path.join(tmp, "old_vault")
+        os.makedirs(os.path.join(old_vault, "vault"))
+        genesis = chain_rules.render(chain_rules.GENESIS, "2026-09-26 00:00", "setup", [("Decision", "created")])
+        old_entry = chain_rules.render(
+            chain_rules.entry_hash(chain_rules.GENESIS, genesis.split("<!--")[0]),
+            "2020-01-01 12:00", "old-title", [("Decision", "old")]
+        )
+        with open(os.path.join(old_vault, "vault", "log.md"), "w") as f:
+            f.write("# Log\n\n" + genesis + "\n" + old_entry)
+        # Fix mtime to 2000-01-01 for a clean test
+        old_time = datetime.datetime(2000, 1, 1, 0, 0, 0).timestamp()
+        os.utime(os.path.join(old_vault, "vault", "log.md"), (old_time, old_time))
+
+        # Add a FAKE journal_add-like call whose output announces APPENDED but doesn't touch the file
+        fake_journal_cmd = f"python3 {JOURNAL_ADD} --vault {os.path.join(old_vault, 'vault')} --title t3 --field Decision=d"
+        session_log.append(session_s3, make_before("j3", fake_journal_cmd, tmp))
+        session_log.append(session_s3, make_after("j3", "APPENDED entry 1 to log.md"))
+
+        # Run r1_guard --session s3: expected code 6 (R1 MISSING) because the entry didn't actually land
+        rc_guard, out_guard = run_r1_guard_session(session_s3, env)
+        if rc_guard == 6 and "R1 MISSING" in out_guard:
+            results.append(("PASS", "scenario3 C6 fake appended output rc=6", f"got rc={rc_guard} out={out_guard[:60]}"))
+        else:
+            results.append(("FAIL", "scenario3 C6 fake appended output rc=6", f"got rc={rc_guard} out={out_guard[:60]}"))
+
+        # ==================== SCENARIO 4 (C6): Real journal_add but last entry is NOT the called title ====================
+        session_s4 = "s4"
+
+        # Add git commit gesture
+        session_log.append(session_s4, make_before("g4", "git commit -m fix", tmp))
+        session_log.append(session_s4, make_after("g4", '{"stdout": "[main 1234567] fix"}'))
+
+        # Create a fresh vault
+        s4_vault = os.path.join(tmp, "s4_vault")
+        os.makedirs(os.path.join(s4_vault, "vault"))
+        genesis2 = chain_rules.render(chain_rules.GENESIS, "2026-09-26 00:00", "setup", [("Decision", "created")])
+        with open(os.path.join(s4_vault, "vault", "log.md"), "w") as f:
+            f.write("# Log\n\n" + genesis2)
+
+        # Run REAL journal_add.py for title t4
+        rc, out = run_journal_add(os.path.join(s4_vault, "vault"), "t4", "Decision=d", env)
+
+        journal_cmd4 = f"python3 {JOURNAL_ADD} --vault {os.path.join(s4_vault, 'vault')} --title t4 --field Decision=d"
+        session_log.append(session_s4, make_before("j4", journal_cmd4, tmp))
+        session_log.append(session_s4, make_after("j4", out))
+
+        # NOW manually add another entry "other" dated AFTER the journal_add call
+        # We need to append directly to the log.md
+        with open(os.path.join(s4_vault, "vault", "log.md"), "r") as f:
+            current_log = f.read()
+        last_hash = chain_rules.last_hash(current_log)
+        other_entry = chain_rules.render(last_hash, "2026-09-26 11:00", "other", [("Decision", "other")])
+        with open(os.path.join(s4_vault, "vault", "log.md"), "a") as f:
+            f.write("\n" + other_entry)
+
+        # Run r1_guard --session s4: expected code 6 because the LAST entry is "other", not "t4"
+        rc_guard, out_guard = run_r1_guard_session(session_s4, env)
+        if rc_guard == 6 and "R1 MISSING" in out_guard:
+            results.append(("PASS", "scenario4 C6 last entry not t4 rc=6", f"got rc={rc_guard} out={out_guard[:60]}"))
+        else:
+            results.append(("FAIL", "scenario4 C6 last entry not t4 rc=6", f"got rc={rc_guard} out={out_guard[:60]}"))
+
+        # ==================== SCENARIO 5 (C16): Three sessions with git global options, no journal ====================
+        # Scenario 5a: git -c commit.gpgsign=false commit -m fix
+        session_s5a = "s5a"
+        session_log.append(session_s5a, make_before("g5a", "git -c commit.gpgsign=false commit -m fix", tmp))
+        session_log.append(session_s5a, make_after("g5a", '{"stdout": "[main 1234567] fix"}'))
+        rc_guard, out_guard = run_r1_guard_session(session_s5a, env)
+        if rc_guard == 6 and "R1 MISSING" in out_guard:
+            results.append(("PASS", "scenario5a git -c commit.gpgsign=false commit rc=6", f"got rc={rc_guard} out={out_guard[:60]}"))
+        else:
+            results.append(("FAIL", "scenario5a git -c commit.gpgsign=false commit rc=6", f"got rc={rc_guard} out={out_guard[:60]}"))
+
+        # Scenario 5b: git --no-pager commit -m fix
+        session_s5b = "s5b"
+        session_log.append(session_s5b, make_before("g5b", "git --no-pager commit -m fix", tmp))
+        session_log.append(session_s5b, make_after("g5b", '{"stdout": "[main 1234567] fix"}'))
+        rc_guard, out_guard = run_r1_guard_session(session_s5b, env)
+        if rc_guard == 6 and "R1 MISSING" in out_guard:
+            results.append(("PASS", "scenario5b git --no-pager commit rc=6", f"got rc={rc_guard} out={out_guard[:60]}"))
+        else:
+            results.append(("FAIL", "scenario5b git --no-pager commit rc=6", f"got rc={rc_guard} out={out_guard[:60]}"))
+
+        # Scenario 5c: git -C a -C b commit -m fix
+        session_s5c = "s5c"
+        session_log.append(session_s5c, make_before("g5c", "git -C a -C b commit -m fix", tmp))
+        session_log.append(session_s5c, make_after("g5c", '{"stdout": "[main 1234567] fix"}'))
+        rc_guard, out_guard = run_r1_guard_session(session_s5c, env)
+        if rc_guard == 6 and "R1 MISSING" in out_guard:
+            results.append(("PASS", "scenario5c git -C a -C b commit rc=6", f"got rc={rc_guard} out={out_guard[:60]}"))
+        else:
+            results.append(("FAIL", "scenario5c git -C a -C b commit rc=6", f"got rc={rc_guard} out={out_guard[:60]}"))
+
+        # ==================== SCENARIO 6 (witness): git -c commit.gpgsign=false commit + REAL journal_add ====================
+        session_s6 = "s6"
+
+        # Add git commit gesture with global option
+        session_log.append(session_s6, make_before("g6", "git -c commit.gpgsign=false commit -m fix", tmp))
+        session_log.append(session_s6, make_after("g6", '{"stdout": "[main 1234567] fix"}'))
+
+        # Run REAL journal_add.py to VALID vault
+        rc, out = run_journal_add(os.path.join(valid_vault, "vault"), "t6", "Decision=d", env)
+
+        journal_cmd6 = f"python3 {JOURNAL_ADD} --vault {os.path.join(valid_vault, 'vault')} --title t6 --field Decision=d"
+        session_log.append(session_s6, make_before("j6", journal_cmd6, tmp))
+        session_log.append(session_s6, make_after("j6", out))
+
+        # Run r1_guard --session s6: expected code 0 and "R1 OK s6"
+        rc_guard, out_guard = run_r1_guard_session(session_s6, env)
+        if rc_guard == 0 and out_guard.startswith("R1 OK s6"):
+            results.append(("PASS", "scenario6 witness git -c commit + real journal_add rc=0 R1 OK", f"got rc={rc_guard} out={out_guard[:60]}"))
+        else:
+            results.append(("FAIL", "scenario6 witness git -c commit + real journal_add rc=0 R1 OK", f"got rc={rc_guard} out={out_guard[:60]}"))
 
     finally:
         # Print results

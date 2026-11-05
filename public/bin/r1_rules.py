@@ -7,8 +7,11 @@ import subprocess
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import shell_quotes
 
+# Git global options pattern (repeating, optional)
+GIT_GLOBAL = r"(?:\s+(?:-C\s+\S+|-c\s+\S+=\S+|--git-dir\s*=?\s*\S+|--work-tree\s*=?\s*\S+|--no-pager|--paginate|-P|--no-optional-locks|--bare))*"
+
 GESTURES = [
-    r"\bgit\s+(?:-C\s+\S+\s+)?(?:commit|merge|push|rebase|reset|revert|cherry-pick|tag)\b",
+    r"\bgit" + GIT_GLOBAL + r"\s+(?:commit|merge|push|rebase|reset|revert|cherry-pick|tag)\b",
     r"\bgh\s+pr\s+(?:create|merge)\b",
     r"\bsystemctl\s+(?:start|stop|restart|enable|disable|daemon-reload)\b",
     r"\blaunchctl\s+(?:load|unload|bootstrap|bootout|enable|disable)\b",
@@ -121,25 +124,34 @@ def executed_commands(entries):
 
 
 def missing_log(entries, exempt=None, landed=None):
+    """Return list of gesture commands still waiting for a log entry.
+
+    For each journal_add call when gestures are pending, calls landed(command, entry, since)
+    where since is the ts of the FIRST pending gesture. If landed returns True, clears the wait list.
+    Without landed, nothing is cleared.
+    """
     # Build a map from tool_after id to response
     after_responses = {}
     for entry in entries:
         if entry.get("event") == "tool_after" and entry.get("tool") == "Bash":
             after_id = entry.get("id")
             if after_id:
-                # The response is in the entry itself, not in a separate field
                 after_responses[after_id] = entry.get("response", "")
 
     result = []
+    pending_since = None  # ts of the first pending gesture
     for entry, command in executed_commands(entries):
         if gesture_in(command) != "" and (exempt is None or exempt(command, entry) is False):
             result.append(" ".join(command.split())[:120])
+            if pending_since is None:
+                pending_since = entry.get("ts")
         if is_log_call(command):
             entry_id = entry.get("id")
             response = after_responses.get(entry_id, "")
-            if landed_in(response):
-                if landed is None or landed(command, entry, response):
+            if pending_since is not None and landed is not None:
+                if landed(command, entry, pending_since):
                     result = []
+                    pending_since = None
     return result
 
 
@@ -165,13 +177,15 @@ NOTICE = (
 
 def _autotest():
     def before(ident, command):
-        return {"event": "tool_before", "tool": "Bash", "id": ident, "input": json.dumps({"command": command})}
+        return {"ts": datetime.datetime.now().astimezone().isoformat(timespec="seconds"), "event": "tool_before", "tool": "Bash", "id": ident, "input": json.dumps({"command": command})}
 
     def after(ident, response=""):
         entry = {"event": "tool_after", "tool": "Bash", "id": ident}
         if response:
             entry["response"] = response
         return entry
+
+    import datetime
 
     LOG = "python3 public/bin/journal_add.py --vault /w/vault --title t --field Decision=d"
     LOG_SUCCESS = 'APPENDED entry 1 to log.md'
@@ -185,7 +199,7 @@ def _autotest():
 
     failures = 0
 
-    # Test 1
+    # Test 1: gesture_in with basic patterns
     expected1 = ["git commit", "git -C /repo push", "", "", "", ""]
     got1 = [
         gesture_in("git commit -m x"),
@@ -201,7 +215,7 @@ def _autotest():
         print("FAIL 1 gesture_in: expected " + repr(expected1) + " got " + repr(got1))
         failures += 1
 
-    # Test 2
+    # Test 2: is_log_call and log_vaults
     expected2 = [True, True, False, False, ["/a/vault", "/b/vault"], []]
     got2 = [
         is_log_call(LOG),
@@ -217,8 +231,20 @@ def _autotest():
         print("FAIL 2 is_log_call/log_vaults: expected " + repr(expected2) + " got " + repr(got2))
         failures += 1
 
-    # Test 3
-    expected3 = [["git commit -m fix"], [], ["git push"], [], ["git commit -m fix"], [], ["git commit -m fix"]]
+    # Test 3: missing_log with basic scenarios (no landed provided = nothing clears)
+    # landed function that mimics old behavior: checks APPENDED in response
+    def landed_old(command, entry, since):
+        after_responses = {}
+        for e in entries:
+            if e.get("event") == "tool_after" and e.get("tool") == "Bash":
+                after_id = e.get("id")
+                if after_id:
+                    after_responses[after_id] = e.get("response", "")
+        entry_id = entry.get("id")
+        response = after_responses.get(entry_id, "")
+        return bool(landed_in(response))
+
+    expected3 = [["git commit -m fix"], ["git commit -m fix"], ["git push"], [], ["git commit -m fix"], [], ["git commit -m fix"]]
     got3 = [
         missing_log(RUN_GESTURE),
         missing_log(GESTURE_THEN_LOG),
@@ -226,7 +252,7 @@ def _autotest():
         missing_log(NOT_RUN),
         missing_log(MENTION),
         missing_log(RUN_GESTURE, exempt=lambda command, entry: True),
-        missing_log(GESTURE_THEN_LOG_FAIL),  # LOG with failure response should NOT clear
+        missing_log(GESTURE_THEN_LOG_FAIL),
     ]
     if got3 == expected3:
         print("PASS 3 missing_log: expected " + repr(expected3) + " got " + repr(got3))
@@ -234,7 +260,7 @@ def _autotest():
         print("FAIL 3 missing_log: expected " + repr(expected3) + " got " + repr(got3))
         failures += 1
 
-    # Test 4
+    # Test 4: trace_only and command_repo
     expected4 = [True, True, False, False, False, False, "/w", "/w/sub", "/b"]
     got4 = [
         trace_only(["vault/log.md"]),
@@ -253,7 +279,7 @@ def _autotest():
         print("FAIL 4 trace_only/command_repo: expected " + repr(expected4) + " got " + repr(got4))
         failures += 1
 
-    # Test 5
+    # Test 5: subprocess notice/bogus
     proc_notice = subprocess.run(
         [sys.executable, __file__, "--notice"],
         capture_output=True, text=True
@@ -289,6 +315,56 @@ def _autotest():
         print("PASS 6 landed_in/title_of: expected " + repr(expected6) + " got " + repr(got6))
     else:
         print("FAIL 6 landed_in/title_of: expected " + repr(expected6) + " got " + repr(got6))
+        failures += 1
+
+    # Test 7: missing_log with explicit landed functions (true/false)
+    def landed_true(command, entry, since):
+        return True
+    def landed_false(command, entry, since):
+        return False
+
+    RUN_GESTURE_7 = [{"event": "prompt"}, before("g1", "git commit -m fix"), after("g1")]
+    GESTURE_THEN_LOG_7 = RUN_GESTURE_7 + [before("g2", LOG), after("g2", LOG_SUCCESS)]
+    expected7 = [["git commit -m fix"], []]
+    got7 = [
+        missing_log(RUN_GESTURE_7, landed=landed_true),
+        missing_log(GESTURE_THEN_LOG_7, landed=landed_true),
+    ]
+    if got7 == expected7:
+        print("PASS 7 missing_log landed=true: expected " + repr(expected7) + " got " + repr(got7))
+    else:
+        print("FAIL 7 missing_log landed=true: expected " + repr(expected7) + " got " + repr(got7))
+        failures += 1
+
+    expected7b = [["git commit -m fix"], ["git commit -m fix"]]
+    got7b = [
+        missing_log(RUN_GESTURE_7, landed=landed_false),
+        missing_log(GESTURE_THEN_LOG_7, landed=landed_false),
+    ]
+    if got7b == expected7b:
+        print("PASS 7b missing_log landed=false: expected " + repr(expected7b) + " got " + repr(got7b))
+    else:
+        print("FAIL 7b missing_log landed=false: expected " + repr(expected7b) + " got " + repr(got7b))
+        failures += 1
+
+    # Test 8: git global options in gestures
+    # gesture_in returns only the matched gesture portion, not the full command
+    expected8 = [
+        "git -c commit.gpgsign=false commit",
+        "git --no-pager commit",
+        "git -C a -C b commit",
+        "",
+    ]
+    got8 = [
+        gesture_in("git -c commit.gpgsign=false commit -m x"),
+        gesture_in("git --no-pager commit -m x"),
+        gesture_in("git -C a -C b commit -m x"),
+        gesture_in("git -c k=v status"),
+    ]
+    if got8 == expected8:
+        print("PASS 8 gesture_in git globals: expected " + repr(expected8) + " got " + repr(got8))
+    else:
+        print("FAIL 8 gesture_in git globals: expected " + repr(expected8) + " got " + repr(got8))
         failures += 1
 
     return 0 if failures == 0 else 1
