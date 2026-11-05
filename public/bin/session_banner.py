@@ -18,7 +18,7 @@ REPEAT_SENTENCE = " Repeat that line to the user in one sentence in your first r
 
 NOT_WIRED_MESSAGE = (
     "FrugalFlow banner only: the guard is NOT wired (no guard.json in the FrugalFlow home, "
-    "or no guard hook in ~/.claude/settings.json). Nothing is blocked. Check: `frugalflow doctor`."
+    "or no guard hook in the Claude settings.json). Nothing is blocked. Check: `frugalflow doctor`."
 )
 
 
@@ -100,16 +100,16 @@ def is_declined(cwd, home_dir):
         return False
 
 
-def guard_wired(home_dir):
+def guard_wired(home_dir, claude_dir):
     """Return True if both guard.json exists in FrugalFlow home AND
-    ~/.claude/settings.json contains a PreToolUse hook with guard_hook --hook."""
+    settings.json in claude_dir contains a PreToolUse hook with guard_hook --hook."""
     # Check guard.json exists in FrugalFlow home
     guard_path = os.path.join(home_dir, "guard.json")
     if not os.path.isfile(guard_path):
         return False
 
-    # Check ~/.claude/settings.json for the hook
-    settings_path = os.path.join(os.path.expanduser("~"), ".claude", "settings.json")
+    # Check settings.json in claude_dir for the hook
+    settings_path = os.path.join(claude_dir, "settings.json")
     try:
         with open(settings_path, "r", encoding="utf-8") as fh:
             settings = json.load(fh)
@@ -127,6 +127,15 @@ def guard_wired(home_dir):
     if not isinstance(pre_tool_use, list):
         return False
 
+    # Import settings_merge from the same directory as this script
+    bin_dir = os.path.dirname(os.path.abspath(__file__))
+    sys.path.insert(0, bin_dir)
+    try:
+        import settings_merge
+    except Exception:
+        return False
+
+    guard_hook_path = os.path.join(bin_dir, "guard_hook.py")
     for group in pre_tool_use:
         if not isinstance(group, dict):
             continue
@@ -137,13 +146,13 @@ def guard_wired(home_dir):
             if not isinstance(hook, dict):
                 continue
             command = hook.get("command")
-            if isinstance(command, str) and "guard_hook" in command and "--hook" in command:
+            if isinstance(command, str) and settings_merge.is_ours(command, guard_hook_path):
                 return True
 
     return False
 
 
-def run_hook():
+def run_hook(claude_dir):
     try:
         raw = sys.stdin.read()
         data = json.loads(raw)
@@ -167,7 +176,7 @@ def run_hook():
         mode = switch.get("mode", "active")
         status = "active" if enabled else "off"
 
-        wired = guard_wired(home_dir)
+        wired = guard_wired(home_dir, claude_dir)
         if wired:
             banner_line = BANNER_TEMPLATE.format(status=status, mode=mode)
         else:
@@ -268,6 +277,7 @@ def run_notice():
 
 def run_autotest():
     script = os.path.abspath(__file__)
+    bin_dir = os.path.dirname(script)
     base = tempfile.mkdtemp()
     all_ok = True
 
@@ -291,24 +301,19 @@ def run_autotest():
     with open(os.path.join(ff_home, "guard.json"), "w", encoding="utf-8") as fh:
         fh.write('{}')
 
-    # Set up fake HOME with settings.json containing the guard hook
+    # Set up fake HOME with settings.json containing the real guard hook via settings_merge
     home_tmp = os.path.join(base, "HOME_TMP")
     os.makedirs(os.path.join(home_tmp, ".git"))
     with open(os.path.join(home_tmp, "main.py"), "w", encoding="utf-8") as fh:
         fh.write('print("hi")')
     claude_dir = os.path.join(home_tmp, ".claude")
     os.makedirs(claude_dir)
-    settings_json = {
-        "hooks": {
-            "PreToolUse": [
-                {
-                    "hooks": [
-                        {"command": "python3 -m frugalflow.guard_hook --hook pre_tool_use"}
-                    ]
-                }
-            ]
-        }
-    }
+    # Use settings_merge to create the proper hook
+    sys.path.insert(0, bin_dir)
+    import settings_merge
+    settings_json = {}
+    cmd = settings_merge.guard_command(sys.executable, bin_dir)
+    settings_json, _ = settings_merge.add_hooks(settings_json, cmd)
     with open(os.path.join(claude_dir, "settings.json"), "w", encoding="utf-8") as fh:
         json.dump(settings_json, fh)
 
@@ -339,9 +344,9 @@ def run_autotest():
             {"session_id": "t", "cwd": cwd, "hook_event_name": "SessionStart", "source": "startup"}
         )
 
-    def run_hook_proc(stdin_text, extra_env=None):
+    def run_hook_proc(stdin_text, extra_env=None, claude_dir_arg=None):
         proc = subprocess.run(
-            [sys.executable, script],
+            [sys.executable, script, "--claude-dir", claude_dir_arg or claude_dir],
             input=stdin_text,
             capture_output=True,
             text=True,
@@ -351,7 +356,7 @@ def run_autotest():
         return proc.returncode, proc.stdout
 
     # P1: P_VAULT with active home, has memory so no question
-    rc, out = run_hook_proc(stdin_json(p_vault))
+    rc, out = run_hook_proc(stdin_json(p_vault), claude_dir_arg=claude_dir)
     ok = rc == 0 and out != ""
     if ok:
         try:
@@ -365,7 +370,7 @@ def run_autotest():
            "exit {} out {}".format(rc, out[:200]))
 
     # P2: P_NEW project without memory, question asked
-    rc, out = run_hook_proc(stdin_json(p_new))
+    rc, out = run_hook_proc(stdin_json(p_new), claude_dir_arg=claude_dir)
     ok = rc == 0 and out != ""
     if ok:
         try:
@@ -389,7 +394,7 @@ def run_autotest():
     expected_line = "DECLINED " + os.path.abspath(p_new)
     d_ok = d_ok and expected_line in proc_decl.stdout
 
-    rc3, out3 = run_hook_proc(stdin_json(p_new))
+    rc3, out3 = run_hook_proc(stdin_json(p_new), claude_dir_arg=claude_dir)
     h_ok = rc3 == 0 and out3 != ""
     if h_ok:
         try:
@@ -405,7 +410,7 @@ def run_autotest():
                proc_decl.returncode, proc_decl.stdout[:80], rc3, out3[:80]))
 
     # P4: HOME_TMP is personal folder no question; banner=false gives empty
-    rc4a, out4a = run_hook_proc(stdin_json(home_tmp))
+    rc4a, out4a = run_hook_proc(stdin_json(home_tmp), claude_dir_arg=claude_dir)
     a_ok = rc4a == 0 and out4a != ""
     if a_ok:
         try:
@@ -422,7 +427,7 @@ def run_autotest():
             '{"switch": {"enabled": true, "mode": "active"}, '
             '"display": {"statusline": true, "turn_line": true, "summary": true, "banner": false}}'
         )
-    rc4b, out4b = run_hook_proc(stdin_json(p_new), {"FRUGALFLOW_HOME": ff_nb})
+    rc4b, out4b = run_hook_proc(stdin_json(p_new), {"FRUGALFLOW_HOME": ff_nb}, claude_dir_arg=claude_dir)
     b_ok = rc4b == 0 and out4b == ""
 
     p4_ok = a_ok and b_ok
@@ -432,10 +437,10 @@ def run_autotest():
                rc4a, out4a[:80], rc4b, repr(out4b)))
 
     # P5: broken JSON and non-existent folder both give empty output
-    rc5a, out5a = run_hook_proc("{not json")
+    rc5a, out5a = run_hook_proc("{not json", claude_dir_arg=claude_dir)
     a5 = rc5a == 0 and out5a == ""
     fake = os.path.join(base, "DOES_NOT_EXIST_xyz")
-    rc5b, out5b = run_hook_proc(stdin_json(fake))
+    rc5b, out5b = run_hook_proc(stdin_json(fake), claude_dir_arg=claude_dir)
     b5 = rc5b == 0 and out5b == ""
     p5_ok = a5 and b5
     report(p5_ok, "P5 broken input and missing folder give empty output",
@@ -452,7 +457,7 @@ def run_autotest():
             '"display": {"statusline": true, "turn_line": true, "summary": true, "banner": true}}'
         )
     # No guard.json created
-    rc6, out6 = run_hook_proc(stdin_json(p_vault), {"FRUGALFLOW_HOME": ff_home_no_guard})
+    rc6, out6 = run_hook_proc(stdin_json(p_vault), {"FRUGALFLOW_HOME": ff_home_no_guard}, claude_dir_arg=claude_dir)
     ok6 = rc6 == 0 and out6 != ""
     if ok6:
         try:
@@ -481,7 +486,7 @@ def run_autotest():
     with open(os.path.join(home_no_settings, "main.py"), "w", encoding="utf-8") as fh:
         fh.write('print("hi")')
     # No .claude directory
-    rc7, out7 = run_hook_proc(stdin_json(p_vault), {"FRUGALFLOW_HOME": ff_home_guard_only, "HOME": home_no_settings})
+    rc7, out7 = run_hook_proc(stdin_json(p_vault), {"FRUGALFLOW_HOME": ff_home_guard_only, "HOME": home_no_settings}, claude_dir_arg=os.path.join(home_no_settings, ".claude"))
     ok7 = rc7 == 0 and out7 != ""
     if ok7:
         try:
@@ -495,8 +500,7 @@ def run_autotest():
            "exit {} out {}".format(rc7, out7[:200]))
 
     # P8: guard.json present AND settings.json with guard_hook --hook -> "FrugalFlow is active"
-    # This is already covered by P1/P3/P4a but let's make it explicit
-    rc8, out8 = run_hook_proc(stdin_json(p_vault))
+    rc8, out8 = run_hook_proc(stdin_json(p_vault), claude_dir_arg=claude_dir)
     ok8 = rc8 == 0 and out8 != ""
     if ok8:
         try:
@@ -513,12 +517,29 @@ def run_autotest():
 
 def main():
     argv = sys.argv[1:]
-    if not argv:
-        run_hook()
+    # Parse --claude-dir option
+    claude_dir = None
+    remaining = []
+    i = 0
+    while i < len(argv):
+        if argv[i] == "--claude-dir":
+            if i + 1 >= len(argv):
+                sys.exit(2)
+            claude_dir = argv[i + 1]
+            i += 2
+        else:
+            remaining.append(argv[i])
+            i += 1
+
+    if claude_dir is None:
+        claude_dir = os.path.join(os.path.expanduser("~"), ".claude")
+
+    if not remaining:
+        run_hook(claude_dir)
         sys.exit(0)
-    first = argv[0]
+    first = remaining[0]
     if first == "decline":
-        run_decline(argv[1:])
+        run_decline(remaining[1:])
         sys.exit(0)
     elif first == "--notice":
         run_notice()
