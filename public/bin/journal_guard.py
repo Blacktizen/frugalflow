@@ -134,6 +134,23 @@ def under(p, px):
 
 VAULT_MARKERS = ("SCHEMA.md", "overview.md")
 
+CLAUDE_SETTINGS_NAMES = ("settings.json", "settings.local.json")
+
+def is_claude_settings(path):
+    """True for a Claude Code settings file directly in a .claude folder (any project),
+    and for any file under a .githooks folder. Belongs to the user."""
+    try:
+        parts = path.split(os.sep)
+        if len(parts) >= 2:
+            if parts[-2].casefold() == ".claude" and parts[-1].casefold() in CLAUDE_SETTINGS_NAMES:
+                return True
+        if any(p.casefold() == ".githooks" for p in parts[:-1]):
+            return True
+    except Exception:
+        pass
+    return False
+
+
 def is_vault_journal(path):
     """Return True when path is the journal of a vault: a log.md whose folder holds
     a SCHEMA.md or an overview.md beside it."""
@@ -153,7 +170,8 @@ def is_protected(path, protected, cwd):
             return True
     # 2026-11-05: a vault journal is protected wherever the vault sits, on the filesystem:
     # a log.md beside a SCHEMA.md or an overview.md. Reads stay free; only writes touch it.
-    return is_vault_journal(p)
+    # 2026-11-05: Claude settings files and .githooks files are the user's too.
+    return is_vault_journal(p) or is_claude_settings(p)
 
 WRITE_DEST_HEADS = {"cp", "tee", "ln", "install", "rsync", "mv"}
 
