@@ -27,7 +27,7 @@ NOTICE = (
 PREFS = {
     "schema_version": "1",
     "verbosity": {"final_answer_words": 120, "step_message_words": 30},
-    "ceilings": {"max_trust": "private", "max_tries": 2, "max_output_tokens": 100},
+    "ceilings": {"max_trust": "trusted_third_party", "max_tries": 2, "max_output_tokens": 100},
     "splitting": {"max_proofs_per_task": 4, "max_brief_lines": 100},
     "grouping": {"independent_calls_same_turn": True},
 }
@@ -38,15 +38,24 @@ CHECK = 'python3 "$FRUGALFLOW_CANDIDATE" | grep -q 42'
 class FakeHandler(http.server.BaseHTTPRequestHandler):
     """Handles POST requests for the fake model engine."""
 
+    def do_GET(self):
+        data = json.dumps({"data": [{"id": "alpha-7b", "loaded_context_length": 8192}]}).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
     def do_POST(self):
         length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(length)
-        BODIES.append(json.loads(body))
+        parsed = json.loads(body)
+        BODIES.append(parsed)
         resp = {
             "model": "alpha-7b",
             "choices": [
                 {
-                    "message": {"content": FENCE + "python\nprint(41)\n" + FENCE},
+                    "message": {"content": "1" if parsed.get("max_tokens") == 1 else FENCE + "python\nprint(41)\n" + FENCE},
                     "finish_reason": "stop",
                 }
             ],
@@ -80,7 +89,7 @@ def make_home(port, prefs, project, with_rules):
         "location": "remote",
         "endpoint": "http://127.0.0.1:" + str(port) + "/v1",
         "context_window": 8192,
-        "trust": "private",
+        "trust": "trusted_third_party",
         "key_env": "",
         "max_output": 1024,
     }
@@ -191,8 +200,8 @@ def test2_anonymization_path():
 def test3_ceilings():
     """Test 3: preferences.json ceilings are applied."""
     server, port = start_engine()
-    home = make_home(port, PREFS, None, with_rules=False)
-    code, calls, max_tokens, output = delegate(home, "code", [])
+    home = make_home(port, PREFS, None, with_rules=True)
+    code, calls, max_tokens, output = delegate(home, "code", ["--trust", "trusted_third_party"])
     if calls != 2:
         shutil.rmtree(home, ignore_errors=True)
         server.shutdown()
@@ -202,7 +211,7 @@ def test3_ceilings():
         server.shutdown()
         return False, "max_tokens <= 100", f"max_tokens={max_tokens}"
 
-    code2, calls2, mt2, output2 = delegate(home, "code", ["--tries", "5"])
+    code2, calls2, mt2, output2 = delegate(home, "code", ["--tries", "5", "--trust", "trusted_third_party"])
     shutil.rmtree(home, ignore_errors=True)
     if code2 != 2:
         server.shutdown()
@@ -221,16 +230,16 @@ def test4_project_file():
     """Test 4: .frugalflow.json project ceilings override preferences."""
     server, port = start_engine()
     project_low = {"schema_version": "1", "ceilings": {"max_tries": 1}}
-    home = make_home(port, PREFS, project_low, with_rules=False)
-    code, calls, max_tokens, output = delegate(home, "code", [])
+    home = make_home(port, PREFS, project_low, with_rules=True)
+    code, calls, max_tokens, output = delegate(home, "code", ["--trust", "trusted_third_party"])
     shutil.rmtree(home, ignore_errors=True)
     if calls != 1:
         server.shutdown()
         return False, "exactly 1 call with project max_tries 1", f"{calls} calls"
 
     project_high = {"schema_version": "1", "ceilings": {"max_tries": 9}}
-    home2 = make_home(port, PREFS, project_high, with_rules=False)
-    code2, calls2, mt2, output2 = delegate(home2, "code", [])
+    home2 = make_home(port, PREFS, project_high, with_rules=True)
+    code2, calls2, mt2, output2 = delegate(home2, "code", ["--trust", "trusted_third_party"])
     shutil.rmtree(home2, ignore_errors=True)
     if code2 != 2:
         server.shutdown()

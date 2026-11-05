@@ -36,7 +36,7 @@ def MODELS(port):
     own = {
         "id": "own", "name": "alpha-7b", "location": "remote",
         "endpoint": "http://127.0.0.1:" + str(port) + "/v1",
-        "context_window": 8192, "trust": "private", "key_env": "",
+        "context_window": 8192, "trust": "trusted_third_party", "key_env": "",
         "max_output": 1024,
     }
     return {
@@ -205,6 +205,7 @@ def run_e2e():
         os.makedirs(home)
         with open(os.path.join(home, "models.json"), "w", encoding="utf-8") as f:
             f.write(json.dumps(MODELS(port)))
+        shutil.copy2(os.path.join(BIN, "..", "config", "anonymization.example.json"), os.path.join(home, "anonymization.json"))
         leak_path = os.path.join(d, "leak.txt")
         clean_path = os.path.join(d, "clean.txt")
         with open(leak_path, "w", encoding="utf-8") as f:
@@ -212,12 +213,12 @@ def run_e2e():
         with open(clean_path, "w", encoding="utf-8") as f:
             f.write(CLEAN)
         env4 = {"FRUGALFLOW_HOME": home}
-        rc_l, out_l = RUN([os.path.join(BIN, "anon_review.py"), leak_path], env4)
+        rc_l, out_l = RUN([os.path.join(BIN, "anon_review.py"), leak_path, "--trust", "trusted_third_party"], env4)
         ok_lc = rc_l == 4
         ok_ls = "SUSPECT " in out_l
         ok_ld = ":1 private_name" in out_l
         ok_ln = "Ginette" not in out_l
-        rc_c, out_c = RUN([os.path.join(BIN, "anon_review.py"), clean_path], env4)
+        rc_c, out_c = RUN([os.path.join(BIN, "anon_review.py"), clean_path, "--trust", "trusted_third_party"], env4)
         ok_cc = rc_c == 0
         ok_co = "CLEAN " in out_c
         jsonl = os.path.join(home, "anon_review.jsonl")
