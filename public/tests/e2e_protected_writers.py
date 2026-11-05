@@ -4,6 +4,18 @@ import subprocess
 import sys
 import tempfile
 
+NOTICE = (
+    "NAME      e2e_protected_writers.py - end-to-end test that the guard "
+    "hook refuses writes to protected paths (preferences.json, models.json, "
+    "guard.json, delegations.jsonl).\n"
+    "READS     the guard_hook.py in ../bin; the temporary home directory.\n"
+    "WRITES    only in temporary folders, always removed. Exit 0 all "
+    "steps pass, 1 a step failed, 2 usage.\n"
+    "EXAMPLE   python3 e2e_protected_writers.py\n"
+    "PITFALLS  2026-11-05 deno/lua/osascript/Rscript/tclsh/awk writers were "
+    "not covered: they can overwrite preferences.json without the hook "
+    "seeing a Python-level write.\n"
+)
 
 HOOK = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -69,6 +81,13 @@ def deny_cases():
         ("r", "sed -i 's/true/false/' {P}", True),
         ("s", "awk 'BEGIN{{print > \"{P}\"}}'", True),
         ("t", "python -c \"open('{P}','w')\"", True),
+        ("u", "deno eval \"Deno.writeTextFileSync('{P}','{{}}')\"", True),
+        ("v", "lua -e \"io.open('{P}','w'):write('{{}}')\"", True),
+        ("w", "osascript -e \"do shell script \\\"echo x > {P}\\\"\"", True),
+        ("x", "Rscript -e \"writeLines('x', '{P}')\"", True),
+        ("y", "tclsh <<EOF\nset f [open {P} w]; puts $f x; close $f\nEOF", True),
+        ("z", "awk 'BEGIN{{print > \"{P}\"}}'", True),
+        ("aa", "git config --file {P} core.bare true", True),
     ]
 
 
@@ -76,6 +95,9 @@ def allow_cases():
     return [
         ("u", "python3 -c \"print(open('{P}').read())\"", False),
         ("v", "cat {P}", False),
+        ("w", "grep x {P}", False),
+        ("x", "jq . {P}", False),
+        ("y", "python3 -c \"print(open('{P}').read())\"", False),
     ]
 
 
@@ -118,15 +140,24 @@ def run_e2e():
     return fail_k
 
 
-def main():
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv[1:]
+    if len(argv) == 1 and argv[0] == "--notice":
+        sys.stdout.write(NOTICE)
+        return 0
+    if len(argv) > 0:
+        sys.stderr.write("usage: e2e_protected_writers.py [--notice]\n")
+        return 2
+
     fail_k = run_e2e()
     if fail_k == 0:
         print("E2E PROTECTED WRITERS OK")
-        sys.exit(0)
+        return 0
     else:
         print(f"E2E PROTECTED WRITERS FAILED {fail_k}")
-        sys.exit(1)
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
