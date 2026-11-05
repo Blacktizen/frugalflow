@@ -43,8 +43,6 @@ def same_target(a, b):
         return True
     if os.path.abspath(os.path.expanduser(a)) == os.path.abspath(os.path.expanduser(b)):
         return True
-    if "/" not in b and os.path.basename(a) == b:
-        return True
     return False
 
 
@@ -203,7 +201,9 @@ def _autotest():
     # Test 3
     try:
         got = (
-            same_target("/w/a.py", "a.py") is True
+            same_target("/w/a.py", "a.py") is False
+            and same_target("/w/a.py", "/w/a.py") is True
+            and same_target(os.path.abspath("a.py"), "a.py") is True
             and same_target("/w/a.py", "b/a.py") is False
             and same_target("~/x.py", os.path.expanduser("~/x.py")) is True
             and same_target(None, "a") is False
