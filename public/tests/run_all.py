@@ -7,13 +7,45 @@ import glob
 import json
 
 
-def build_env():
+def build_env(path_override=None):
     env = {}
     for k, v in os.environ.items():
         if not k.startswith("GIT_"):
             env[k] = v
     env["PYTHONDONTWRITEBYTECODE"] = "1"
-    return env
+
+    # Use provided PATH or fall back to environment PATH
+    path_str = path_override if path_override is not None else env.get("PATH", "")
+
+    # Isolate from installed frugalflow in PATH
+    path_dirs = path_str.split(os.pathsep)
+    new_path_dirs = []
+    temp_dirs_to_cleanup = []
+
+    for d in path_dirs:
+        frugalflow_path = os.path.join(d, "frugalflow")
+        if os.path.isfile(frugalflow_path) and os.access(frugalflow_path, os.X_OK):
+            # Create temp dir with symlinks to everything except frugalflow
+            temp_dir = tempfile.mkdtemp()
+            temp_dirs_to_cleanup.append(temp_dir)
+            try:
+                for entry in os.listdir(d):
+                    if entry == "frugalflow":
+                        continue
+                    src = os.path.join(d, entry)
+                    dst = os.path.join(temp_dir, entry)
+                    try:
+                        os.symlink(src, dst)
+                    except OSError:
+                        pass  # Ignore symlink failures (e.g., directories, permissions)
+            except OSError:
+                pass  # If we can't list the dir, fall back to original
+            new_path_dirs.append(temp_dir)
+        else:
+            new_path_dirs.append(d)
+
+    env["PATH"] = os.pathsep.join(new_path_dirs)
+    return env, temp_dirs_to_cleanup
 
 
 def collect_elements(root):
@@ -72,7 +104,7 @@ def run_suite(root, fail_fast):
     with open(os.path.join(tmp_dir, "anonymization.json"), "w") as f:
         f.write(json.dumps(anon_data))
 
-    base_env = build_env()
+    base_env, path_temp_dirs = build_env()
     base_env["FRUGALFLOW_HOME"] = tmp_dir
 
     n_total = 0
@@ -94,6 +126,8 @@ def run_suite(root, fail_fast):
                 break
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
+        for d in path_temp_dirs:
+            shutil.rmtree(d, ignore_errors=True)
 
     if n_fail == 0:
         print("RUN ALL OK {}/{}".format(n_total, n_total))
@@ -200,7 +234,46 @@ def autotest_run(runner_path):
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
-    total = 4
+    # Test 5: PATH isolation - frugalflow in PATH should be hidden, other tools (git) preserved
+    tmp = tempfile.mkdtemp()
+    path_temps = []
+    skipped = 0
+    try:
+        # Create a fake frugalflow that exits 99
+        ff_path = os.path.join(tmp, "frugalflow")
+        with open(ff_path, "w") as f:
+            f.write("#!/bin/sh\nexit 99\n")
+        os.chmod(ff_path, 0o755)
+
+        # Create a symlink to real git
+        git_real = shutil.which("git")
+        if not git_real:
+            # If git not found, this test can't run properly: skip, neither pass nor fail
+            skipped = 1
+            print("SKIP test5 path isolation: skipped (git not found)")
+        else:
+            os.symlink(git_real, os.path.join(tmp, "git"))
+
+            # Build env with our temp dir prepended to PATH
+            test_path = tmp + os.pathsep + os.environ.get("PATH", "")
+            env, path_temps = build_env(path_override=test_path)
+
+            # Check that frugalflow is hidden but git is found
+            ff_found = shutil.which("frugalflow", path=env["PATH"])
+            git_found = shutil.which("git", path=env["PATH"])
+
+            if ff_found is None and git_found is not None:
+                print("PASS test5 path isolation: frugalflow hidden, git preserved")
+            else:
+                failures += 1
+                print("FAIL test5 path isolation: frugalflow_found={} git_found={}".format(
+                    ff_found is not None, git_found is not None))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+        for d in path_temps:
+            shutil.rmtree(d, ignore_errors=True)
+
+    total = 5 - skipped
     print("AUTOTEST {}/{}".format(total - failures, total))
     return 0 if failures == 0 else 1
 

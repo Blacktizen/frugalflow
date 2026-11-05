@@ -36,16 +36,22 @@ After any action that changes state (a commit, a merge, a setting, a measurement
 Bulky work goes to a local or cheaper model. A failed delegation almost always comes from the brief, not from the model, so every brief is checked before it is sent (`brief_check`): each rule it breaks is named, with how to fix it. Every first attempt that fails adds its rule, so the same mistake is never paid twice. Each tool carries its own notice, with the dated pitfalls it has met, and every new rule must pass the whole bench with no regression. Per-model notes keep what each model needs, each with its proof (`model_notes`).
 
 ### 6. Nothing is accepted on a model's word
-"Done" means nothing until an independent check says so (`delegate.py --verify`). A test only counts once it has been seen red, then green: `bite` breaks the code on purpose to prove the suite really fails. Guards fail closed: a check that crashes or doubts refuses, with a "To fix:" line, never a silent pass.
+"Done" means nothing until an independent check says so (`delegate.py --verify`). A test only counts once it has been seen red, then green: `bite` breaks the code on purpose to prove the suite really fails. Inside the hook, a check that crashes or doubts refuses, with a "To fix:" line, never a silent pass.
 
-### 7. Your private data never leaves
+### 7. Your private data stays out of third-party models
 Before anything goes to a hosted model, including models hosted abroad, `anon_check` refuses names, personal paths, addresses and secrets, and `send_rules` decides what may leave. `frugalflow scan` finds secrets in a folder or a repo, with no model and no setup, and works as a pre-commit hook or a CI step.
 
 ### 8. A refusal log per tool: a built-in progress loop
 Every tool logs its own refusals. Each new refusal becomes a todo line, then a bench case; a wrong refusal becomes a fix that must keep every other case green (`refusal_loop`). A commit waits while a false refusal is still open. The tools improve from their own use, every day.
 
 ### 9. Smooth, and it guides you
-FrugalFlow works in the background through Claude Code hooks. When it stops something, it says why and what to run next. `frugalflow config` shows and changes its settings; `doctor` checks everything in one command; `on`, `off` and `mode` switch it in one word.
+FrugalFlow works in the background through Claude Code hooks. When it stops something, it says why and what to run next. `doctor` is the health check: one line per check, in one command. `frugalflow config` shows every setting and what it means. The settings are yours: you change them in your own terminal (`config set`, `on`, `off`, `mode`), and the assistant is refused if it tries, in every mode.
+
+## What the guards are, and what they are not
+
+FrugalFlow's guards are a safety net against the mistakes and shortcuts of a cooperative assistant: forgetting the project's rules, skipping a delegation, writing over a log, turning a setting off, sending private data to a third party. They refuse at the moment of the gesture, and every refusal says what to do instead.
+
+They are not a security boundary against a hostile agent. The hooks run as the same user as the assistant: a script the assistant writes and then runs can do what that user can do, and no rule on the text of a command can see inside it. To contain an agent that actively tries to get around the rules, run it in an isolated environment (another user, a container) where FrugalFlow's files are read-only to it. [`public/THREAT_MODEL.md`](public/THREAT_MODEL.md) lists what is covered and what is not.
 
 ## Measured
 

@@ -165,11 +165,11 @@ def _run_proofs():
 
 
 def _print_notice():
-    print("NAME: banner_merge - add or remove a SessionStart hook in a Claude Code settings dict")
-    print("READS: a settings dict and a command string")
-    print("WRITES: a new settings dict (deep copy); never mutates the input")
-    print("EXAMPLE: add_banner({}, \"python3 /opt/ff/bin/session_banner.py\") adds a hooks entry and returns changed=True")
-    print("PITFALLS: cascade removal - empty SessionStart list deletes the key; empty hooks deletes the key")
+    print("NAME      banner_merge.py - add or remove a SessionStart hook in a Claude Code settings dict")
+    print("READS     a settings dict and a command string")
+    print("WRITES    a new settings dict (deep copy); never mutates the input")
+    print("EXAMPLE   in banner_merge.py, add_banner({}, \"python3 /opt/ff/bin/session_banner.py\") adds a hooks entry and returns changed=True")
+    print("PITFALLS  2026-11-05 cascade removal - empty SessionStart list deletes the key; empty hooks deletes the key")
 
 
 def _handle_autotest():

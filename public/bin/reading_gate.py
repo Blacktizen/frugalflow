@@ -10,18 +10,21 @@ import subprocess
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import page_rules
+import journal_guard
 
 ATTEST = ".reading.json"
 
 USAGE = "usage: reading_gate.py --vault DIR (--show | --attest FILE | --status) | --notice | --autotest"
 
 NOTICE = (
-    "NAME      reading_gate.py - the vault's reading gate: shows the bearing lines of the required pages, attests a reading only when a restatement repeats every one of them.\n"
+    "NAME      reading_gate.py - the vault's reading gate: shows the bearing lines of the required pages, attests a reading only when a restatement repeats every one of them, and, run as a check of the guard hook, refuses the first write into a vault that asks for a reading.\n"
     "READS     --vault: the REQUIRED-READING block of SCHEMA.md at the vault root and the pages it names, found by name anywhere in the vault except raw/; --attest: the restatement file.\n"
-    "WRITES    <vault>/.reading.json on a full restatement only. Exit 0 ok, 2 usage, 3 page missing or ambiguous, 4 lines missing, 5 unread or stale.\n"
+    "WRITES    <vault>/.reading.json: on a full restatement, or by the guard hook's check at the moment it refuses the first write. Never by hand. Exit 0 ok, 2 usage, 3 page missing or ambiguous, 4 lines missing, 5 unread or stale.\n"
     "EXAMPLE   python3 reading_gate.py --vault ~/projects/demo/vault --attest restatement.txt\n"
     "PITFALLS  2026-09-22 moving a page into a subfolder made the old gate refuse every write, its own repair included.\n"
     "          Pages are resolved by name; a moved page keeps the same fingerprint, so the attestation stays valid.\n"
+    "          2026-11-05 the gate only spoke when it was asked, so a write into a gated vault passed untouched.\n"
+    "          check() now runs inside the guard hook: it refuses once, shows the bearing lines, and attests that refusal itself, so the identical write right after passes without a new restitution.\n"
 )
 
 
@@ -81,6 +84,156 @@ def status(vault, pages):
     if data.get("fingerprint") == page_rules.fingerprint(pages):
         return (0, "READ attestation matches the pages")
     return (5, "STALE pages changed since the attestation")
+
+
+# --- the gate as a check of the guard hook (guard_checks.build runs check()) ---
+
+HAND_WRITE = (
+    "Reading gate refused: " + ATTEST + " is the gate's own file. "
+    "To fix: never write this file by hand; the gate writes it itself, at the moment it refuses the first write into the vault."
+)
+
+
+def absolute(path, cwd):
+    """Expand a written path, make it absolute, resolve it - the same way journal_guard does."""
+    p = os.path.expanduser(path)
+    if not os.path.isabs(p):
+        p = os.path.join(cwd, p)
+    return os.path.realpath(p)
+
+
+def gated_dir(directory):
+    """The vault a folder belongs to: itself, or the nearest ancestor whose SCHEMA.md names required pages."""
+    d = os.path.realpath(directory)
+    while True:
+        schema = os.path.join(d, "SCHEMA.md")
+        if os.path.isfile(schema):
+            try:
+                with open(schema, "r", encoding="utf-8") as fh:
+                    text = fh.read()
+            except OSError:
+                return None
+            # a block that names no page is not a gate: page_rules would fall back to its default pages.
+            if page_rules.schema_pages(text) is not None:
+                return d
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None
+        d = parent
+
+
+def gated_vault(path, cwd):
+    """The vault a written path falls into, or None when no SCHEMA.md there asks for a reading."""
+    return gated_dir(os.path.dirname(absolute(path, cwd)))
+
+
+def attest_refusal(vault, pages):
+    """Write the attestation of this refusal: the same fingerprint --status reads."""
+    total = sum(len(page_rules.bearing_lines(t)) for _p, t in pages)
+    payload = {
+        "fingerprint": page_rules.fingerprint(pages),
+        "time": datetime.datetime.now().isoformat(timespec="seconds"),
+        "lines": total,
+        "attestation": "hook",
+    }
+    with open(os.path.join(vault, ATTEST), "w", encoding="utf-8") as fh:
+        fh.write(json.dumps(payload))
+    return total
+
+
+def refusal_text(vault, pages):
+    """What the gate answers a first write: the lines to read, then the gesture to repeat."""
+    out = ["Reading gate: " + vault + " asks for a reading before any write."]
+    for p, text in pages:
+        out.append("PAGE " + p)
+        for line in page_rules.bearing_lines(text):
+            out.append(line)
+    out.append(
+        "Read them, then make the write again. To fix: repeat this exact write; "
+        "the gate attested this refusal itself, so the next one is accepted without a new restitution."
+    )
+    return "\n".join(out)
+
+
+def write_path(tool_name, tool_input):
+    """The file a write tool names, or None for any other tool."""
+    if tool_name in ("Write", "Edit", "MultiEdit"):
+        p = tool_input.get("file_path")
+    elif tool_name == "NotebookEdit":
+        p = tool_input.get("notebook_path")
+    else:
+        return None
+    return p if isinstance(p, str) and p else None
+
+
+def named_dirs(command, cwd):
+    """Folders a shell command names beside the attestation file, so a vault reached by an absolute path is found too."""
+    result = []
+    for word in re.split(r"[\s'\"`;|&()<>]+", command):
+        word = re.sub(r"^[0-9]*[<>]+", "", word)  # > path, 2> path
+        if ATTEST not in word:
+            continue
+        d = os.path.dirname(absolute(word, cwd))
+        if d not in result:
+            result.append(d)
+    return result
+
+
+def bash_attestations(tool_input, cwd):
+    """Attestation files a shell command writes inside a vault that asks for a reading."""
+    command = tool_input.get("command")
+    if not isinstance(command, str) or ATTEST not in command:
+        return []
+    vaults = []
+    for d in [cwd] + named_dirs(command, cwd):
+        vault = gated_dir(d)
+        if vault is not None and vault not in vaults:
+            vaults.append(vault)
+    result = []
+    for vault in vaults:
+        attest = os.path.join(vault, ATTEST)
+        # journal_guard answers for the whole command: redirections, tee, sed -i, inline code, cd tracking.
+        for touched in journal_guard.touched("Bash", tool_input, [attest], cwd):
+            if absolute(touched, cwd) == absolute(attest, cwd):
+                result.append(attest)
+                break
+    return result
+
+
+def check(tool_name, tool_input, config, ctx):
+    """Refuse the first write into a gated vault and attest it; refuse any hand-write of the attestation."""
+    cwd = ctx.get("cwd") if isinstance(ctx, dict) else None
+    if not (isinstance(cwd, str) and cwd):
+        cwd = os.getcwd()
+
+    path = write_path(tool_name, tool_input)
+    if path is not None:
+        vault = gated_vault(path, cwd)
+        if vault is None:
+            return (False, "", [])
+        attest = os.path.join(vault, ATTEST)
+        if absolute(path, cwd) == absolute(attest, cwd):
+            return (True, HAND_WRITE, [attest])
+        pages, errors = load(vault)
+        if errors:
+            return (
+                True,
+                "Reading gate refused: " + vault + " cannot read its required pages (" + "; ".join(errors) + "). "
+                "To fix: repair SCHEMA.md and the pages it names; nothing is written into this vault while they are broken.",
+                [path],
+            )
+        code, _message = status(vault, pages)
+        if code == 0:
+            return (False, "", [])
+        attest_refusal(vault, pages)
+        return (True, refusal_text(vault, pages), [path])
+
+    if tool_name == "Bash":
+        touched = bash_attestations(tool_input, cwd)
+        if touched:
+            return (True, HAND_WRITE, touched)
+
+    return (False, "", [])
 
 
 def _run_autotest():

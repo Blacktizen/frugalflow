@@ -62,6 +62,9 @@ def _non_code_suffix(dest):
         ext = base
     return ext in OUTPUT_SUFFIXES
 
+SETTINGS_FILES = ("preferences.json", "models.json", "engines.json", "anonymization.json",
+                  "model_notes.json", "memory_declined.json")
+
 def protected_paths(home, settings):
     """Return the list of protected paths."""
     paths = []
@@ -76,6 +79,12 @@ def protected_paths(home, settings):
     add("delegations.jsonl")
     add("guard.json")
     add("blocks")
+    # 2026-11-05: the user's settings are the user's: the assistant never writes them, neither
+    # to tighten nor to loosen (preferences.json held the switch the assistant could turn off).
+    for name in SETTINGS_FILES:
+        add(name)
+    # 2026-11-05: Claude's own settings file is the user's too: the assistant never writes it.
+    add(os.path.join("~", ".claude", "settings.json"))
 
     dl = settings.get("delegation_logs", [])
     if isinstance(dl, str):
@@ -102,6 +111,19 @@ def normal(path, cwd):
         path = os.path.join(cwd, path)
     return os.path.realpath(path)
 
+VAULT_MARKERS = ("SCHEMA.md", "overview.md")
+
+def is_vault_journal(path):
+    """Return True when path is the journal of a vault: a log.md whose folder holds
+    a SCHEMA.md or an overview.md beside it."""
+    try:
+        if os.path.basename(path) != "log.md":
+            return False
+        d = os.path.dirname(path)
+        return any(os.path.isfile(os.path.join(d, m)) for m in VAULT_MARKERS)
+    except Exception:
+        return False
+
 def is_protected(path, protected, cwd):
     """Return True if path is protected."""
     p = normal(path, cwd)
@@ -109,7 +131,9 @@ def is_protected(path, protected, cwd):
         px = normal(x, cwd)
         if p == px or p.startswith(px + os.sep):
             return True
-    return False
+    # 2026-11-05: a vault journal is protected wherever the vault sits, on the filesystem:
+    # a log.md beside a SCHEMA.md or an overview.md. Reads stay free; only writes touch it.
+    return is_vault_journal(p)
 
 WRITE_DEST_HEADS = {"cp", "tee", "ln", "install", "rsync", "mv"}
 
@@ -252,7 +276,7 @@ READER_HEADS = {
     "cat", "head", "tail", "less", "more", "wc", "grep", "egrep", "fgrep", "rg",
     "jq", "ls", "stat", "file", "du", "diff", "cmp", "shasum", "sha256sum", "md5",  # lang-ok
     "md5sum", "readlink", "realpath", "basename", "dirname", "test", "[", "echo",
-    "printf",
+    "printf", "cut",
 }
 STRUCT_KW = {"for", "while", "until", "select", "case", "fi", "esac", "done", "in", "{", "}"}
 STRIP_KW = {"then", "else", "elif", "do", "if", "time"}
@@ -344,7 +368,10 @@ def _zone_rel(path, protected, cwd):
         px = normal(x, cwd)
         if p == px or p.startswith(px + os.sep) or px.startswith(p + os.sep):
             return True
-    return False
+    # Vault journals (log.md beside SCHEMA.md or overview.md) are protected
+    # wherever they sit on the filesystem. Only exact match counts; a parent
+    # of a vault journal is not itself a vault journal.
+    return is_vault_journal(p)
 
 def _zone_markers(protected):
     """Return the protected names: the fixed zone names and the dotted basenames."""
@@ -491,7 +518,9 @@ def _reaches_zone(p, protected, cwd):
         px = normal(x, cwd)
         if pp == px or pp.startswith(px + os.sep):
             return True
-    return False
+    # Vault journals (log.md beside SCHEMA.md or overview.md) are protected
+    # wherever they sit on the filesystem.
+    return is_vault_journal(pp)
 
 def _word_names_zone(w, protected, cwd, markers):
     """Return True when a word of the command names a protected path.
@@ -754,6 +783,17 @@ def _find_is_reader(args):
         i += 1
     return True
 
+# 2026-11-05: `cd $W && git diff --stat` was refused as a journal write; a read-only
+# git subcommand writes nothing unless it is given an output file.
+# add and commit are index/history operations that do not write the file itself.
+GIT_READERS = {"add", "commit", "diff", "log", "status", "show", "rev-parse", "blame", "shortlog", "describe", "ls-files"}
+
+def _git_is_reader(args):
+    """Return True for a read-only git subcommand with no output file option."""
+    if not args or args[0] not in GIT_READERS:
+        return False
+    return not any(a == "-o" or a.startswith("--output") for a in args[1:])
+
 def _strict_reader(head, args):
     """Return True when the head is a plain reader, or a reader with read-only options."""
     if head in READER_HEADS:
@@ -764,6 +804,8 @@ def _strict_reader(head, args):
         return _awk_is_reader(args)
     if head == "find":
         return _find_is_reader(args)
+    if head == "git":
+        return _git_is_reader(args)
     return False
 
 def _interp_touches(code, cwd_now, unreadable, protected, cwd, markers):
@@ -913,6 +955,13 @@ def _whitelist_touches(command, sp, protected, cwd):
                 v = zone_word if zone_word is not None else "<unknown>"
                 if v not in out:
                     out.append(v)
+            # Also check inline code for protected paths directly (covers os.system etc.)
+            for code in unproven_c + unproven_h:
+                if _interp_touches(code, cwd_now, unreadable, protected, cwd, markers):
+                    v = zone_word if zone_word is not None else "<unknown>"
+                    if v not in out:
+                        out.append(v)
+                    break
         elif head in ("sh", "bash", "zsh") and "-c" in args:
             k = args.index("-c")
             code = args[k + 1] if k + 1 < len(args) else ""
@@ -927,10 +976,32 @@ def _whitelist_touches(command, sp, protected, cwd):
                 v = zone_word if zone_word is not None else "<unknown>"
                 if v not in out:
                     out.append(v)
+        elif head == "php" and "-r" in args:
+            k = args.index("-r")
+            code = args[k + 1] if k + 1 < len(args) else ""
+            if _interp_touches(code, cwd_now, unreadable, protected, cwd, markers):
+                v = zone_word if zone_word is not None else "<unknown>"
+                if v not in out:
+                    out.append(v)
+        elif head == "git":
+            # Git has complex subcommands; rely on word-by-word analysis (zone_word)
+            # and strict reader check. The GENERAL RULE full-text check would catch
+            # commit messages, diff output refs, etc. which are not file operations.
+            if zone_word is not None and not _strict_reader(head, args):
+                if zone_word not in out:
+                    out.append(zone_word)
         else:
             if zone_word is not None and not _strict_reader(head, args):
                 if zone_word not in out:
                     out.append(zone_word)
+            # GENERAL RULE: any segment whose full text names a protected path is a touch,
+            # unless its head is a proven reader (whitelist readers, proven python, json.tool).
+            segment_names_zone = any(_component_in(s, m) for m in markers)
+            is_proven_reader = _strict_reader(head, args) or _proven_python_reader(s, bodies) or _json_tool_strict(s)
+            if segment_names_zone and not is_proven_reader:
+                v = zone_word if zone_word is not None else "<unknown>"
+                if v not in out:
+                    out.append(v)
             if head == "awk":
                 prog = next((a for a in args if not a.startswith("-")), "")
                 if not _awk_is_reader(args) and _interp_touches(prog, cwd_now, unreadable, protected, cwd, markers):
@@ -991,8 +1062,9 @@ def _whitelist_touches(command, sp, protected, cwd):
                             out.append("<unknown>")
         prev_contact = zone_word is not None or dollar
     # a heredoc body read by an interpreter that is not a shell is
-    # not cut into shell commands; node, perl and ruby keep exactly the verdict
-    # their inline code already has: a protected name in it is a contact.
+    # not cut into shell commands; any non-proven-reader head makes its
+    # body a contact if the body names a protected path. Shell heredocs are
+    # handled recursively by touched() and are skipped here.
     import shell_split
     import shell_targets
 
@@ -1000,13 +1072,41 @@ def _whitelist_touches(command, sp, protected, cwd):
         line = b.get("line", "")
         if not line:
             continue
+        # Skip shell heredocs: they are judged as commands by the recursive
+        # touched() call in the main function.
+        if _shell_read_heredoc(b):
+            continue
         local = shell_split.split_segments(line)
         owner = next((x for x in local if "<<" in x), line)
         try:
             head = shell_targets.judge_segment(owner, {"code_extensions": JOURNAL_EXTS, "delegate_tools": []}).get("head", "")
         except Exception:
             head = ""
-        if head in ("node", "ruby", "perl"):
+        # Parse owner segment for args to check proven reader status
+        try:
+            owner_words = shlex.split(owner)
+        except ValueError:
+            owner_words = owner.split()
+        owner_head = ""
+        owner_args = []
+        if owner_words:
+            j = 0
+            while j < len(owner_words) and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", owner_words[j]):
+                j += 1
+            if j < len(owner_words) and owner_words[j] == "env":
+                j += 1
+                while j < len(owner_words) and (
+                        owner_words[j].startswith("-")
+                        or re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", owner_words[j])):
+                    j += 1
+            if j < len(owner_words) and owner_words[j] not in STRUCT_KW:
+                while j < len(owner_words) and owner_words[j] in STRIP_KW:
+                    j += 1
+                if j < len(owner_words):
+                    owner_head = os.path.basename(owner_words[j])
+                    owner_args = owner_words[j + 1:]
+        is_proven = _strict_reader(owner_head, owner_args) or _proven_python_reader(owner, bodies) or _json_tool_strict(owner)
+        if not is_proven:
             if _interp_touches(b.get("body", ""), cwd_now, unreadable, protected, cwd, markers):
                 if "<unknown>" not in out:
                     out.append("<unknown>")
@@ -1788,7 +1888,7 @@ def run_autotest():
 def print_notice():
     """Print the notice exactly."""
     notice = (
-        "NAME      journal_guard.py - tells whether an agent tool call writes, deletes, moves, links or disarms a protected guard file: the delegation log, the refusal logs, the guard settings.\n"
+        "NAME      journal_guard.py - tells whether an agent tool call writes, deletes, moves, links or disarms a protected file: the delegation log, the refusal logs, the guard settings, the user's Claude settings file, the journal of each vault.\n"
         "READS     the tool call it is given, and the guard settings for the paths to protect.\n"
         "WRITES    nothing: touched() returns the protected paths the call touches, \"<unknown>\" when a write it cannot read sits beside a protected name.\n"
         "EXAMPLE   python3 journal_guard.py --autotest\n"
@@ -1803,6 +1903,7 @@ def print_notice():
         "          2026-10-05 a redirection or cp/tee destination with a literal non-code file name (a .txt, .json, .np, .init, ...) after cd into an unreadable folder was refused as a journal touch; the literal suffix now decides, and an env prefix or a NAME=value argument is no longer read as a file contact.\n"
         "          2026-10-14 a proven read run from a folder of the zone was taken for a write: a python segment whose inline code is a proven read is a reader there.\n"
         "          2026-10-15 a heredoc body read by a shell, a json.tool output file and an unreadable target named guard.json were never judged: they are now.\n"
+        "          2026-11-05 the zone stopped at the guard's own folder: the user's Claude settings file (~/.claude/settings.json) and the journal of a vault (log.md beside a SCHEMA.md or an overview.md) are now protected too, wherever they sit; they are read freely, never written, and journal_add.py remains the legitimate gesture.\n"
     )
     print(notice)
 

@@ -152,6 +152,9 @@ def route(doc, role_name, max_trust):
     if model is None:
         return (None, "role " + role_name + " names unknown model " + str(model_id))
 
+    if model.get("location") == "remote" and model.get("trust") == "private":
+        return (None, "model " + str(model_id) + " is remote with trust private: private content never goes to a remote layer")
+
     trust = model.get("trust")
     if trust not in TRUST:
         return (None, "model " + str(model_id) + " has unknown trust " + str(trust))

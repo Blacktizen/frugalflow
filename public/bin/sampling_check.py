@@ -58,7 +58,7 @@ def run_autotest():
                 entry("bare"),
                 entry("broken", notice="missing.json"),
                 entry("badsamp", sampling={"seed": 1}),
-                entry("far", location="remote")],
+                entry("far", location="remote", trust="untrusted_third_party")],
                 "layers": [{"name": "reading", "delegable": True}],
                 "roles": [{"name": i, "layer": "reading", "model": i} for i in ids]}
 

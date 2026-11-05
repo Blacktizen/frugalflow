@@ -100,8 +100,11 @@ def run_autotest():
                     "event": "tool_before", "tool": "Bash", "id": ident,
                     "input": json.dumps({"command": command})}
 
-        def fixture_after(ident):
-            return {"ts": "2026-09-26T10:05:01+02:00", "event": "tool_after", "tool": "Bash", "id": ident}
+        def fixture_after(ident, response=""):
+            entry = {"ts": "2026-09-26T10:05:01+02:00", "event": "tool_after", "tool": "Bash", "id": ident}
+            if response:
+                entry["response"] = response
+            return entry
 
         proofs = []
 
@@ -132,8 +135,15 @@ def run_autotest():
                        "expected rc=6 with r1/vault FAIL, got rc=" + str(proc.returncode) + " out=" + out2))
 
         # Proof 3: log call then verdict
+        # The log call must really land: a genesis log.md, then a real journal_add run whose output is the response.
+        import chain_rules
+        with open(os.path.join(vault, "log.md"), "w", encoding="utf-8") as fh:
+            fh.write("# Log\n\n" + chain_rules.render(chain_rules.GENESIS, "2026-09-26 00:00", "setup", [("Decision", "created")]))
+        landed = subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "journal_add.py"),
+                                 "--vault", vault, "--title", "parser fixed", "--field", "Decision=d"],
+                                capture_output=True, text=True, env=env)
         session_log.append("s1", fixture_before("a2", LOG, os.path.join(base, "proj"), vault))
-        session_log.append("s1", fixture_after("a2"))
+        session_log.append("s1", fixture_after("a2", landed.stdout.strip()))
 
         proc = subprocess.run([sys.executable, __file__, "--session", "s1", "--vault", vault],
                               capture_output=True, text=True, env=env)

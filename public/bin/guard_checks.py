@@ -8,15 +8,16 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import digest_rules
 import read_intake
 import read_quarantine
+import reading_gate
 
-CHECKS = [("quarantine_read", read_quarantine.check), ("intake", read_intake.check), ("digest", digest_rules.check)]
+CHECKS = [("quarantine_read", read_quarantine.check), ("intake", read_intake.check), ("digest", digest_rules.check), ("reading_gate", reading_gate.check)]
 
 _CHECKS_MAP = {name: fn for name, fn in CHECKS}
 
 NOTICE = (
-    "NAME      guard_checks.py - builds the entry checks run by guard_rules.decide (read quarantine, intake, digest) and measures files for them.\n"
+    "NAME      guard_checks.py - builds the entry checks run by guard_rules.decide (read quarantine, intake, digest, the reading gate) and measures files for them.\n"
     "READS     the size and the line count of the files the checks ask about; nothing else.\n"
-    "WRITES    nothing: build() returns the (name, check) list; an unknown check name gives a check that fails, so the guard refuses.\n"
+    "WRITES    nothing itself: build() returns the (name, check) list; an unknown check name gives a check that fails, so the guard refuses. The reading gate writes the vault's own attestation when it refuses.\n"
     "EXAMPLE   python3 guard_checks.py --notice\n"
     "PITFALLS  2026-09-26 a naive guard imported each check apart and ran on without it when the import failed.\n"
     "          A missing module stops the hook that imports this file, and an unknown check name refuses every call.\n"
@@ -68,7 +69,7 @@ def build(settings, records, cwd=None, now=None, stat=None):
 
             def _raise(tool_name, tool_input, config, _n=name):
                 raise ValueError(
-                    f"unknown check {_n}. To fix: use quarantine_read, intake or digest in the checks setting"
+                    f"unknown check {_n}. To fix: use quarantine_read, intake, digest or reading_gate in the checks setting"
                 )
 
             result.append((name, _raise))
@@ -121,7 +122,7 @@ def _autotest():
             f.write(BIG.encode("utf-8"))
         with open(os.path.join(d, "small.md"), "wb") as f:
             f.write(SMALL.encode("utf-8"))
-        expected2 = (["quarantine_read", "intake", "digest"], ["digest"], [])
+        expected2 = (["quarantine_read", "intake", "digest", "reading_gate"], ["digest"], [])
         got2 = (
             [n for n, _ in build(CFG, [], cwd=d)],
             [n for n, _ in build({"checks": ["digest"]}, [], cwd=d)],

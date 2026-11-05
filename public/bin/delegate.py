@@ -356,7 +356,7 @@ def autotest():
     def models_doc(port):
         own = {"id": "own", "name": "alpha-7b", "location": "remote",
                "endpoint": "http://127.0.0.1:" + str(port) + "/v1",
-               "context_window": 8192, "trust": "private", "key_env": "", "max_output": 1024}
+               "context_window": 8192, "trust": "trusted_third_party", "key_env": "", "max_output": 1024}
         far = dict(own, id="far", trust="untrusted_third_party")
         return {"models": [own, far],
                 "layers": [{"name": "work", "delegable": True}],
@@ -409,9 +409,12 @@ def autotest():
         f.write(TASK)
     with open(os.path.join(D, "bad.md"), "w", encoding="utf-8") as f:
         f.write(BAD)
+    anon_src = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "config", "anonymization.example.json")
+    anon_file = os.path.join(D, "anonymization.json")
+    shutil.copy2(anon_src, anon_file)
 
     env = dict(os.environ, FRUGALFLOW_HOME=D, FRUGALFLOW_BRIEF_RULES=os.path.join(D, "rules.json"))
-    base_cmd = [sys.executable, os.path.abspath(__file__), "--timeout", "10"]
+    base_cmd = [sys.executable, os.path.abspath(__file__), "--timeout", "10", "--trust", "trusted_third_party"]
     jpath = os.path.join(D, "delegations.jsonl")
 
     def last_journal():
@@ -667,6 +670,7 @@ def autotest():
 
     # 5c
     reset()
+    os.remove(anon_file)
     cmd = base_cmd + ["--file", os.path.join(D, "task.md"), "--role", "far", "--trust", "untrusted_third_party"]
     p = subprocess.run(cmd, capture_output=True, text=True, timeout=60, env=env)
     ok = True
@@ -681,6 +685,7 @@ def autotest():
         ok = False
         details.append("bodies=" + str(len(state["BODIES"])))
     results.append(("test5c", ok, "code=4 NO RULES 0 bodies", "; ".join(details) if details else "ok"))
+    shutil.copy2(anon_src, anon_file)
 
     # 5d
     reset()
