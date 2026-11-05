@@ -83,6 +83,8 @@ def protected_paths(home, settings):
     # to tighten nor to loosen (preferences.json held the switch the assistant could turn off).
     for name in SETTINGS_FILES:
         add(name)
+    # 2026-11-05: Claude's own settings file is the user's too: the assistant never writes it.
+    add(os.path.join("~", ".claude", "settings.json"))
 
     dl = settings.get("delegation_logs", [])
     if isinstance(dl, str):
@@ -109,6 +111,19 @@ def normal(path, cwd):
         path = os.path.join(cwd, path)
     return os.path.realpath(path)
 
+VAULT_MARKERS = ("SCHEMA.md", "overview.md")
+
+def is_vault_journal(path):
+    """Return True when path is the journal of a vault: a log.md whose folder holds
+    a SCHEMA.md or an overview.md beside it."""
+    try:
+        if os.path.basename(path) != "log.md":
+            return False
+        d = os.path.dirname(path)
+        return any(os.path.isfile(os.path.join(d, m)) for m in VAULT_MARKERS)
+    except Exception:
+        return False
+
 def is_protected(path, protected, cwd):
     """Return True if path is protected."""
     p = normal(path, cwd)
@@ -116,7 +131,9 @@ def is_protected(path, protected, cwd):
         px = normal(x, cwd)
         if p == px or p.startswith(px + os.sep):
             return True
-    return False
+    # 2026-11-05: a vault journal is protected wherever the vault sits, on the filesystem:
+    # a log.md beside a SCHEMA.md or an overview.md. Reads stay free; only writes touch it.
+    return is_vault_journal(p)
 
 WRITE_DEST_HEADS = {"cp", "tee", "ln", "install", "rsync", "mv"}
 
@@ -1807,7 +1824,7 @@ def run_autotest():
 def print_notice():
     """Print the notice exactly."""
     notice = (
-        "NAME      journal_guard.py - tells whether an agent tool call writes, deletes, moves, links or disarms a protected guard file: the delegation log, the refusal logs, the guard settings.\n"
+        "NAME      journal_guard.py - tells whether an agent tool call writes, deletes, moves, links or disarms a protected file: the delegation log, the refusal logs, the guard settings, the user's Claude settings file, the journal of each vault.\n"
         "READS     the tool call it is given, and the guard settings for the paths to protect.\n"
         "WRITES    nothing: touched() returns the protected paths the call touches, \"<unknown>\" when a write it cannot read sits beside a protected name.\n"
         "EXAMPLE   python3 journal_guard.py --autotest\n"
@@ -1822,6 +1839,7 @@ def print_notice():
         "          2026-10-05 a redirection or cp/tee destination with a literal non-code file name (a .txt, .json, .np, .init, ...) after cd into an unreadable folder was refused as a journal touch; the literal suffix now decides, and an env prefix or a NAME=value argument is no longer read as a file contact.\n"
         "          2026-10-14 a proven read run from a folder of the zone was taken for a write: a python segment whose inline code is a proven read is a reader there.\n"
         "          2026-10-15 a heredoc body read by a shell, a json.tool output file and an unreadable target named guard.json were never judged: they are now.\n"
+        "          2026-11-05 the zone stopped at the guard's own folder: the user's Claude settings file (~/.claude/settings.json) and the journal of a vault (log.md beside a SCHEMA.md or an overview.md) are now protected too, wherever they sit; they are read freely, never written, and journal_add.py remains the legitimate gesture.\n"
     )
     print(notice)
 
