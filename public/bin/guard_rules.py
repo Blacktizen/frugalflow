@@ -16,7 +16,8 @@ def result(decision, audit, targets, reason):
 
 
 def is_code(path, config):
-    return isinstance(path, str) and path and os.path.splitext(path)[1].lower() in config.get("code_extensions", [])
+    ext = os.path.splitext(path)[1].lower() if isinstance(path, str) and path else ""
+    return ext == ".ipynb" or ext in config.get("code_extensions", [])
 
 
 def decide(tool_name, tool_input, config, records, checks=(), judge=None, now=None):

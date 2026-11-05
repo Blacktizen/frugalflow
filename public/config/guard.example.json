@@ -1,5 +1,5 @@
 {
-  "code_extensions": [".py", ".sh", ".js", ".ts"],
+  "code_extensions": [".py", ".sh", ".js", ".ts", ".ipynb"],
   "delegation_logs": ["delegations.jsonl"],
   "audit_log": "audit.jsonl",
   "line_threshold": 20,
