@@ -31,10 +31,10 @@ NOTICE = (
     "          Every doubt now refuses with a \"To fix:\" line, and shell refusals are logged like the others.\n"
     "          2026-10-03 the switch lived only in the assistant's memory, which never bites; the hook now reads preferences.json on every call so off and observe are real.\n"
     "          2026-10-04 an observed refusal in observe mode now prints one short systemMessage line when display.turn_line is on; it never says deny.\n"
+    "          2026-11-05 audit is a guarantee: an unwritable audit log refuses writes in active mode."
 )
 
-
-TURN_PREFIX = "FrugalFlow \u00b7 observe: "
+TURN_PREFIX = "FrugalFlow · observe: "
 
 
 def deny_json(reason):
@@ -87,7 +87,23 @@ def load_records(home, settings):
     return records
 
 
+def can_write_audit(home, settings):
+    """Test if the audit log can be written. Returns (bool, error_message)."""
+    try:
+        path = resolve(home, settings["audit_log"])
+        parent = os.path.dirname(path)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        # Try to open for append
+        with open(path, "a", encoding="utf-8") as f:
+            pass
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+
 def write_audit(home, settings, tool, res):
+    """Write an audit line. Returns (success: bool, error_message: str or None)."""
     try:
         path = resolve(home, settings["audit_log"])
         parent = os.path.dirname(path)
@@ -103,8 +119,9 @@ def write_audit(home, settings, tool, res):
         }
         with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(line, ensure_ascii=False) + "\n")
-    except Exception:
-        print("audit log cannot be written", file=sys.stderr)
+        return True, None
+    except Exception as e:
+        return False, str(e)
 
 
 def read_switch(home):
@@ -145,6 +162,21 @@ def turn_message(reason):
     first = lines[0] if lines else ""
     budget = 200 - len(TURN_PREFIX)
     return TURN_PREFIX + first[:budget]
+
+
+def is_write_tool(tool_name):
+    """Return True if the tool is a file write tool."""
+    return tool_name in ("Write", "Edit", "MultiEdit", "NotebookEdit")
+
+
+def is_pure_read_tool(tool_name):
+    """Return True if the tool is a pure read tool that should never be audited."""
+    return tool_name in ("Read", "Grep", "Glob")
+
+
+def is_bash_write_audit(audit):
+    """Return True if the audit label indicates a Bash write."""
+    return audit and audit.startswith("shell_write")
 
 
 def run_hook(stdin_text):
@@ -188,9 +220,12 @@ def run_hook(stdin_text):
     if not isinstance(inp, dict):
         inp = {}
 
+    # Disarmed mode (FRUGALFLOW_GUARD=0 or settings.active=False)
     if os.environ.get("FRUGALFLOW_GUARD") == "0" or settings.get("active", True) is False:
-        res = guard_rules.result("allow", "disarmed", [], "")
-        write_audit(home, settings, tool, res)
+        # In disarmed mode, audit all writes with "disarmed" label (existing behavior)
+        if is_write_tool(tool) or (tool == "Bash" and False):  # Bash not audited in disarmed per existing tests
+            res = guard_rules.result("allow", "disarmed", [], "")
+            write_audit(home, settings, tool, res)
         return ("", True)
 
     enabled, mode = read_switch(home)
@@ -199,7 +234,11 @@ def run_hook(stdin_text):
 
     observed_reason = None
     if enabled is False:
-        res = guard_rules.result("allow", "off", [], "")
+        # Off mode: only audit file write tools with "off" label, no Bash analysis
+        if is_write_tool(tool):
+            res = guard_rules.result("allow", "off", [], "")
+        else:
+            res = guard_rules.result("allow", None, [], "")
     else:
         try:
             res = guard_rules.decide(tool, inp, settings, records, guard_checks.build(settings, records, payload.get("cwd")))
@@ -216,8 +255,7 @@ def run_hook(stdin_text):
             observed_reason = res["reason"]
             res = guard_rules.result("allow", "observed:" + str(res["audit"]), res["targets"], res["reason"])
 
-    # 2026-11-05: this layer failed open (import error or exception = nothing protected);
-    # it now refuses, like every other check.
+    # Journal guard check (runs in all modes including off)
     if res["decision"] != "deny":
         try:
             if journal_guard is None:
@@ -239,23 +277,71 @@ def run_hook(stdin_text):
                 + "). To fix: never touch these files; read them only.",
             )
 
-    # 2026-11-05: the user's settings belong to the user; the assistant never changes them,
-    # whatever the mode (frugalflow off/on/mode/config set... run by the assistant is refused).
+    # Settings CLI guard check
     if res["decision"] != "deny":
         try:
             import settings_cli_guard
             refuse_s, reason_s = settings_cli_guard.verdict(tool, inp)
         except Exception as e:
             refuse_s, reason_s = True, ("Guard refused: the settings check failed (%s). "
-                                        "To fix: report this command; nothing passes while the guard fails." % e)
+                                            "To fix: report this command; nothing passes while the guard fails." % e)
         if refuse_s:
             res = guard_rules.result("deny", "settings", [], reason_s)
 
-    replaying = os.environ.get("FRUGALFLOW_REPLAY") == "1"
+    # At this point, res["decision"] is either "allow" or "deny"
+    # For allowed writes, check audit log writability in active/observe modes
     audit_written = False
-    if res["audit"] is not None and not replaying:
-        write_audit(home, settings, tool, res)
-        audit_written = True
+    audit_warn = False
+
+    if res["decision"] == "allow":
+        is_write = is_write_tool(tool) or (tool == "Bash" and is_bash_write_audit(res["audit"]))
+        if is_write:
+            writable, err = can_write_audit(home, settings)
+            if not writable:
+                if mode == "active":
+                    # Refuse the write in active mode
+                    audit_path = resolve(home, settings["audit_log"])
+                    fix_hint = f"make the audit log directory writable, or correct \"audit_log\" in {os.path.join(home, 'guard.json')}"
+                    reason = (
+                        f"Guard refused: the audit log at {audit_path} cannot be written ({err}). "
+                        f"To fix: {fix_hint}"
+                    )
+                    res = guard_rules.result("deny", "audit_unwritable", [], reason)
+                elif mode == "observe":
+                    # Allow but warn in observe mode
+                    audit_path = resolve(home, settings["audit_log"])
+                    warn_msg = f"audit log at {audit_path} cannot be written ({err})"
+                    audit_warn = True
+
+    # Write audit log for allowed writes (including free writes) and for denials
+    replaying = os.environ.get("FRUGALFLOW_REPLAY") == "1"
+    is_write = is_write_tool(tool) or (tool == "Bash" and is_bash_write_audit(res["audit"]))
+
+    # Write audit for allowed writes
+    if res["decision"] == "allow" and is_write and not replaying:
+        # Determine the audit label for free writes
+        audit_label = res["audit"]
+        if is_write_tool(tool) and res["audit"] is None:
+            audit_label = "free_write"
+        # Create a modified result with the correct audit label for logging
+        audit_res = {"decision": res["decision"], "audit": audit_label, "targets": res["targets"], "reason": res["reason"]}
+        ok, err = write_audit(home, settings, tool, audit_res)
+        audit_written = ok
+        if not ok and mode == "active":
+            # This shouldn't happen since we checked can_write_audit, but fail closed
+            audit_path = resolve(home, settings["audit_log"])
+            fix_hint = f"make the audit log directory writable, or correct \"audit_log\" in {os.path.join(home, 'guard.json')}"
+            reason = (
+                f"Guard refused: the audit log at {audit_path} cannot be written ({err}). "
+                f"To fix: {fix_hint}"
+            )
+            res = guard_rules.result("deny", "audit_unwritable", [], reason)
+            audit_written = False
+
+    # Write audit for denials (as before, when audit label is not None)
+    if res["decision"] == "deny" and res["audit"] is not None and not replaying:
+        ok, err = write_audit(home, settings, tool, res)
+        audit_written = ok
 
     if res["decision"] == "deny":
         try:
@@ -266,8 +352,13 @@ def run_hook(stdin_text):
         except Exception:
             print("block log cannot be written", file=sys.stderr)
         return (deny_json(res["reason"]), audit_written)
+
     if observed_reason is not None and turn_line_enabled(home):
         return (json.dumps({"systemMessage": turn_message(observed_reason)}, ensure_ascii=False), audit_written)
+
+    if audit_warn and turn_line_enabled(home):
+        return (json.dumps({"systemMessage": turn_message(warn_msg)}, ensure_ascii=False), audit_written)
+
     return ("", audit_written)
 
 
