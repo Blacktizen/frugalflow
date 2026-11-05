@@ -268,11 +268,11 @@ def run_decline(args):
 
 
 def run_notice():
-    sys.stdout.write("NAME: FrugalFlow SessionStart banner hook\n")
-    sys.stdout.write("READS: stdin hook JSON, home/preferences.json, home/memory_declined.json\n")
-    sys.stdout.write("WRITES: nothing in hook mode; home/memory_declined.json in decline mode\n")
-    sys.stdout.write("EXAMPLE: echo '{\"cwd\": \"projects/demo\"}' | python3 session_banner.py\n")
-    sys.stdout.write("PITFALLS: missing or broken preferences.json uses defaults; broken memory_declined.json counts as empty\n")
+    sys.stdout.write("NAME      session_banner.py - FrugalFlow SessionStart banner hook\n")
+    sys.stdout.write("READS     stdin hook JSON, home/preferences.json, home/memory_declined.json\n")
+    sys.stdout.write("WRITES    nothing in hook mode; home/memory_declined.json in decline mode\n")
+    sys.stdout.write("EXAMPLE   echo '{\"cwd\": \"projects/demo\"}' | python3 session_banner.py\n")
+    sys.stdout.write("PITFALLS  2026-11-05 missing or broken preferences.json uses defaults; broken memory_declined.json counts as empty\n")
 
 
 def run_autotest():
