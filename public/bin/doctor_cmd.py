@@ -168,7 +168,19 @@ def _doctor(home, claude_dir, ollama_url, lmstudio_url):
 
     # 3 guard.json
     if _guard_ok(home):
-        print("OK guard.json")
+        guard_path = os.path.join(home, "guard.json")
+        try:
+            with open(guard_path, encoding="utf-8") as f:
+                guard_doc = json.load(f)
+            checks = guard_doc.get("checks")
+            if isinstance(checks, list) and "reading_gate" not in checks:
+                fails += 1
+                print("FAIL guard.json checks lack reading_gate: the reading gate is off (" + fix + ")")
+            else:
+                print("OK guard.json")
+        except (OSError, ValueError):
+            fails += 1
+            print("FAIL guard.json cannot be read (" + fix + ")")
     else:
         fails += 1
         print("FAIL guard.json is missing or incomplete (" + fix + ")")
