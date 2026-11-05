@@ -232,6 +232,50 @@ def check(tool_name, tool_input, config, ctx):
         touched = bash_attestations(tool_input, cwd)
         if touched:
             return (True, HAND_WRITE, touched)
+        # a Bash write into a gated vault is judged like a Write: every write
+        # target of the call is looked at, in order; a write outside a vault
+        # stays free, and so does a read.
+        targets = journal_guard.write_targets("Bash", tool_input, cwd)
+        if not targets:
+            return (False, "", [])
+        for target in targets:
+            if target == "<unknown>":
+                # a write nobody can resolve, made from a gated folder, is
+                # refused like one that names it - but not attested.
+                vault = gated_dir(cwd)
+                if vault is None:
+                    continue
+                pages, errors = load(vault)
+                if errors:
+                    return (
+                        True,
+                        "Reading gate refused: " + vault + " cannot read its required pages (" + "; ".join(errors) + "). "
+                        "To fix: repair SCHEMA.md and the pages it names; nothing is written into this vault while they are broken.",
+                        [target],
+                    )
+                code, _message = status(vault, pages)
+                if code != 0:
+                    return (True, refusal_text(vault, pages), [target])
+                continue
+            vault = gated_vault(target, cwd)
+            if vault is None:
+                continue
+            attest = os.path.join(vault, ATTEST)
+            if target == absolute(attest, cwd):
+                return (True, HAND_WRITE, [attest])
+            pages, errors = load(vault)
+            if errors:
+                return (
+                    True,
+                    "Reading gate refused: " + vault + " cannot read its required pages (" + "; ".join(errors) + "). "
+                    "To fix: repair SCHEMA.md and the pages it names; nothing is written into this vault while they are broken.",
+                    [target],
+                )
+            code, _message = status(vault, pages)
+            if code == 0:
+                continue
+            attest_refusal(vault, pages)
+            return (True, refusal_text(vault, pages), [target])
 
     return (False, "", [])
 
