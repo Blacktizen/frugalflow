@@ -2,6 +2,8 @@ import os
 import sys
 import json
 import subprocess
+import shutil
+import shlex
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import claude_block
@@ -168,7 +170,19 @@ def _doctor(home, claude_dir, ollama_url, lmstudio_url):
 
     # 3 guard.json
     if _guard_ok(home):
-        print("OK guard.json")
+        guard_path = os.path.join(home, "guard.json")
+        try:
+            with open(guard_path, encoding="utf-8") as f:
+                guard_doc = json.load(f)
+            checks = guard_doc.get("checks")
+            if isinstance(checks, list) and "reading_gate" not in checks:
+                fails += 1
+                print("FAIL guard.json checks lack reading_gate: the reading gate is off (" + fix + ")")
+            else:
+                print("OK guard.json")
+        except (OSError, ValueError):
+            fails += 1
+            print("FAIL guard.json cannot be read (" + fix + ")")
     else:
         fails += 1
         print("FAIL guard.json is missing or incomplete (" + fix + ")")
@@ -199,6 +213,57 @@ def _doctor(home, claude_dir, ollama_url, lmstudio_url):
         print("OK status line: FrugalFlow segment in place")
     else:
         print("WARN status line: FrugalFlow segment missing (" + fix + ")")
+
+    # 6c hook interpreter exists
+    settings_path = os.path.join(claude_dir, "settings.json")
+    if os.path.isfile(settings_path):
+        try:
+            with open(settings_path, encoding="utf-8") as f:
+                doc = json.load(f)
+        except (OSError, ValueError):
+            doc = None
+        if isinstance(doc, dict):
+            hooks = doc.get("hooks")
+            if isinstance(hooks, dict):
+                pre = hooks.get("PreToolUse")
+                if isinstance(pre, list):
+                    guard_path = os.path.join(BIN, "guard_hook.py")
+                    for group in pre:
+                        if not isinstance(group, dict):
+                            continue
+                        entries = group.get("hooks")
+                        if not isinstance(entries, list):
+                            continue
+                        for entry in entries:
+                            if not isinstance(entry, dict):
+                                continue
+                            if settings_merge.is_ours(entry.get("command", ""), guard_path):
+                                cmd = entry.get("command", "")
+                                try:
+                                    parts = shlex.split(cmd)
+                                except ValueError:
+                                    parts = []
+                                if parts:
+                                    first = parts[0]
+                                    if os.path.isabs(first):
+                                        if not os.path.exists(first):
+                                            fails += 1
+                                            print("FAIL hook interpreter does not exist: " + first + " (" + fix + ")")
+                                        else:
+                                            print("OK hook interpreter exists: " + first)
+                                    elif first == "frugalflow":
+                                        if shutil.which("frugalflow") is None:
+                                            fails += 1
+                                            print("FAIL hook interpreter does not exist: frugalflow (" + fix + ")")
+                                        else:
+                                            print("OK hook interpreter exists: frugalflow")
+                                    else:
+                                        resolved = shutil.which(first)
+                                        if resolved is None:
+                                            fails += 1
+                                            print("FAIL hook interpreter does not exist: " + first + " (" + fix + ")")
+                                        else:
+                                            print("OK hook interpreter exists: " + first)
 
     # 7 switch
     enabled, mode = _read_switch(home)
