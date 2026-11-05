@@ -195,6 +195,67 @@ def run_e2e():
         except Exception as e:
             report(False, "E2 reading the attestation is not a write", "no exception", str(e))
 
+        # --- E2b: the attestation file is protected everywhere, case-insensitive, via Bash ---
+        try:
+            # Bash printf '{}' > .read""ing.json from vault -> deny
+            cmd = "printf '{}' > .read\"\"ing.json"
+            code9, dec9, reason9 = HOOK(H, CALL("Bash", {"command": cmd}, V))
+            ok = code9 == 0 and dec9 == "deny" and ".reading.json" in reason9
+            report(
+                ok,
+                "E2b Bash concatenated name .read\"\"ing.json",
+                "deny/0/mentions .reading.json",
+                "%s/%s/%r" % (dec9, code9, reason9[:120]),
+            )
+        except Exception as e:
+            report(False, "E2b Bash concatenated name .read\"\"ing.json", "no exception", str(e))
+
+        # Create a subdirectory for the relative path test
+        subdir = os.path.join(V, "sub")
+        os.makedirs(subdir, exist_ok=True)
+
+        try:
+            # Bash cd sub && printf '{}' > ../.reading.json -> deny
+            cmd = "cd sub && printf '{}' > ../.reading.json"
+            code10, dec10, reason10 = HOOK(H, CALL("Bash", {"command": cmd}, V))
+            ok = code10 == 0 and dec10 == "deny" and ".reading.json" in reason10
+            report(
+                ok,
+                "E2b Bash relative path ../.reading.json from subdir",
+                "deny/0/mentions .reading.json",
+                "%s/%s/%r" % (dec10, code10, reason10[:120]),
+            )
+        except Exception as e:
+            report(False, "E2b Bash relative path ../.reading.json from subdir", "no exception", str(e))
+
+        try:
+            # Bash n=reading; printf '{}' > .$n.json -> deny
+            cmd = "n=reading; printf '{}' > .$n.json"
+            code11, dec11, reason11 = HOOK(H, CALL("Bash", {"command": cmd}, V))
+            ok = code11 == 0 and dec11 == "deny" and ".reading.json" in reason11
+            report(
+                ok,
+                "E2b Bash variable expansion .$n.json",
+                "deny/0/mentions .reading.json",
+                "%s/%s/%r" % (dec11, code11, reason11[:120]),
+            )
+        except Exception as e:
+            report(False, "E2b Bash variable expansion .$n.json", "no exception", str(e))
+
+        try:
+            # Bash with case variation .READING.JSON -> deny
+            cmd = "printf '{}' > .READING.JSON"
+            code12, dec12, reason12 = HOOK(H, CALL("Bash", {"command": cmd}, V))
+            ok = code12 == 0 and dec12 == "deny" and ".READING.JSON" in reason12
+            report(
+                ok,
+                "E2b Bash case variation .READING.JSON",
+                "deny/0/mentions .READING.JSON",
+                "%s/%s/%r" % (dec12, code12, reason12[:120]),
+            )
+        except Exception as e:
+            report(False, "E2b Bash case variation .READING.JSON", "no exception", str(e))
+
         # --- E3: a folder without a required-reading block is never touched ---
         try:
             code9, dec9, reason9 = HOOK(H, CALL("Write", {"file_path": os.path.join(P, "notes.md"), "content": PAGE}, P))

@@ -112,6 +112,7 @@ def normal(path, cwd):
     return os.path.realpath(path)
 
 VAULT_MARKERS = ("SCHEMA.md", "overview.md")
+ATTESTATION_NAME = ".reading.json"
 
 def is_vault_journal(path):
     """Return True when path is the journal of a vault: a log.md whose folder holds
@@ -127,6 +128,9 @@ def is_vault_journal(path):
 def is_protected(path, protected, cwd):
     """Return True if path is protected."""
     p = normal(path, cwd)
+    # The reading-gate attestation file is protected regardless of `checks`.
+    if os.path.basename(p).casefold() == ATTESTATION_NAME or os.path.basename(path).casefold() == ATTESTATION_NAME:
+        return True
     for x in protected:
         px = normal(x, cwd)
         if p == px or p.startswith(px + os.sep):
