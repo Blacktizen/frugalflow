@@ -361,14 +361,56 @@ def _check_case_e():
         _cleanup_home(home)
 
 
+def _check_case_f():
+    """Case (f): observe mode, Bash write (tee) with no receipt -> observed:shell_write audit, allow."""
+    home = tempfile.mkdtemp(dir="/tmp")
+    try:
+        _write_settings(home, "audit.jsonl", mode="observe")
+        # Write delegations.jsonl without a receipt for /w/a.py
+        with open(os.path.join(home, "delegations.jsonl"), "w", encoding="utf-8") as f:
+            f.write("")  # empty, no receipt
+
+        tool_call = json.dumps({
+            "tool_name": "Bash",
+            "tool_input": {"command": "tee /w/a.py"}
+        })
+
+        code, stdout, stderr = _run_hook(home, tool_call)
+
+        if code != 0:
+            return False, f"FAIL case (f): expected exit code 0, got {code}"
+
+        # No permissionDecision deny in stdout
+        if "permissionDecision" in stdout and "deny" in stdout:
+            return False, f"FAIL case (f): unexpected deny in stdout: {stdout!r}"
+
+        # Check audit log has at least one line with audit starting with "observed:shell_write"
+        audit_lines = _read_audit_lines(home, "audit.jsonl")
+        found = False
+        for line in audit_lines:
+            audit_val = line.get("audit", "")
+            if audit_val.startswith("observed:shell_write"):
+                found = True
+                break
+
+        if not found:
+            return False, f"FAIL case (f): no audit line with 'observed:shell_write' prefix, audit_lines={audit_lines}"
+
+        return True, "PASS case (f): observe, Bash write no receipt -> audit observed:shell_write, allow"
+
+    finally:
+        _cleanup_home(home)
+
+
 def main():
-    """Run all 5 test cases and report results."""
+    """Run all 6 test cases and report results."""
     cases = [
         ("(a) active, unreadable audit, code write with receipt", _check_case_a),
         ("(b) observe, unreadable audit, code write with receipt", _check_case_b),
         ("(c) active, writable audit, non-code write", _check_case_c),
         ("(d) active, pure Read", _check_case_d),
         ("(e) active, unreadable audit, non-code write", _check_case_e),
+        ("(f) observe, Bash write no receipt", _check_case_f),
     ]
 
     all_passed = True
