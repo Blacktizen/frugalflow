@@ -86,6 +86,11 @@ def protected_paths(home, settings):
         add(name)
     # 2026-11-05: Claude's own settings file is the user's too: the assistant never writes it.
     add(os.path.join("~", ".claude", "settings.json"))
+    # The guard's own code is protected: a write to it would turn the guard off.
+    add(os.path.dirname(os.path.abspath(__file__)))
+    _exe = shutil.which("frugalflow")
+    if _exe:
+        add(os.path.realpath(_exe))
 
     dl = settings.get("delegation_logs", [])
     if isinstance(dl, str):
