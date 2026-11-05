@@ -216,15 +216,19 @@ def run_hook(stdin_text):
             observed_reason = res["reason"]
             res = guard_rules.result("allow", "observed:" + str(res["audit"]), res["targets"], res["reason"])
 
-    if res["decision"] != "deny" and journal_guard is not None:
+    # 2026-11-05: this layer failed open (import error or exception = nothing protected);
+    # it now refuses, like every other check.
+    if res["decision"] != "deny":
         try:
+            if journal_guard is None:
+                raise RuntimeError("journal_guard cannot be imported")
             cwd = payload.get("cwd")
             if not (cwd is not None and isinstance(cwd, str) and cwd):
                 cwd = os.getcwd()
             protected = journal_guard.protected_paths(home, settings)
             touched_paths = journal_guard.touched(tool, inp, protected, cwd)
-        except Exception:
-            touched_paths = []
+        except Exception as e:
+            touched_paths = ["(the protected-files check failed: %s)" % e]
         if touched_paths:
             res = guard_rules.result(
                 "deny",
@@ -234,6 +238,18 @@ def run_hook(stdin_text):
                 + ", ".join(touched_paths)
                 + "). To fix: never touch these files; read them only.",
             )
+
+    # 2026-11-05: the user's settings belong to the user; the assistant never changes them,
+    # whatever the mode (frugalflow off/on/mode/config set... run by the assistant is refused).
+    if res["decision"] != "deny":
+        try:
+            import settings_cli_guard
+            refuse_s, reason_s = settings_cli_guard.verdict(tool, inp)
+        except Exception as e:
+            refuse_s, reason_s = True, ("Guard refused: the settings check failed (%s). "
+                                        "To fix: report this command; nothing passes while the guard fails." % e)
+        if refuse_s:
+            res = guard_rules.result("deny", "settings", [], reason_s)
 
     replaying = os.environ.get("FRUGALFLOW_REPLAY") == "1"
     audit_written = False

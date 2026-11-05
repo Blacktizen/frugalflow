@@ -62,6 +62,9 @@ def _non_code_suffix(dest):
         ext = base
     return ext in OUTPUT_SUFFIXES
 
+SETTINGS_FILES = ("preferences.json", "models.json", "engines.json", "anonymization.json",
+                  "model_notes.json", "memory_declined.json")
+
 def protected_paths(home, settings):
     """Return the list of protected paths."""
     paths = []
@@ -76,6 +79,10 @@ def protected_paths(home, settings):
     add("delegations.jsonl")
     add("guard.json")
     add("blocks")
+    # 2026-11-05: the user's settings are the user's: the assistant never writes them, neither
+    # to tighten nor to loosen (preferences.json held the switch the assistant could turn off).
+    for name in SETTINGS_FILES:
+        add(name)
 
     dl = settings.get("delegation_logs", [])
     if isinstance(dl, str):
@@ -252,7 +259,7 @@ READER_HEADS = {
     "cat", "head", "tail", "less", "more", "wc", "grep", "egrep", "fgrep", "rg",
     "jq", "ls", "stat", "file", "du", "diff", "cmp", "shasum", "sha256sum", "md5",  # lang-ok
     "md5sum", "readlink", "realpath", "basename", "dirname", "test", "[", "echo",
-    "printf",
+    "printf", "cut",
 }
 STRUCT_KW = {"for", "while", "until", "select", "case", "fi", "esac", "done", "in", "{", "}"}
 STRIP_KW = {"then", "else", "elif", "do", "if", "time"}
@@ -754,6 +761,16 @@ def _find_is_reader(args):
         i += 1
     return True
 
+# 2026-11-05: `cd $W && git diff --stat` was refused as a journal write; a read-only
+# git subcommand writes nothing unless it is given an output file.
+GIT_READERS = {"diff", "log", "status", "show", "rev-parse", "blame", "shortlog", "describe", "ls-files"}
+
+def _git_is_reader(args):
+    """Return True for a read-only git subcommand with no output file option."""
+    if not args or args[0] not in GIT_READERS:
+        return False
+    return not any(a == "-o" or a.startswith("--output") for a in args[1:])
+
 def _strict_reader(head, args):
     """Return True when the head is a plain reader, or a reader with read-only options."""
     if head in READER_HEADS:
@@ -764,6 +781,8 @@ def _strict_reader(head, args):
         return _awk_is_reader(args)
     if head == "find":
         return _find_is_reader(args)
+    if head == "git":
+        return _git_is_reader(args)
     return False
 
 def _interp_touches(code, cwd_now, unreadable, protected, cwd, markers):
