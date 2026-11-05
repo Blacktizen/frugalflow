@@ -12,35 +12,110 @@ import session_log
 import r1_rules
 import chain_rules
 
-COMMIT = re.compile(r"\bgit\s+(?:-C\s+\S+\s+)?commit\b")
+# Use GIT_GLOBAL from r1_rules for commit gesture matching
+COMMIT = re.compile(r"\bgit" + r1_rules.GIT_GLOBAL + r"\s+commit\b")
 
 
-def entry_landed(command, entry, response):
-    """Return True if the journal_add call actually landed an entry with the given title."""
+def entry_landed(command, entry, since):
+    """Return True if the journal_add call actually landed an entry with the given title.
+
+    Conditions for at least one --vault directory:
+    - title (--title) exists and since is parsable (ISO, datetime.fromisoformat)
+    - the log.md (find all files named log.md under this directory) has a LAST sealed entry
+      whose header is '## [YYYY-MM-DD HH:MM] <title>' with exactly this title
+    - this last entry is dated after the gesture: its date YYYY-MM-DD HH:MM, converted to
+      local minute, is >= the minute of the since field (same minute accepted)
+    - chain_rules.verify(text) returns ok
+    - any exception returns False
+    The response output is NEVER read. The mtime is not used.
+    """
     try:
-        rel_path = r1_rules.landed_in(response)
-        if not rel_path:
-            return False
         title = r1_rules.title_of(command)
         if not title:
             return False
+
+        # Parse since as ISO datetime
+        try:
+            since_dt = datetime.datetime.fromisoformat(since)
+        except Exception:
+            return False
+
+        # Convert since to local timezone, then floor to minute (naive for comparison with log entry)
+        if since_dt.tzinfo is not None:
+            since_dt = since_dt.astimezone()
+        since_minute = since_dt.replace(second=0, microsecond=0, tzinfo=None)
+
         vaults = r1_rules.log_vaults(command)
         if not vaults:
             return False
+
         cwd = entry.get("cwd", "")
         for vault in vaults:
             vault_path = vault
             if not os.path.isabs(vault_path):
                 vault_path = os.path.normpath(os.path.join(cwd, vault_path))
-            target_file = os.path.join(vault_path, rel_path)
-            if os.path.exists(target_file):
-                with open(target_file, "r") as handle:
-                    content = handle.read()
-                    if title in content:
-                        return True
+
+            # Find all log.md files under this vault
+            log_files = []
+            for root, dirs, files in os.walk(vault_path):
+                for f in files:
+                    if f == "log.md":
+                        log_files.append(os.path.join(root, f))
+
+            if not log_files:
+                continue
+
+            for log_file in log_files:
+                try:
+                    with open(log_file, "r", encoding="utf-8") as handle:
+                        content = handle.read()
+                except Exception:
+                    continue
+
+                # Verify chain
+                ok, n, bad, reason = chain_rules.verify(content)
+                if not ok:
+                    continue
+
+                # Get the last sealed entry
+                entries_list = chain_rules.entries(content)
+                if not entries_list:
+                    continue
+
+                last_entry = entries_list[-1]
+                if last_entry["hash"] is None:
+                    continue
+
+                # Parse the header of the last entry: ## [YYYY-MM-DD HH:MM] <title>
+                body = last_entry["body"]
+                header_match = re.match(r"^## \[(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\] (.+)$", body.split("\n")[0])
+                if not header_match:
+                    continue
+
+                entry_time_str = header_match.group(1)
+                entry_title = header_match.group(2)
+
+                # Check exact title match
+                if entry_title != title:
+                    continue
+
+                # Parse entry time and compare minutes (both naive local time)
+                try:
+                    entry_dt = datetime.datetime.strptime(entry_time_str, "%Y-%m-%d %H:%M")
+                except Exception:
+                    continue
+
+                entry_minute = entry_dt.replace(second=0, microsecond=0)
+                if entry_minute < since_minute:
+                    continue
+
+                # All conditions met
+                return True
+
         return False
     except Exception:
         return False
+
 
 USAGE = "usage: r1_guard.py [--session SESSION] | --notice | --autotest   (no argument: Stop hook mode, reads the hook payload on stdin)"
 
@@ -228,7 +303,6 @@ def autotest():
             valid_vault = os.path.join(base, "valid_vault")
             os.makedirs(os.path.join(valid_vault, "vault"))
             # Write a genesis entry to log.md so journal_add.py can append to it
-            import chain_rules
             genesis_entry = chain_rules.render(chain_rules.GENESIS, "2026-09-26 00:00", "setup", [("Decision", "created")])
             with open(os.path.join(valid_vault, "vault", "log.md"), "w") as handle:
                 handle.write("# Log\n\n" + genesis_entry)
@@ -269,6 +343,54 @@ def autotest():
             else:
                 results.append(("FAIL", "test5 notice/bogus/bad-json",
                                 "5a:" + str(proc_5a.returncode) + " 5b:" + str(proc_5b.returncode) + " 5c:" + str(proc_5c.returncode)))
+
+        # Test 6: entry_landed with explicit true/false scenarios
+        # Create a vault with a genesis entry and a sealed entry
+        test_vault = os.path.join(base, "test_vault")
+        os.makedirs(os.path.join(test_vault, "vault"))
+        genesis_entry = chain_rules.render(chain_rules.GENESIS, "2026-09-26 00:00", "setup", [("Decision", "created")])
+        entry1 = chain_rules.render(chain_rules.entry_hash(chain_rules.GENESIS, genesis_entry.split("<!--")[0]), "2026-09-26 10:00", "my title", [("Decision", "d")])
+        with open(os.path.join(test_vault, "vault", "log.md"), "w") as handle:
+            handle.write("# Log\n\n" + genesis_entry + "\n" + entry1)
+
+        # entry_landed should return True for matching title and time
+        test_entry = {"ts": "2026-09-26T09:59:00+02:00", "cwd": base}
+        test_command = "python3 journal_add.py --vault " + os.path.join(test_vault, "vault") + " --title \"my title\" --field Decision=d"
+        r6a = entry_landed(test_command, test_entry, "2026-09-26T09:59:00+02:00")
+
+        # entry_landed should return False for non-matching title
+        test_command2 = "python3 journal_add.py --vault " + os.path.join(test_vault, "vault") + " --title \"other title\" --field Decision=d"
+        r6b = entry_landed(test_command2, test_entry, "2026-09-26T09:59:00+02:00")
+
+        # entry_landed should return False for time before gesture
+        test_entry3 = {"ts": "2026-09-26T10:01:00+02:00", "cwd": base}
+        r6c = entry_landed(test_command, test_entry3, "2026-09-26T10:01:00+02:00")
+
+        if r6a is True and r6b is False and r6c is False:
+            results.append(("PASS", "test6 entry_landed true/false/false", "True/False/False"))
+        else:
+            results.append(("FAIL", "test6 entry_landed true/false/false", "got " + str(r6a) + "/" + str(r6b) + "/" + str(r6c)))
+
+        # Test 7: git global options in exempt (commit gesture recognition)
+        # Wait to ensure previous commits are outside the 5-second time window
+        import time
+        time.sleep(6)
+        # These should be recognized as commit gestures (exempt checks trace_only)
+        with open(os.path.join(repo, "vault", "log.md"), "w") as handle:
+            handle.write("y\n")
+        subprocess.run(["git", "add", "vault/log.md"], cwd=repo, check=True, env=env)
+        subprocess.run(["git", "commit", "-q", "-m", "trace2"], cwd=repo, check=True, env=env)
+
+        r7a = exempt("git -c commit.gpgsign=false commit -m trace", before("a7a", "git -c commit.gpgsign=false commit -m trace", repo))
+        r7b = exempt("git --no-pager commit -m trace", before("a7b", "git --no-pager commit -m trace", repo))
+        # This should NOT be a commit gesture
+        r7c = exempt("git -c k=v status", before("a7c", "git -c k=v status", repo))
+
+        if r7a is True and r7b is True and r7c is False:
+            results.append(("PASS", "test7 exempt git globals", "True/True/False"))
+        else:
+            results.append(("FAIL", "test7 exempt git globals", "got " + str(r7a) + "/" + str(r7b) + "/" + str(r7c)))
+
     finally:
         for status, expected, got in results:
             print(status + " " + expected + " [" + got + "]")

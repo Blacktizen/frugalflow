@@ -61,7 +61,7 @@ def health(session, entries, vault=None):
     results = []
     code, msg = session_log.check(session)
     results.append(("chain", "" if code == 0 else msg))
-    missing = r1_rules.missing_log(entries, r1_guard.exempt)
+    missing = r1_rules.missing_log(entries, r1_guard.exempt, landed=r1_guard.entry_landed)
     results.append(("r1", "" if not missing else str(len(missing)) + " gesture(s) without a log entry"))
     open_seqs = notes_rules.decisions_without_verdict(entries)
     results.append(("verdicts", "" if not open_seqs else "no verdict for decisions " + ", ".join(str(seq) for seq in open_seqs)))
