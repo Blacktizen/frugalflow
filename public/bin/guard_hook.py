@@ -280,8 +280,8 @@ def run_hook(stdin_text):
     if not isinstance(inp, dict):
         inp = {}
 
-    # Disarmed mode (FRUGALFLOW_GUARD=0 or settings.active=False)
-    if os.environ.get("FRUGALFLOW_GUARD") == "0" or settings.get("active", True) is False:
+    # Disarmed mode (FRUGALFLOW_GUARD=0 with allow_env_disarm true, or settings.active=False)
+    if (os.environ.get("FRUGALFLOW_GUARD") == "0" and settings.get("allow_env_disarm", False) is True) or settings.get("active", True) is False:
         # In disarmed mode, run always-on checks (journal, settings) with "disarmed" label for writes
         res = guard_rules.result("allow", "disarmed" if is_write_tool(tool) else None, [], "")
         res = always_on_checks(res, tool, inp, payload, home, settings)
@@ -632,6 +632,9 @@ def _autotest():
                     got = f"parse_h3: {e}"
 
         _SETUP(h, "")
+        # The test with FRUGALFLOW_GUARD=0 needs allow_env_disarm=true in guard.json
+        with open(os.path.join(h, "guard.json"), "w", encoding="utf-8") as f:
+            json.dump({**SETTINGS, "allow_env_disarm": True}, f)
         code, stdout = _RUN(
             h,
             CALL("Write", {"file_path": "/w/b.py", "content": BIG}),

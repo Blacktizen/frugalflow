@@ -48,6 +48,8 @@ def run_hook(home_user, home_ff, work_dir, payload, env_extra=None, active=None,
     guard_json = dict(GUARD_SETTINGS)
     if active is not None:
         guard_json["active"] = active
+    if guard_env:
+        guard_json["allow_env_disarm"] = True
     with open(os.path.join(home_ff, "guard.json"), "w", encoding="utf-8") as f:
         json.dump(guard_json, f)
 
