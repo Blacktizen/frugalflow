@@ -212,9 +212,37 @@ def judge_segment(seg, config):
                     reason = "archive"
 
         elif head == "unzip":
-            unknown = True
-            if reason == "":
-                reason = "archive"
+            # unzip is a proven READ only if:
+            # (a) all options consist solely of letters from {l,v,t,Z,q,z,h} (e.g. -l, -lq, -Z, -v, -t)
+            # (b) no -d or -o option present
+            # (c) at least one non-option argument (doesn't start with "-")
+            # (d) at least one proven-read option is present (-l, -t, -Z, -v)
+            # In all other cases, keep the old verdict: unknown = True, reason "archive"
+            opts_letters = set()
+            has_d_or_o = False
+            nonopt_count = 0
+            has_proven_read_opt = False
+            for a in args:
+                if a.startswith("-") and not a.startswith("--"):
+                    # short options like -l, -lq, -Z, etc.
+                    for ch in a[1:]:
+                        opts_letters.add(ch)
+                    if "d" in a[1:] or "o" in a[1:]:
+                        has_d_or_o = True
+                    if any(ch in "ltZv" for ch in a[1:]):
+                        has_proven_read_opt = True
+                elif a.startswith("--"):
+                    # long options: treat as unknown unless explicitly allowed
+                    # --help, --version etc. are not in our proven-read list
+                    has_d_or_o = True  # conservative: long opts make it unknown
+                else:
+                    nonopt_count += 1
+            allowed_letters = {"l", "v", "t", "Z", "q", "z", "h"}
+            proven_read = (opts_letters <= allowed_letters) and (not has_d_or_o) and (nonopt_count >= 1) and has_proven_read_opt
+            if not proven_read:
+                unknown = True
+                if reason == "":
+                    reason = "archive"
 
         elif head == "patch":
             unknown = True
