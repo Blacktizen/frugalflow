@@ -13,6 +13,17 @@ def build_env():
         if not k.startswith("GIT_"):
             env[k] = v
     env["PYTHONDONTWRITEBYTECODE"] = "1"
+
+    # Filter PATH: remove any directory containing an executable named 'frugalflow'
+    if "PATH" in env:
+        path_entries = env["PATH"].split(os.pathsep)
+        filtered = []
+        for entry in path_entries:
+            frugalflow_path = os.path.join(entry, "frugalflow")
+            if not (os.path.isfile(frugalflow_path) and os.access(frugalflow_path, os.X_OK)):
+                filtered.append(entry)
+        env["PATH"] = os.pathsep.join(filtered)
+
     return env
 
 
