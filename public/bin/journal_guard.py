@@ -4,6 +4,7 @@ import shlex
 import sys
 import subprocess
 import tempfile
+import unicodedata
 import shutil
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -111,13 +112,33 @@ def normal(path, cwd):
         path = os.path.join(cwd, path)
     return os.path.realpath(path)
 
+def fold(path):
+    """Comparison key of a path: realpath, Unicode NFC, casefold. APFS and HFS+ match names in any case,
+    so comparing realpaths as strings is not enough."""
+    return unicodedata.normalize("NFC", os.path.realpath(path)).casefold()
+
+def same_path(a, b):
+    """True when a and b name the same file: same key, or, when both exist, the same device and inode."""
+    if fold(a) == fold(b):
+        return True
+    try:
+        sa = os.stat(a)
+        sb = os.stat(b)
+    except OSError:
+        return False
+    return (sa.st_dev, sa.st_ino) == (sb.st_dev, sb.st_ino)
+
+def under(p, px):
+    """True when p is the protected path px or sits inside it, judged on the comparison keys."""
+    return same_path(p, px) or fold(p).startswith(fold(px) + os.sep)
+
 VAULT_MARKERS = ("SCHEMA.md", "overview.md")
 
 def is_vault_journal(path):
     """Return True when path is the journal of a vault: a log.md whose folder holds
     a SCHEMA.md or an overview.md beside it."""
     try:
-        if os.path.basename(path) != "log.md":
+        if unicodedata.normalize("NFC", os.path.basename(path)).casefold() != "log.md":
             return False
         d = os.path.dirname(path)
         return any(os.path.isfile(os.path.join(d, m)) for m in VAULT_MARKERS)
@@ -128,8 +149,7 @@ def is_protected(path, protected, cwd):
     """Return True if path is protected."""
     p = normal(path, cwd)
     for x in protected:
-        px = normal(x, cwd)
-        if p == px or p.startswith(px + os.sep):
+        if under(p, normal(x, cwd)):
             return True
     # 2026-11-05: a vault journal is protected wherever the vault sits, on the filesystem:
     # a log.md beside a SCHEMA.md or an overview.md. Reads stay free; only writes touch it.
@@ -319,7 +339,9 @@ def _pattern_zone(pre, protected, cwd):
     p = os.path.normpath(p)
     for x in protected:
         px = normal(x, cwd)
-        if p == px or px.startswith(p) or p.startswith(px):
+        kp = unicodedata.normalize("NFC", p).casefold()
+        kx = unicodedata.normalize("NFC", px).casefold()
+        if kp == kx or kx.startswith(kp) or kp.startswith(kx):
             return True
     return False
 
@@ -351,13 +373,13 @@ def _zone_cwd(d, protected, cwd):
         pxs = [normal(x, cwd) for x in protected]
         if not pxs:
             return False
-        in_zone = any(pd == px or pd.startswith(px + os.sep) for px in pxs)
+        in_zone = any(under(pd, px) for px in pxs)
         if in_zone:
             return True
-        if not any(px.startswith(pd + os.sep) for px in pxs):
+        if not any(fold(px).startswith(fold(pd) + os.sep) for px in pxs):
             return False
         home = os.path.expanduser("~")
-        return pd == home or pd.startswith(home + os.sep)
+        return fold(pd) == fold(home) or fold(pd).startswith(fold(home) + os.sep)
     except Exception:
         return True
 
@@ -366,7 +388,7 @@ def _zone_rel(path, protected, cwd):
     p = normal(path, cwd)
     for x in protected:
         px = normal(x, cwd)
-        if p == px or p.startswith(px + os.sep) or px.startswith(p + os.sep):
+        if under(p, px) or fold(px).startswith(fold(p) + os.sep):
             return True
     # Vault journals (log.md beside SCHEMA.md or overview.md) are protected
     # wherever they sit on the filesystem. Only exact match counts; a parent
@@ -516,7 +538,7 @@ def _reaches_zone(p, protected, cwd):
     pp = normal(p, cwd)
     for x in protected:
         px = normal(x, cwd)
-        if pp == px or pp.startswith(px + os.sep):
+        if under(pp, px):
             return True
     # Vault journals (log.md beside SCHEMA.md or overview.md) are protected
     # wherever they sit on the filesystem.
@@ -592,7 +614,7 @@ def _in_zone(d, protected, cwd):
         pd = os.path.realpath(_expand_tilde(d))
         for x in protected:
             px = normal(x, cwd)
-            if pd == px or pd.startswith(px + os.sep):
+            if under(pd, px):
                 return True
         return False
     except Exception:
@@ -1176,7 +1198,7 @@ def touched(tool, tool_input, protected, cwd, depth=0):
                     px = os.path.realpath(os.path.expanduser(x))
                 except Exception:
                     continue
-                if p != px and px.startswith(p + os.sep):
+                if fold(p) != fold(px) and fold(px).startswith(fold(p) + os.sep):
                     return True
             return False
 

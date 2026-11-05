@@ -194,7 +194,7 @@ def bash_attestations(tool_input, cwd):
         attest = os.path.join(vault, ATTEST)
         # journal_guard answers for the whole command: redirections, tee, sed -i, inline code, cd tracking.
         for touched in journal_guard.touched("Bash", tool_input, [attest], cwd):
-            if absolute(touched, cwd) == absolute(attest, cwd):
+            if journal_guard.same_path(absolute(touched, cwd), absolute(attest, cwd)):
                 result.append(attest)
                 break
     return result
@@ -212,7 +212,7 @@ def check(tool_name, tool_input, config, ctx):
         if vault is None:
             return (False, "", [])
         attest = os.path.join(vault, ATTEST)
-        if absolute(path, cwd) == absolute(attest, cwd):
+        if journal_guard.same_path(absolute(path, cwd), absolute(attest, cwd)):
             return (True, HAND_WRITE, [attest])
         pages, errors = load(vault)
         if errors:

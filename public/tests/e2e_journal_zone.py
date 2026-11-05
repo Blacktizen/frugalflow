@@ -165,9 +165,73 @@ def proof_e2():
         shutil.rmtree(vault, ignore_errors=True)
 
 
+def proof_e3_casse():
+    """A protected file named in mixed case is refused like its lowercase name: the zone
+    compares names without case. Witnesses keep the zone from widening: a same-named file
+    in a throwaway work folder outside the home stays free, and the exact lowercase name
+    stays refused."""
+    home = new_home()
+    vault = new_vault()
+    work = tempfile.mkdtemp(prefix="ff_zone_work_", dir="/tmp")
+    try:
+        cdir = os.path.join(home, ".claude")
+        os.makedirs(cdir, exist_ok=True)
+        with open(os.path.join(cdir, "settings.json"), "w", encoding="utf-8") as f:
+            f.write(SETTINGS_TEXT)
+
+        # (label, tool, tool_input, cwd, expected decision)
+        cases = [
+            ("Write Preferences.json", "Write",
+             {"file_path": os.path.join(home, "Preferences.json"), "content": "{}"}, home, "deny"),
+            ("Write GUARD.json", "Write",
+             {"file_path": os.path.join(home, "GUARD.json"), "content": "{}"}, home, "deny"),
+            ("Edit GUARD.json", "Edit",
+             {"file_path": os.path.join(home, "GUARD.json"),
+              "old_string": "allow", "new_string": "deny"}, home, "deny"),
+            ("Write AUDIT.jsonl", "Write",
+             {"file_path": os.path.join(home, "AUDIT.jsonl"), "content": "x\n"}, home, "deny"),
+            ("MultiEdit Models-mixed", "MultiEdit",
+             {"file_path": os.path.join(home, "Mo" + "De" + "Ls.json"),  # lang-ok: De is a fragment of MoDeLs.json, not French
+              "edits": [{"old_string": "a", "new_string": "b"}]}, home, "deny"),
+            ("Write Delegations.jsonl", "Write",
+             {"file_path": os.path.join(home, "Delegations.jsonl"), "content": "x\n"}, home, "deny"),
+            ("Write .claude/Settings.json", "Write",
+             {"file_path": os.path.join(cdir, "Settings.json"), "content": "{}"}, home, "deny"),
+            ("Write vault LOG.md", "Write",
+             {"file_path": os.path.join(vault, "LOG.md"), "content": "x\n"}, home, "deny"),
+            ("Bash printf PREFERENCES.json", "Bash",
+             {"command": "printf '{}' > " + os.path.join(home, "PREFERENCES.json")}, home, "deny"),
+            ("Bash echo Delegations.jsonl", "Bash",
+             {"command": "echo x >> " + os.path.join(home, "Delegations.jsonl")}, home, "deny"),
+            ("Write workdir Preferences.json", "Write",
+             {"file_path": os.path.join(work, "Preferences.json"), "content": "{}"}, work, "allow"),
+            ("Write preferences.json lowercase", "Write",
+             {"file_path": os.path.join(home, "preferences.json"), "content": "{}"}, home, "deny"),
+        ]
+
+        results = []
+        ok_all = True
+        for label, tool, tool_input, cwd, expect in cases:
+            code, decision, reason = HOOK_CALL(home, tool, tool_input, cwd)
+            seen = decision if code == 0 else "code=" + str(code)
+            if not (code == 0 and decision == expect):
+                ok_all = False
+                seen += "/code=" + str(code) + "/reason=" + repr(reason[:120])
+            results.append(label + "=" + seen)
+
+        expected = ("12 cases as expected: 10 mixed-case denies, 1 allow in a work folder "
+                    "outside the home, 1 lowercase deny")
+        got = "; ".join(results)
+        return (ok_all, expected, got)
+    finally:
+        shutil.rmtree(home, ignore_errors=True)
+        shutil.rmtree(vault, ignore_errors=True)
+        shutil.rmtree(work, ignore_errors=True)
+
+
 def run_e2e():
     fail_k = 0
-    for num, proof in ((1, proof_e1), (2, proof_e2)):
+    for num, proof in ((1, proof_e1), (2, proof_e2), (3, proof_e3_casse)):
         try:
             ok, expected, got = proof()
         except Exception as e:
@@ -179,7 +243,7 @@ def run_e2e():
 
 
 def label_of(num):
-    return {1: "zone denies writes, allows reads", 2: "journal_add gesture"}.get(num, "")
+    return {1: "zone denies writes, allows reads", 2: "journal_add gesture", 3: "mixed-case refused"}.get(num, "")
 
 
 def main():
