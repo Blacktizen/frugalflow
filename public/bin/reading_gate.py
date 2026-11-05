@@ -255,6 +255,9 @@ def check(tool_name, tool_input, config, ctx):
                     )
                 code, _message = status(vault, pages)
                 if code != 0:
+                    # refused once, like a named write: the refusal delivers the
+                    # lines, so the next gesture passes (no endless loop).
+                    attest_refusal(vault, pages)
                     return (True, refusal_text(vault, pages), [target])
                 continue
             vault = gated_vault(target, cwd)

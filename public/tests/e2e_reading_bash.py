@@ -211,14 +211,14 @@ def run_e2e():
         except Exception as e:
             report(False, "E8 echo > .reading.json (cwd = vault)", "no exception", str(e))
 
-        # --- Témoin: the Write tool path is untouched ---
+        # --- Control: the Write tool path is untouched ---
         V7 = new_vault()
         try:
             code, dec, reason = HOOK(H, CALL("Write", {"file_path": os.path.join(V7, "notes.md"), "content": PAGE}, V7))
             ok = deny_ok(code, dec, reason)
-            report(ok, "Témoin Write to <vault>/notes.md", "deny/0/a bearing line in the reason/'To fix:'", "%s/%s/%r" % (dec, code, reason[:120]))
+            report(ok, "Control: Write to <vault>/notes.md", "deny/0/a bearing line in the reason/'To fix:'", "%s/%s/%r" % (dec, code, reason[:120]))
         except Exception as e:
-            report(False, "Témoin Write to <vault>/notes.md", "no exception", str(e))
+            report(False, "Control: Write to <vault>/notes.md", "no exception", str(e))
 
     finally:
         for d in dirs:
