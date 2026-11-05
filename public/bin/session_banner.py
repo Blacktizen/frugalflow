@@ -7,7 +7,7 @@ import subprocess
 
 BANNER_TEMPLATE = (
     "FrugalFlow is {status} (mode: {mode}). Settings: "
-    "`frugalflow config` · health check: `frugalflow doctor`"
+    "`frugalflow config` \u00b7 health check: `frugalflow doctor`"
 )
 
 PROJECT_SUFFIXES = frozenset(

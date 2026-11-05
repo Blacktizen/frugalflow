@@ -236,6 +236,8 @@ def autotest_run(runner_path):
 
     # Test 5: PATH isolation - frugalflow in PATH should be hidden, other tools (git) preserved
     tmp = tempfile.mkdtemp()
+    path_temps = []
+    skipped = 0
     try:
         # Create a fake frugalflow that exits 99
         ff_path = os.path.join(tmp, "frugalflow")
@@ -246,14 +248,15 @@ def autotest_run(runner_path):
         # Create a symlink to real git
         git_real = shutil.which("git")
         if not git_real:
-            # If git not found, this test can't run properly
-            print("PASS test5 path isolation: skipped (git not found)")
+            # If git not found, this test can't run properly: skip, neither pass nor fail
+            skipped = 1
+            print("SKIP test5 path isolation: skipped (git not found)")
         else:
             os.symlink(git_real, os.path.join(tmp, "git"))
 
             # Build env with our temp dir prepended to PATH
             test_path = tmp + os.pathsep + os.environ.get("PATH", "")
-            env, _ = build_env(path_override=test_path)
+            env, path_temps = build_env(path_override=test_path)
 
             # Check that frugalflow is hidden but git is found
             ff_found = shutil.which("frugalflow", path=env["PATH"])
@@ -267,8 +270,10 @@ def autotest_run(runner_path):
                     ff_found is not None, git_found is not None))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+        for d in path_temps:
+            shutil.rmtree(d, ignore_errors=True)
 
-    total = 5
+    total = 5 - skipped
     print("AUTOTEST {}/{}".format(total - failures, total))
     return 0 if failures == 0 else 1
 
