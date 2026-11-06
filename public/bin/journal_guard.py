@@ -10,7 +10,7 @@ import shutil
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 JOURNAL_EXTS = [".jsonl", ".json", ".log"]
-TOUCHING_HEADS = {"rm", "unlink", "truncate", "shred", "mv", "ln", "chflags", "chmod", "chown", "rsync", "install"}
+TOUCHING_HEADS = {"rm", "unlink", "truncate", "shred", "mv", "ln", "chflags", "chmod", "chown", "rsync", "install", "cp"}
 FILE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 
 # a literal output-file name: a write destination that ends with one of
@@ -142,6 +142,25 @@ ATTESTATION_NAME = ".reading.json"
 
 CLAUDE_SETTINGS_NAMES = ("settings.json", "settings.local.json")
 
+# Container folders: a dependency tree, a virtualenv or a tool cache is never a
+# vault, so the descent of tree_holds_protected never enters one.
+TREE_SKIP_DIRS = (".git", ".mypy_cache", ".pytest_cache", ".tox", ".venv",
+                  "__pycache__", "node_modules", "venv")
+
+# C3: a file is a vault marker when it is a SCHEMA.md or overview.md
+# that has a log.md in the same folder (sibling).
+def is_vault_marker(path):
+    """Return True when path is a SCHEMA.md or overview.md that has a log.md sibling."""
+    try:
+        base = unicodedata.normalize("NFC", os.path.basename(path)).casefold()
+        if base not in ("schema.md", "overview.md"):
+            return False
+        d = os.path.dirname(path)
+        log_path = os.path.join(d, "log.md")
+        return os.path.isfile(log_path)
+    except Exception:
+        return False
+
 def is_claude_settings(path):
     """True for a Claude Code settings file directly in a .claude folder (any project),
     and for any file under a .githooks folder. Belongs to the user."""
@@ -158,15 +177,110 @@ def is_claude_settings(path):
 
 
 def is_vault_journal(path):
-    """Return True when path is the journal of a vault: a log.md whose folder holds
-    a SCHEMA.md or an overview.md beside it."""
+    """Return True when path is the journal of a vault: a log.md whose folder
+    OR AN ANCESTOR contains a SCHEMA.md or an overview.md. The walk up stops
+    before the root / and before the personal folder: neither is ever a vault. (C7)"""
     try:
         if unicodedata.normalize("NFC", os.path.basename(path)).casefold() != "log.md":
             return False
         d = os.path.dirname(path)
-        return any(os.path.isfile(os.path.join(d, m)) for m in VAULT_MARKERS)
+        # The root and the personal folder never count as a vault: stop before them.
+        home = os.path.expanduser("~")
+        stop = {os.sep, home, os.path.realpath(home)}
+        while d:
+            if d in stop:
+                break
+            if any(os.path.isfile(os.path.join(d, m)) for m in VAULT_MARKERS):
+                return True
+            parent = os.path.dirname(d)
+            if parent == d:  # reached root
+                break
+            d = parent
+        return False
     except Exception:
         return False
+
+
+# C2/C9: tree_holds_protected - returns True if directory d (or any descendant)
+# contains a protected file. Used for mv/rm/cp-R/rsync/ln source checking.
+def tree_holds_protected(d, protected, cwd):
+    """Return True if directory d contains (at any depth) a protected file.
+
+    Protected files:
+    - settings.json or settings.local.json directly in a .claude folder
+    - any file under a .githooks folder
+    - a vault journal (log.md with SCHEMA.md/overview.md in same or ancestor folder)
+    - a vault marker (SCHEMA.md/overview.md with log.md sibling) (C3)
+    - .reading.json
+    - any path from the protected list
+    A directory named .claude or .githooks is itself refused as a source.
+
+    Returns False if d is not a directory or is a symlink.
+    Walks with os.walk, returns True at first protected file.
+    The descent never enters a container folder (TREE_SKIP_DIRS): a dependency
+    tree, a virtualenv or a tool cache is not a vault; a walked root named so
+    is not one either.
+    Cap of 20000 entries beyond which returns True (fail closed).
+    Any exception returns True (fail closed)."""
+    try:
+        # Not a directory or is a symlink -> not a tree to check
+        if not os.path.isdir(d) or os.path.islink(d):
+            return False
+
+        # Directory named .claude or .githooks is itself protected as a source
+        base = os.path.basename(d).casefold()
+        if base in (".claude", ".githooks"):
+            return True
+
+        # A container folder is never a vault, not even as the walked root
+        if base in TREE_SKIP_DIRS:
+            return False
+
+        # Normalize protected paths once
+        protected_norm = [normal(x, cwd) for x in protected]
+
+        count = 0
+        for root, dirs, files in os.walk(d):
+            # Check directory names for .claude/.githooks
+            for dirname in dirs:
+                if dirname.casefold() in (".claude", ".githooks"):
+                    return True
+
+            # Never descend into a container folder
+            dirs[:] = [x for x in dirs if x.casefold() not in TREE_SKIP_DIRS]
+
+            for fname in files:
+                count += 1
+                if count > 20000:
+                    return True  # fail closed
+
+                fpath = os.path.join(root, fname)
+                fpath_norm = normal(fpath, cwd)
+
+                # Check against protected list paths
+                for px in protected_norm:
+                    if under(fpath_norm, px):
+                        return True
+
+                # Check for vault journal (log.md with marker in same or ancestor folder)
+                if is_vault_journal(fpath_norm):
+                    return True
+
+                # Check for vault marker (SCHEMA.md/overview.md with log.md sibling) (C3)
+                if is_vault_marker(fpath_norm):
+                    return True
+
+                # Check for .reading.json
+                if os.path.basename(fpath_norm).casefold() == ATTESTATION_NAME:
+                    return True
+
+                # Check for Claude settings files in .claude folder
+                if is_claude_settings(fpath_norm):
+                    return True
+
+        return False
+    except Exception:
+        return True  # fail closed
 
 def is_protected(path, protected, cwd):
     """Return True if path is protected."""
@@ -180,7 +294,8 @@ def is_protected(path, protected, cwd):
     # 2026-11-05: a vault journal is protected wherever the vault sits, on the filesystem:
     # a log.md beside a SCHEMA.md or an overview.md. Reads stay free; only writes touch it.
     # 2026-11-05: Claude settings files and .githooks files are the user's too.
-    return is_vault_journal(p) or is_claude_settings(p)
+    # C3: SCHEMA.md and overview.md are protected when a log.md is in their folder.
+    return is_vault_journal(p) or is_vault_marker(p) or is_claude_settings(p)
 
 WRITE_DEST_HEADS = {"cp", "tee", "ln", "install", "rsync", "mv"}
 
@@ -1261,18 +1376,15 @@ def touched(tool, tool_input, protected, cwd, depth=0, collect=None):
         REMOVING_HEADS = {"rm", "unlink", "truncate", "shred"}
 
         def _parent_zone(path):
+            """C2/C9: return True if path is a directory that contains a protected file."""
             try:
-                p = os.path.realpath(os.path.expanduser(path))
+                p = os.path.expanduser(path)
+                if not os.path.isabs(p):
+                    p = os.path.join(cwd_local, p)
+                p = os.path.realpath(p)
             except Exception:
                 return False
-            for x in protected:
-                try:
-                    px = os.path.realpath(os.path.expanduser(x))
-                except Exception:
-                    continue
-                if fold(p) != fold(px) and fold(px).startswith(fold(p) + os.sep):
-                    return True
-            return False
+            return os.path.isdir(p) and tree_holds_protected(p, protected, cwd)
 
         def scan(segs_list, bodies_list):
             # one pass of the touch scan over a list of segments,
@@ -1348,8 +1460,47 @@ def touched(tool, tool_input, protected, cwd, depth=0, collect=None):
                     unreadable_local = True
                     continue
                 if head in TOUCHING_HEADS:
-                    for w in words[1:]:
-                        if not w.startswith("-"):
+                    # C2/C9: distinguish sources from destinations
+                    nonopt = [w for w in words[1:] if not w.startswith("-")]
+                    if head in REMOVING_HEADS:
+                        # rm, unlink, truncate, shred: all non-option args are sources (parent=True)
+                        for w in nonopt:
+                            judge(w, parent=True)
+                    elif head in ("mv", "rsync", "ln"):
+                        # mv, rsync, ln: all but the last non-option arg are sources (parent=True)
+                        # the last is the destination (parent=False)
+                        for i, w in enumerate(nonopt):
+                            is_source = (i < len(nonopt) - 1)
+                            judge(w, parent=is_source)
+                    elif head == "cp":
+                        # cp: check for -R, -r, -a, --recursive
+                        is_recursive = any(a in ("-R", "-r", "-a", "--recursive") for a in words[1:] if a.startswith("-"))
+                        if is_recursive:
+                            # cp -R: all but the last non-option arg are sources, judged by tree_holds_protected only
+                            for i, w in enumerate(nonopt):
+                                if i < len(nonopt) - 1:
+                                    # Source: check if directory contains protected files
+                                    try:
+                                        p = os.path.expanduser(w)
+                                        if not os.path.isabs(p):
+                                            p = os.path.join(cwd_local, p)
+                                        p = os.path.realpath(p)
+                                        if os.path.isdir(p) and tree_holds_protected(p, protected, cwd):
+                                            if w not in result:
+                                                result.append(w)
+                                    except Exception:
+                                        if w not in result:
+                                            result.append(w)
+                                else:
+                                    # Destination: judge normally (not as parent)
+                                    judge(w, parent=False)
+                        else:
+                            # cp without -R: sources are read-only, only judge destination
+                            if nonopt:
+                                judge(nonopt[-1], parent=False)
+                    else:
+                        # Other touching heads (chflags, chmod, chown, install): all non-option args are targets
+                        for w in nonopt:
                             judge(w, parent=head in REMOVING_HEADS)
                 if head in ("sed", "perl"):
                     args = words[1:]
