@@ -9,8 +9,9 @@ import json
 
 def build_env(path_override=None):
     env = {}
+    # Drop GIT_* and CLAUDECODE: the suites must behave the same inside and outside Claude Code.
     for k, v in os.environ.items():
-        if not k.startswith("GIT_"):
+        if not k.startswith("GIT_") and k != "CLAUDECODE":
             env[k] = v
     env["PYTHONDONTWRITEBYTECODE"] = "1"
 
@@ -21,6 +22,12 @@ def build_env(path_override=None):
     path_dirs = path_str.split(os.pathsep)
     new_path_dirs = []
     temp_dirs_to_cleanup = []
+
+    # Point HOME at a throwaway dir: no suite may ever write the real settings
+    # of the person who runs it.
+    home_dir = tempfile.mkdtemp()
+    temp_dirs_to_cleanup.append(home_dir)
+    env["HOME"] = home_dir
 
     for d in path_dirs:
         frugalflow_path = os.path.join(d, "frugalflow")
