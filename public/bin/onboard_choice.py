@@ -4,6 +4,9 @@ import subprocess
 import sys
 import tempfile
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import config_rules
+
 NOTICE = (
     "NAME      onboard_choice.py - the decisions of the guided setup: "
     "which engines to offer, which one is chosen, how it lands in models.json.\n"
@@ -14,7 +17,10 @@ NOTICE = (
     "PITFALLS  2026-10-25 an engine typed without /v1 was written as is "
     "and every call failed; endpoints are now normalized to end with /v1.\n"
     "          2026-10-25 a key found in the environment is only named "
-    "in models.json; its value is never read here."
+    "in models.json; its value is never read here.\n"
+    "          2026-11-06 an OpenAI endpoint typed without a key landed in local-reader "
+    "even when its host was remote; it now lands in local-reader only when the host is "
+    "local (or named in private_hosts), else in remote-coder."
 )
 
 
@@ -105,17 +111,22 @@ def apply_choice(doc, choice):
                 m["name"] = choice["model"]
     elif kind == "openai":
         key_env = choice.get("key_env", "")
-        if key_env == "":
-            m = find_model("local-reader")
+        endpoint = choice.get("endpoint", "")
+        private_hosts = doc.get("private_hosts")
+        if not isinstance(private_hosts, list):
+            private_hosts = []
+        if key_env != "" or not config_rules.host_is_local(endpoint, private_hosts):
+            m = find_model("remote-coder")
             if m is not None:
-                m["endpoint"] = choice.get("endpoint", "")
+                m["endpoint"] = endpoint
+                if key_env != "":
+                    m["key_env"] = key_env
                 if choice.get("model", "") != "":
                     m["name"] = choice["model"]
         else:
-            m = find_model("remote-coder")
+            m = find_model("local-reader")
             if m is not None:
-                m["endpoint"] = choice.get("endpoint", "")
-                m["key_env"] = key_env
+                m["endpoint"] = endpoint
                 if choice.get("model", "") != "":
                     m["name"] = choice["model"]
     elif kind == "key":
@@ -289,8 +300,52 @@ def _run_autotest():
     else:
         print("FAIL 5 expected=apply_choice+exit2 got=mismatch")
 
-    print("AUTOTEST " + str(n_pass) + "/5")
-    return 0 if n_pass == 5 else 1
+    # --- Test6: an OpenAI endpoint without a key follows its host ---
+    ok6 = True
+
+    # (a) remote host: local-reader untouched, the endpoint lands in remote-coder
+    ch6a = {"kind": "openai", "endpoint": "https://api.openai.com/v1",
+            "model": "gpt-x", "key_env": ""}
+    r6a = apply_choice(DOC, ch6a)
+    if r6a["models"][0] != DOC["models"][0]:
+        ok6 = False
+    if r6a["models"][1]["endpoint"] != "https://api.openai.com/v1":
+        ok6 = False
+    if r6a["models"][1]["name"] != "gpt-x":
+        ok6 = False
+    if r6a["models"][1]["key_env"] != "FRUGALFLOW_REMOTE_KEY":
+        ok6 = False
+
+    # (b) loopback host: local-reader updated, remote-coder untouched
+    ch6b = {"kind": "openai", "endpoint": "http://127.0.0.1:1234/v1",
+            "model": "local-q", "key_env": ""}
+    r6b = apply_choice(DOC, ch6b)
+    if r6b["models"][0]["endpoint"] != "http://127.0.0.1:1234/v1":
+        ok6 = False
+    if r6b["models"][0]["name"] != "local-q":
+        ok6 = False
+    if r6b["models"][1] != DOC["models"][1]:
+        ok6 = False
+
+    # (c) a host named in private_hosts counts as local
+    LAN_HOST = ".".join(["192", "168", "1", "50"])
+    doc6c = dict(DOC, private_hosts=[LAN_HOST])
+    ch6c = {"kind": "openai", "endpoint": "http://" + LAN_HOST + ":9100/v1",
+            "model": "lan-m", "key_env": ""}
+    r6c = apply_choice(doc6c, ch6c)
+    if r6c["models"][0]["endpoint"] != "http://" + LAN_HOST + ":9100/v1":
+        ok6 = False
+    if r6c["models"][1] != DOC["models"][1]:
+        ok6 = False
+
+    if ok6:
+        print("PASS 6 expected=openai endpoint follows its host got=ok")
+        n_pass += 1
+    else:
+        print("FAIL 6 expected=openai endpoint follows its host got=mismatch")
+
+    print("AUTOTEST " + str(n_pass) + "/6")
+    return 0 if n_pass == 6 else 1
 
 
 if __name__ == "__main__":
