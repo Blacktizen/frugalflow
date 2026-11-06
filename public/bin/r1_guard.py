@@ -354,17 +354,19 @@ def autotest():
             handle.write("# Log\n\n" + genesis_entry + "\n" + entry1)
 
         # entry_landed should return True for matching title and time
-        test_entry = {"ts": "2026-09-26T09:59:00+02:00", "cwd": base}
+        # log.md headers are local wall-clock minutes, so the test instants are
+        # local too; an explicit offset made the test depend on the machine time zone.
+        test_entry = {"ts": "2026-09-26T09:59:00", "cwd": base}
         test_command = "python3 journal_add.py --vault " + os.path.join(test_vault, "vault") + " --title \"my title\" --field Decision=d"
-        r6a = entry_landed(test_command, test_entry, "2026-09-26T09:59:00+02:00")
+        r6a = entry_landed(test_command, test_entry, "2026-09-26T09:59:00")
 
         # entry_landed should return False for non-matching title
         test_command2 = "python3 journal_add.py --vault " + os.path.join(test_vault, "vault") + " --title \"other title\" --field Decision=d"
-        r6b = entry_landed(test_command2, test_entry, "2026-09-26T09:59:00+02:00")
+        r6b = entry_landed(test_command2, test_entry, "2026-09-26T09:59:00")
 
         # entry_landed should return False for time before gesture
-        test_entry3 = {"ts": "2026-09-26T10:01:00+02:00", "cwd": base}
-        r6c = entry_landed(test_command, test_entry3, "2026-09-26T10:01:00+02:00")
+        test_entry3 = {"ts": "2026-09-26T10:01:00", "cwd": base}
+        r6c = entry_landed(test_command, test_entry3, "2026-09-26T10:01:00")
 
         if r6a is True and r6b is False and r6c is False:
             results.append(("PASS", "test6 entry_landed true/false/false", "True/False/False"))
