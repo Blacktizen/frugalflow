@@ -13,6 +13,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import layers
+import config_rules
 
 NOTICE = (
     "NAME      delegate_prep.py - turns a role into a checked model plan, or refuses with the reason and its code.\n"
@@ -21,6 +22,8 @@ NOTICE = (
     "EXAMPLE   python3 delegate_prep.py --models ~/.frugalflow/models.json --role code --bench\n"
     "PITFALLS  2026-09-22 a private text was about to leave for a third party; the declared sensitivity is the routing ceiling.\n"
     "          The key is read from the environment and never printed.\n"
+    "          2026-11-06 layers.verify alone let a local+private model on a non-local host through, and the text left in clear:\n"
+    "          prepare() replays config_rules.validate_models before any route, with --bench or without it.\n"
 )
 
 USAGE = "usage: delegate_prep.py --models FILE --role NAME [--trust LEVEL] [--bench] | --notice | --autotest"
@@ -40,7 +43,10 @@ def prepare(models_path, role, trust, bench=False, timeout=300):
     except (OSError, json.JSONDecodeError):
         return (None, 2, "NO MODELS FILE: " + models_path)
 
-    errors = layers.verify(doc)
+    # The host rules of config_rules are replayed here, before any route: a document
+    # that passes layers.verify but declares a local or private model on a non-local
+    # host must never reach the wire, with --bench or without it.
+    errors = config_rules.validate_models(doc) + layers.verify(doc)
     if errors:
         return (None, 2, "MODELS REFUSED: " + errors[0])
 
@@ -114,12 +120,12 @@ def prepare(models_path, role, trust, bench=False, timeout=300):
 
 
 def _models_doc(port, closed):
-    local = {"id": "reader", "name": "alpha-7b", "location": "local", "endpoint": "http://127.0.0.1:" + str(port) + "/v1", "context_window": 8192, "trust": "private", "key_env": "", "sampling": {"temperature": 0.7}, "max_output": 2048, "max_parallel": 2}
+    local = {"id": "reader", "name": "alpha-7b", "location": "local", "endpoint": "http://127.0.0.1:" + str(port) + "/v1", "context_window": 8192, "paid": False, "trust": "private", "key_env": "", "sampling": {"temperature": 0.7}, "max_output": 2048, "max_parallel": 2}
     dead = dict(local, id="dead", endpoint="http://127.0.0.1:" + str(closed) + "/v1")
-    far = {"id": "far", "name": "beta-pro", "location": "remote", "endpoint": "https://api.example.com/v1", "context_window": 65536, "trust": "untrusted_third_party", "key_env": "FF_TEST_KEY"}
-    me = {"id": "me", "name": "session", "location": "in_session", "trust": "private", "key_env": ""}
+    far = {"id": "far", "name": "beta-pro", "location": "remote", "endpoint": "https://api.example.com/v1", "context_window": 65536, "paid": False, "trust": "untrusted_third_party", "key_env": "FF_TEST_KEY"}
+    me = {"id": "me", "name": "session", "location": "in_session", "paid": False, "trust": "private", "key_env": ""}
     ids = ["reader", "dead", "far", "me"]
-    return {"models": [local, dead, far, me], "layers": [{"name": "work", "delegable": True}],
+    return {"schema_version": "1", "models": [local, dead, far, me], "layers": [{"name": "work", "delegable": True}],
             "roles": [{"name": i, "layer": "work", "model": i} for i in ids]}
 
 

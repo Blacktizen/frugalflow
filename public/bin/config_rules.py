@@ -2,6 +2,7 @@ import sys
 import os
 import re
 import subprocess
+import ipaddress
 import urllib.parse
 
 LOCATIONS = ["local", "remote", "in_session"]
@@ -18,20 +19,22 @@ def _host_of(endpoint):
         return None
 
 
-def _is_loopback_v4(host):
-    parts = host.split(".")
-    if len(parts) != 4 or parts[0] != "127":
+def _is_loopback_ip(host):
+    """True only when ipaddress reads the host as a loopback address.
+
+    A shorthand the address library cannot read (127.1, a name with leading zeros) is
+    never local: what we cannot judge is refused, not guessed.
+    """
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
         return False
-    for p in parts:
-        if not p.isdigit() or not 0 <= int(p) <= 255:
-            return False
-    return True
 
 
 def host_is_local(endpoint, private_hosts):
     """True when the host of the URL is a loopback address or a name named in private_hosts.
 
-    Loopback means: an IPv4 address in the 127/8 loopback block, the address ::1, the name
+    Loopback means: an address ipaddress reads as loopback (the 127/8 block, ::1), the name
     localhost, or a name ending in .localhost. private_hosts is compared
     without case. An endpoint that does not read as a URL is never local.
     """
@@ -40,9 +43,7 @@ def host_is_local(endpoint, private_hosts):
         return False
     if host == "localhost" or host.endswith(".localhost"):
         return True
-    if host == "::1":
-        return True
-    if _is_loopback_v4(host):
+    if _is_loopback_ip(host):
         return True
     if isinstance(private_hosts, list):
         for h in private_hosts:
@@ -196,7 +197,9 @@ _NOTICE = (
     "PITFALLS  2026-09-23 the old validator accepted any trust ceiling it did not know: it failed open.\n"
     "          An unknown value is now an error, never a guess.\n"
     "          2026-11-06 a hand-typed remote endpoint landed as location local with trust private and the validator said nothing.\n"
-    "          A local or private model must have a loopback endpoint, or its host must be named in private_hosts."
+    "          A local or private model must have a loopback endpoint, or its host must be named in private_hosts.\n"
+    "          2026-11-06 the shorthand 127.1 resolves to loopback on some systems but ipaddress cannot read it as an address;\n"
+    "          loopback is judged by ipaddress on the host the URL library resolved, so a shorthand is refused, never trusted."
 )
 
 
@@ -243,6 +246,7 @@ def _autotest():
         ("https://api.openai.com/v1", ["API.OpenAI.com"], True),
         ("https://api.openai.com/v1", [], False),
         ("http://127.0.0.1.evil.example/v1", [], False),
+        ("http://127.1:9100/v1", [], False),
         ("not a url", [], False),
         ("", [], False),
     ]
