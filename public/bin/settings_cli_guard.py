@@ -2,6 +2,7 @@
 """settings_cli_guard.py -- refuses shell commands that mutate FrugalFlow settings."""
 
 import os
+import re
 import subprocess
 import sys
 
@@ -15,7 +16,7 @@ REASON_TEXT = (
 )
 
 FREE_ARGS = frozenset({"on", "off", "mode", "display", "init", "setup", "uninstall"})
-HEREDOC_HEADS = frozenset({"bash", "sh", "zsh"})
+HEREDOC_HEADS = frozenset({"bash", "sh", "zsh", "dash", "ksh", "fish"})
 SCRIPT_RUN_HEADS = frozenset({"frugalflow.py", "config_cmd.py"})
 SCRIPT_INIT_HEADS = frozenset({"init_cmd.py", "setup_cmd.py", "uninstall_cmd.py"})
 RUN_INIT_TOOLS = frozenset({
@@ -23,6 +24,47 @@ RUN_INIT_TOOLS = frozenset({
     "init_cmd.py", "setup_cmd.py", "uninstall_cmd.py",
 })
 RUN_CONFIG_TOOLS = frozenset({"config_cmd", "config_cmd.py"})
+
+# Readers: commands that only read/output data, never execute frugalflow
+READER_HEADS = frozenset({
+    "echo", "printf", "grep", "egrep", "rg", "cat", "head", "tail",
+    "less", "more", "ls", "wc", "diff", "file", "stat",
+})
+
+# Python options to skip when detecting script execution
+PYTHON_SKIP_OPTS = frozenset({
+    "-I", "-u", "-O", "-B", "-E", "-s", "-S", "-X", "-W",
+})
+
+# Regex to detect frugalflow setting-changing subcommands in raw text
+# Matches frugalflow or frugalflow.py followed by setting-changing subcommand
+# Tolerates quotes and commas: 'frugalflow','off' or "frugalflow","off"
+SETTING_SUBCOMMANDS = (
+    r"(?:on|off|mode|display|init|setup|uninstall|config\s+set|memory\s+decline|"
+    r"notes\s+(?:add-pitfall|merge|measure)|run\s+model_notes)"
+)
+FRUGALFLOW_SETTING_RE = re.compile(
+    r"(?:frugalflow(?:\.py)?)[\"',\s]+" + SETTING_SUBCOMMANDS,
+    re.IGNORECASE
+)
+
+# Head token that is a variable expansion: $F, ${F} (quotes are removed by tokenize).
+# The command it runs is unknown until the shell resolves it.
+VAR_HEAD_RE = re.compile(r"^\$[{]?[A-Za-z_][A-Za-z0-9_]*[}]?$")
+
+# A setting-changing subcommand appearing anywhere in raw segment text
+SETTING_SUB_RE = re.compile(r"\b(?:" + SETTING_SUBCOMMANDS + r")\b", re.IGNORECASE)
+
+# Shell heads that take -c (or grouped option containing c)
+SHELL_C_HEADS = frozenset({"bash", "sh", "zsh", "dash", "ksh", "fish"})
+
+# Interpreter heads that take -e (code from command line)
+INTERPRETER_E_HEADS = frozenset({"perl", "ruby", "node"})
+
+# Non-reader interpreter heads for heredoc bodies
+NON_READER_INTERPRETERS = frozenset({
+    "python", "python3", "perl", "ruby", "node", "bash", "sh", "zsh", "dash", "ksh", "fish",
+})
 
 
 def _basename(token):
@@ -32,6 +74,30 @@ def _basename(token):
 def _is_python(token):
     base = _basename(token)
     return base in ("python", "python3") or base.startswith("python3.")
+
+
+def _skip_python_opts(tokens):
+    """Skip Python interpreter options (-I, -u, -O, -B, -E, -s, -S, -X, -W, -c, -m).
+    Returns the index of the first non-option token after the python command, or len(tokens) if none."""
+    i = 1  # Start after the python command itself
+    while i < len(tokens):
+        tok = tokens[i]
+        if tok == "-c" or tok == "-m":
+            # -c and -m take an argument; skip both
+            return i + 2 if i + 1 < len(tokens) else len(tokens)
+        if tok in PYTHON_SKIP_OPTS:
+            # These options may take an argument (-X value, -W value)
+            if tok in ("-X", "-W") and i + 1 < len(tokens):
+                i += 2
+            else:
+                i += 1
+            continue
+        # Long options like --version, --help, etc.
+        if tok.startswith("--"):
+            i += 1
+            continue
+        break
+    return i
 
 
 def _resolve_run(args):
@@ -61,7 +127,52 @@ def _rule4(args):
         return True
     if first == "notes" and len(args) >= 2 and args[1] in ("add-pitfall", "merge", "measure"):
         return True
+    if first == "run" and len(args) >= 2 and _basename(args[1]) in ("model_notes", "model_notes.py"):
+        return True
     return False
+
+
+def _raw_text_changes_settings(text):
+    """Check if raw text contains frugalflow/frugalflow.py followed by a setting-changing subcommand."""
+    return bool(FRUGALFLOW_SETTING_RE.search(text))
+
+
+def _head_is_variable_expansion(token):
+    """True if the head token is a variable expansion ($F, ${F}, "$F"): the command is hidden."""
+    return bool(VAR_HEAD_RE.match(token))
+
+
+def _is_shell_with_c_option(head, tokens):
+    """Check if shell head has a grouped option containing 'c' (e.g., bash -lc, dash -c)."""
+    if head not in SHELL_C_HEADS:
+        return False
+    for tok in tokens[1:]:
+        if tok == "-c":
+            return True
+        if tok.startswith("-") and "c" in tok[1:] and not tok.startswith("--"):
+            return True
+    return False
+
+
+def _is_interpreter_with_e_option(head, tokens):
+    """Check if interpreter head has -e option (code from command line)."""
+    if head not in INTERPRETER_E_HEADS:
+        return False
+    for i, tok in enumerate(tokens[1:]):
+        if tok == "-e" and i + 1 < len(tokens) - 1:
+            return True
+        if tok.startswith("-e") and len(tok) > 2:
+            return True
+    return False
+
+
+def _is_non_reader_interpreter(head):
+    """Check if the head is a non-reader interpreter for heredoc bodies."""
+    base = _basename(head)
+    # Check for python/python3 variants
+    if base in ("python", "python3") or base.startswith("python3."):
+        return True
+    return base in NON_READER_INTERPRETERS
 
 
 def segment_changes(tokens):
@@ -70,12 +181,15 @@ def segment_changes(tokens):
         return False
     head = _basename(tokens[0])
 
-    # Rule 5: bash/sh/zsh with -c -> recurse on the remainder
-    if head in HEREDOC_HEADS:
-        if len(tokens) >= 2 and tokens[1] == "-c":
-            inner = " ".join(tokens[2:])
-            if inner and changes_settings(inner):
-                return True
+    # Rule 5: shell with -c -> recurse on the remainder
+    if _is_shell_with_c_option(head, tokens):
+        # Find the -c option and get everything after it
+        for i, tok in enumerate(tokens[1:], 1):
+            if tok == "-c" or (tok.startswith("-") and "c" in tok[1:] and not tok.startswith("--")):
+                inner = " ".join(tokens[i+1:])
+                if inner and changes_settings(inner):
+                    return True
+                break
         return False
 
     # Rule 5: eval -> recurse on the remainder joined by spaces
@@ -86,25 +200,55 @@ def segment_changes(tokens):
         return False
 
     # Rule 7: python/python3/python3.N with -c
-    if _is_python(tokens[0]) and len(tokens) >= 2 and tokens[1] == "-c":
-        code = " ".join(tokens[2:])
-        if "frugalflow" in code or "_cmd" in code:
-            return True
+    if _is_python(tokens[0]):
+        # Skip python options first
+        idx = _skip_python_opts(tokens)
+        if idx < len(tokens):
+            # Check if the next token after options is -c
+            if tokens[idx] == "-c" and idx + 1 < len(tokens):
+                code = " ".join(tokens[idx+1:])
+                if "frugalflow" in code or "_cmd" in code:
+                    return True
+                return False
+            # Check if it's -m module
+            if tokens[idx] == "-m" and idx + 1 < len(tokens):
+                module = tokens[idx+1]
+                if "frugalflow" in module:
+                    # Treat as running frugalflow script
+                    inner_args = tokens[idx+2:]
+                    changed, inner_args = _resolve_run(inner_args)
+                    if changed:
+                        return True
+                    return _rule4(inner_args)
+                return False
+            # Check if it's a direct script execution (frugalflow.py)
+            script = _basename(tokens[idx])
+            if script in SCRIPT_RUN_HEADS or script == "frugalflow.py":
+                args = tokens[idx+1:]
+                changed, args = _resolve_run(args)
+                if changed:
+                    return True
+                return _rule4(args)
+            if script in SCRIPT_INIT_HEADS:
+                if len(tokens) > idx + 1 and tokens[idx+1] in ("--notice", "--help"):
+                    return False
+                return True
         return False
 
-    # Rule 2: python running a named script
-    if _is_python(tokens[0]) and len(tokens) >= 2:
-        second = _basename(tokens[1])
-        if second in SCRIPT_RUN_HEADS:
-            args = tokens[2:]
-            changed, args = _resolve_run(args)
-            if changed:
-                return True
-            return _rule4(args)
-        if second in SCRIPT_INIT_HEADS:
-            if len(tokens) >= 3 and tokens[2] in ("--notice", "--help"):
-                return False
-            return True
+    # Rule 2: interpreter with -e (perl -e, ruby -e, node -e)
+    if _is_interpreter_with_e_option(head, tokens):
+        # Get the code after -e
+        for i, tok in enumerate(tokens[1:], 1):
+            if tok == "-e" and i + 1 < len(tokens):
+                code = " ".join(tokens[i+1:])
+                if _raw_text_changes_settings(code):
+                    return True
+                break
+            if tok.startswith("-e") and len(tok) > 2:
+                code = tok[2:] + " " + " ".join(tokens[i+1:])
+                if _raw_text_changes_settings(code):
+                    return True
+                break
         return False
 
     # Rule 1: head is frugalflow
@@ -114,6 +258,27 @@ def segment_changes(tokens):
         if changed:
             return True
         return _rule4(args)
+
+    # Direct execution of frugalflow.py (basename is frugalflow.py)
+    if head == "frugalflow.py":
+        args = tokens[1:]
+        changed, args = _resolve_run(args)
+        if changed:
+            return True
+        return _rule4(args)
+
+    # git -c alias.x='!frugalflow off' x
+    if head == "git":
+        # Check for -c option with alias containing frugalflow setting change
+        for i, tok in enumerate(tokens[1:], 1):
+            if tok == "-c" and i + 1 < len(tokens):
+                config_val = tokens[i+1]
+                if _raw_text_changes_settings(config_val):
+                    return True
+            elif tok.startswith("-c") and len(tok) > 2:
+                config_val = tok[2:]
+                if _raw_text_changes_settings(config_val):
+                    return True
 
     # 2026-11-05: `xargs frugalflow < f` passed: a launcher that runs its arguments as a
     # command hides the head. When in doubt, refuse.
@@ -145,6 +310,13 @@ def changes_settings(command):
 
     faulty = []
 
+    # Check for pipe to shell (e.g., echo 'frugalflow off' | sh)
+    # and here-string to shell (e.g., sh <<< 'frugalflow off')
+    if _command_feeds_shell_via_pipe_or_herestring(command):
+        if _raw_text_changes_settings(command):
+            faulty.append(command)
+            return faulty
+
     for seg in segments:
         raw = tokenize(seg)
         # xargs/parallel take the arguments from stdin: the subcommand cannot be known.
@@ -159,22 +331,44 @@ def changes_settings(command):
         head = _basename(toks[0])
 
         relevant = False
-        if head == "frugalflow":
-            relevant = True
-        elif head in HEREDOC_HEADS and len(toks) >= 2 and toks[1] == "-c":
-            relevant = True
-        elif head == "eval" or head in LAUNCHER_HEADS:
-            relevant = True
-        elif _is_python(toks[0]):
-            if len(toks) >= 2 and toks[1] == "-c":
+        # Reader heads (echo, printf, grep, etc.) are never relevant unless they feed a shell
+        # (which is handled above via _command_feeds_shell_via_pipe_or_herestring)
+        if head not in READER_HEADS:
+            if head == "frugalflow":
                 relevant = True
-            elif len(toks) >= 2 and _basename(toks[1]) in (SCRIPT_RUN_HEADS | SCRIPT_INIT_HEADS):
+            elif _is_shell_with_c_option(head, toks):
+                relevant = True
+            elif head == "eval":
+                relevant = True
+            elif head in LAUNCHER_HEADS:
+                relevant = True
+            elif _is_python(toks[0]):
+                # Check after skipping python options
+                idx = _skip_python_opts(toks)
+                if idx < len(toks):
+                    if toks[idx] == "-c":
+                        relevant = True
+                    elif toks[idx] == "-m" and idx + 1 < len(toks) and "frugalflow" in toks[idx+1]:
+                        relevant = True
+                    elif _basename(toks[idx]) in (SCRIPT_RUN_HEADS | SCRIPT_INIT_HEADS | {"frugalflow.py"}):
+                        relevant = True
+            elif _is_interpreter_with_e_option(head, toks):
+                relevant = True
+            elif head == "git":
                 relevant = True
 
         if relevant and segment_changes(toks):
             faulty.append(seg)
+        # Also check raw text for cases where tokenization might miss things
+        elif _raw_text_changes_settings(seg) and head not in READER_HEADS:
+            faulty.append(seg)
+        # A segment headed by a variable expansion ($F off) hides the command:
+        # when the command text names frugalflow and the segment carries a
+        # setting-changing subcommand, refuse. Reading subcommands stay free.
+        elif _head_is_variable_expansion(toks[0]) and "frugalflow" in command and SETTING_SUB_RE.search(seg):
+            faulty.append(seg)
 
-    # Rule 6: heredoc bodies opened by bash/sh/zsh
+    # Rule 6: heredoc bodies opened by non-reader interpreters
     for body_info in bodies:
         line = body_info["line"]
         body = body_info["body"]
@@ -183,11 +377,32 @@ def changes_settings(command):
         if not line_toks:
             continue
         line_head = _basename(line_toks[0])
-        if line_head in HEREDOC_HEADS:
+        # Check if the heredoc is given to a non-reader interpreter
+        if _is_non_reader_interpreter(line_head):
+            if changes_settings(body):
+                faulty.append(body)
+        # Also check the original HEREDOC_HEADS for backward compatibility
+        elif line_head in HEREDOC_HEADS:
             if changes_settings(body):
                 faulty.append(body)
 
     return faulty
+
+
+def _command_feeds_shell_via_pipe_or_herestring(command):
+    """Check if the command pipes to a shell or uses a here-string to feed a shell."""
+    # Pipe to shell: ... | sh, ... | bash, etc.
+    # Here-string to shell: sh <<< '...', bash <<< '...'
+    masked = command
+    # Simple check for pipe followed by shell
+    for shell in SHELL_C_HEADS:
+        # Pipe pattern: | shell
+        if re.search(r'\|\s*' + re.escape(shell) + r'(\s|$)', masked):
+            return True
+        # Here-string pattern: shell <<<
+        if re.search(r'\b' + re.escape(shell) + r'\s*<<<', masked):
+            return True
+    return False
 
 
 def verdict(tool_name, tool_input):
