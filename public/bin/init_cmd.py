@@ -54,6 +54,8 @@ KEY_HELP = {
         "audit_log": "where each decision of the guard is written",
         "line_threshold": "a code write of this many lines or fewer needs no receipt",
         "receipt_minutes": "how long a delegation receipt stays valid",
+        "byte_threshold": "a code write of more bytes than this needs a receipt, whatever its line count",
+        "cumulative_lines": "code written to one file in the receipt window may not exceed this many lines in small pieces",
         "quarantine_minutes": "how long a delegated file cannot be read: run its test instead",
         "digest_extensions": "files a counting command must hand to a model",
         "digest_max_bytes": "below this size, counting by hand is allowed",

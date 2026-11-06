@@ -8,12 +8,17 @@ import tempfile
 import shutil
 
 
-def read(models_path, cwd):
-    """Read preferences.json beside models.json and .frugalflow.json in the working directory.
+def read(cwd):
+    """Read preferences.json in the FRUGALFLOW_HOME folder and .frugalflow.json in the working directory.
+
+    preferences.json is never read beside a models.json a delegation points
+    at: the ceilings come from the home folder (FRUGALFLOW_HOME, else
+    ~/.frugalflow), whatever --models names.
 
     Returns a (prefs, project, error) tuple.
     """
-    prefs_path = os.path.join(os.path.dirname(os.path.abspath(models_path)), "preferences.json")
+    home = os.environ.get("FRUGALFLOW_HOME") or os.path.join(os.path.expanduser("~"), ".frugalflow")
+    prefs_path = os.path.join(home, "preferences.json")
     project_path = os.path.join(cwd, ".frugalflow.json")
 
     prefs = None
@@ -37,11 +42,12 @@ def read(models_path, cwd):
 
 
 NOTICE_LINES = [
-    "NAME      limits_files.py - reads the two documents that set the ceilings of a delegation: preferences.json beside models.json, and .frugalflow.json in the working directory.",
-    "READS     preferences.json beside the models.json path it is given; .frugalflow.json in the working directory it is given.",
+    "NAME      limits_files.py - reads the two documents that set the ceilings of a delegation: preferences.json in the FRUGALFLOW_HOME folder, and .frugalflow.json in the working directory.",
+    "READS     preferences.json in FRUGALFLOW_HOME (else ~/.frugalflow), never beside a models.json a delegation points at; .frugalflow.json in the working directory it is given.",
     "WRITES    nothing: read() returns both documents (None when a file is absent), or an error starting with CEILING.",
     "EXAMPLE   python3 limits_files.py --autotest",
     "PITFALLS  2026-10-02 an absent file is not an error, an unreadable one is: a broken preferences.json must never be read as no preferences.",
+    "          2026-11-06 a preferences.json lying beside a --models file set the ceilings from outside the home folder; preferences.json is now read only in the home folder.",
 ]
 
 
@@ -52,14 +58,14 @@ def autotest():
     BROKEN_TEXT = '{"a": '
 
     all_passed = True
+    saved_home = os.environ.get("FRUGALFLOW_HOME")
 
     for idx in range(1, 6):
         home = tempfile.mkdtemp()
         work = tempfile.mkdtemp()
+        models_dir = None
+        os.environ["FRUGALFLOW_HOME"] = home
         try:
-            with open(os.path.join(home, "models.json"), "w", encoding="utf-8") as f:
-                f.write("{}")
-
             if idx == 1:
                 expected = (None, None, None)
             elif idx == 2:
@@ -79,19 +85,15 @@ def autotest():
                     f.write(BROKEN_TEXT)
                 expected = (None, None, "CEILING: " + os.path.join(work, ".frugalflow.json") + " unreadable or invalid JSON")
             else:
-                with open(os.path.join(home, "preferences.json"), "w", encoding="utf-8") as f:
+                # A preferences.json beside another folder's models.json is not read.
+                models_dir = tempfile.mkdtemp()
+                with open(os.path.join(models_dir, "models.json"), "w", encoding="utf-8") as f:
+                    f.write("{}")
+                with open(os.path.join(models_dir, "preferences.json"), "w", encoding="utf-8") as f:
                     f.write(PREFS_TEXT)
-                expected = ({"a": 1}, None, None)
+                expected = (None, None, None)
 
-            if idx == 5:
-                original_cwd = os.getcwd()
-                os.chdir(home)
-                try:
-                    result = read("models.json", work)
-                finally:
-                    os.chdir(original_cwd)
-            else:
-                result = read(os.path.join(home, "models.json"), work)
+            result = read(work)
 
             if idx == 5:
                 proc = subprocess.run([sys.executable, __file__, "--notice"], capture_output=True, text=True)
@@ -106,8 +108,14 @@ def autotest():
             print(status + " " + str(idx) + " expected=" + repr(expected) + " got=" + repr(result))
 
         finally:
+            if saved_home is None:
+                os.environ.pop("FRUGALFLOW_HOME", None)
+            else:
+                os.environ["FRUGALFLOW_HOME"] = saved_home
             shutil.rmtree(home)
             shutil.rmtree(work)
+            if models_dir is not None:
+                shutil.rmtree(models_dir)
 
     return 0 if all_passed else 1
 

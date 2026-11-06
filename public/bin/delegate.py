@@ -7,6 +7,7 @@ import shutil
 import threading
 import subprocess
 import http.server
+import hashlib
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import delegate_prep
@@ -35,12 +36,13 @@ except ImportError:
 
 NOTICE = (
     "NAME      delegate.py - sends a task to a role's model and, with --verify, retries until the check passes, never writing an unchecked attempt to the target.\n"
-    "READS     --file; models.json, preferences.json and, for a non-private model, anonymization.json (--models, else FRUGALFLOW_HOME, else ~/.frugalflow); .frugalflow.json in the working directory (--tries, --max-tokens and --trust may only tighten their ceilings); the delegation log, for the delay estimate; the engine's answers.\n"
+    "READS     --file; models.json (--models only with --bench, else FRUGALFLOW_HOME, else ~/.frugalflow); preferences.json and, for a non-private model, anonymization.json, both in FRUGALFLOW_HOME (else ~/.frugalflow), never beside a --models file; .frugalflow.json in the working directory (--tries, --max-tokens and --trust may only tighten their ceilings); the delegation log, for the delay estimate; the engine's answers.\n"
     "WRITES    --out once verified; the candidate file next to it; one line in the delegation log, with its duration. Exit 0 done, 2 arguments, 3 checks, 4 content, 5 not verified, 6 answer refused, 7 brief refused.\n"
     "EXAMPLE   python3 delegate.py --role code --file task.md --out tool.py --verify 'python3 \"$FRUGALFLOW_CANDIDATE\" --autotest' --verify-timeout 900\n"
     "PITFALLS  2026-09-18 a failed last attempt landed in the target; the target now only receives a verified attempt.\n"
     "          2026-09-23 the candidate lost its extension and the check could not load it; it keeps the target's extension.\n"
-    "          2026-09-26 a faulty brief could be sent and a check naming the target failed every attempt; the brief is checked before sending, the check is corrected to the candidate."
+    "          2026-09-26 a faulty brief could be sent and a check naming the target failed every attempt; the brief is checked before sending, the check is corrected to the candidate.\n"
+    "          2026-11-06 a --models file from another folder brought that folder's preferences.json as the ceilings; the ceilings now come only from the home folder."
 )
 
 
@@ -125,9 +127,24 @@ def main():
         sys.stderr.write(guard_refusal + "\n")
         sys.exit(3)
 
+    # DEFECT C5: --models only with --bench or with the models.json of FRUGALFLOW_HOME
+    if args.models and not args.bench:
+        home = os.environ.get("FRUGALFLOW_HOME") or os.path.join(os.path.expanduser("~"), ".frugalflow")
+        expected_models = os.path.join(home, "models.json")
+        if os.path.abspath(args.models) != os.path.abspath(expected_models):
+            print("MODELS REFUSED: --models only with --bench or with the models.json of FRUGALFLOW_HOME")
+            sys.exit(2)
+
     # Step 2b: the ceilings of preferences.json and .frugalflow.json; an option may only tighten.
-    models_path = args.models or os.path.join(os.environ.get("FRUGALFLOW_HOME") or os.path.join(os.path.expanduser("~"), ".frugalflow"), "models.json")
-    prefs, project, error = limits_files.read(models_path, os.getcwd())
+    home = os.environ.get("FRUGALFLOW_HOME") or os.path.join(os.path.expanduser("~"), ".frugalflow")
+    models_path = os.path.join(home, "models.json") if not args.bench else (args.models or os.path.join(home, "models.json"))
+    models_sha256 = None
+    try:
+        with open(models_path, "rb") as f:
+            models_sha256 = hashlib.sha256(f.read()).hexdigest()
+    except OSError:
+        pass
+    prefs, project, error = limits_files.read(os.getcwd())
     if error is None:
         limits, error = run_limits.resolve(prefs, project, {"tries": args.tries, "max_tokens": args.max_tokens, "trust": args.trust})
     if error:
@@ -196,7 +213,8 @@ def main():
     # Step 7
     A, I = [], []
     if plan["trust"] != "private":
-        anon_path = os.path.join(os.path.dirname(os.path.abspath(models_path)), "anonymization.json")
+        home = os.environ.get("FRUGALFLOW_HOME") or os.path.join(os.path.expanduser("~"), ".frugalflow")
+        anon_path = os.path.join(home, "anonymization.json")
         try:
             with open(anon_path, "r", encoding="utf-8") as f:
                 doc = json.load(f)

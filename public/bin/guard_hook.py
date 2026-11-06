@@ -90,6 +90,30 @@ def load_records(home, settings):
     return records
 
 
+def load_audit(home, settings):
+    """Load audit records for cumulative check. Returns list of dicts, [] if file missing, None if unreadable."""
+    path = resolve(home, settings["audit_log"])
+    if not os.path.exists(path):
+        return []
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            text = f.read()
+    except (OSError, UnicodeDecodeError):
+        return None
+    out = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if isinstance(obj, dict):
+            out.append(obj)
+    return out
+
+
 def can_write_audit(home, settings):
     """Test if the audit log can be written. Returns (bool, error_message)."""
     try:
@@ -120,6 +144,8 @@ def write_audit(home, settings, tool, res):
             "targets": res["targets"][:5],
             "reason": res["reason"][:300],
         }
+        if "lines" in res and isinstance(res["lines"], int):
+            line["lines"] = res["lines"]
         with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(line, ensure_ascii=False) + "\n")
         return True, None
@@ -280,8 +306,8 @@ def run_hook(stdin_text):
     if not isinstance(inp, dict):
         inp = {}
 
-    # Disarmed mode (FRUGALFLOW_GUARD=0 or settings.active=False)
-    if os.environ.get("FRUGALFLOW_GUARD") == "0" or settings.get("active", True) is False:
+    # Disarmed mode (FRUGALFLOW_GUARD=0 with allow_env_disarm true, or settings.active=False)
+    if (os.environ.get("FRUGALFLOW_GUARD") == "0" and settings.get("allow_env_disarm", False) is True) or settings.get("active", True) is False:
         # In disarmed mode, run always-on checks (journal, settings) with "disarmed" label for writes
         res = guard_rules.result("allow", "disarmed" if is_write_tool(tool) else None, [], "")
         res = always_on_checks(res, tool, inp, payload, home, settings)
@@ -295,6 +321,7 @@ def run_hook(stdin_text):
     enabled, mode = read_switch(home)
 
     records = load_records(home, settings)
+    audit_records = load_audit(home, settings)
 
     observed_reason = None
     if enabled is False:
@@ -305,7 +332,7 @@ def run_hook(stdin_text):
             res = guard_rules.result("allow", None, [], "")
     else:
         try:
-            res = guard_rules.decide(tool, inp, settings, records, guard_checks.build(settings, records, payload.get("cwd")))
+            res = guard_rules.decide(tool, inp, settings, records, guard_checks.build(settings, records, payload.get("cwd"), mode=mode), audit_records=audit_records)
         except Exception as e:
             res = guard_rules.result(
                 "deny",
@@ -317,7 +344,10 @@ def run_hook(stdin_text):
 
         if mode == "observe" and res["decision"] == "deny":
             observed_reason = res["reason"]
+            lines_val = res.get("lines")
             res = guard_rules.result("allow", "observed:" + str(res["audit"]), res["targets"], res["reason"])
+            if lines_val is not None:
+                res["lines"] = lines_val
 
     # Always-on checks (journal guard, settings CLI guard) — run in all modes including off
     res = always_on_checks(res, tool, inp, payload, home, settings)
@@ -377,6 +407,8 @@ def run_hook(stdin_text):
 
         if should_audit:
             audit_res = {"decision": res["decision"], "audit": audit_label, "targets": res["targets"], "reason": res["reason"]}
+            if "lines" in res and isinstance(res["lines"], int):
+                audit_res["lines"] = res["lines"]
             ok, err = write_audit(home, settings, tool, audit_res)
             audit_written = ok
             if not ok and mode == "active":
@@ -632,6 +664,9 @@ def _autotest():
                     got = f"parse_h3: {e}"
 
         _SETUP(h, "")
+        # The test with FRUGALFLOW_GUARD=0 needs allow_env_disarm=true in guard.json
+        with open(os.path.join(h, "guard.json"), "w", encoding="utf-8") as f:
+            json.dump({**SETTINGS, "allow_env_disarm": True}, f)
         code, stdout = _RUN(
             h,
             CALL("Write", {"file_path": "/w/b.py", "content": BIG}),

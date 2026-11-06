@@ -1,5 +1,5 @@
 {
-  "code_extensions": [".py", ".sh", ".js", ".ts", ".ipynb"],
+  "code_extensions": [".py", ".sh", ".js", ".ts", ".ipynb", ".tsx", ".jsx", ".go", ".rs", ".rb", ".java", ".kt", ".swift", ".c", ".cc", ".cpp", ".h", ".hpp", ".cs", ".php", ".pl", ".lua", ".mjs", ".cjs", ".zsh", ".bash", ".ps1"],
   "delegation_logs": ["delegations.jsonl"],
   "audit_log": "audit.jsonl",
   "line_threshold": 20,
@@ -13,5 +13,7 @@
   "digest_waiver": "manual-digest",
   "delegate_tools": ["delegate.py"],
   "fix_hint": "Delegate it: python3 bin/delegate.py --role code --file task.md --out <file>.",
-  "checks": ["quarantine_read", "intake", "digest", "reading_gate"]
+  "checks": ["quarantine_read", "intake", "digest", "reading_gate"],
+  "byte_threshold": 2000,
+  "cumulative_lines": 60
 }

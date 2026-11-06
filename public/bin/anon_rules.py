@@ -20,7 +20,7 @@ GENERIC_ANONYMIZABLE = [
     (r"(?i)\b(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:lan|internal|intra|corp|ts\.net)\b", "internal host name", "HOST"),
     (r"\b(?:DESKTOP|LAPTOP)-[A-Z0-9]{6,}\b", "machine name", "HOST"),
     (r"(?:@author|__author__)[ \t]*[:=]?[ \t]*\W?[A-Z][a-z]+", "author metadata", "AUTHOR"),
-    (r"(?<!\d)(?!01[\s.-]?23[\s.-]?45[\s.-]?67[\s.-]?89(?!\d))(?:\+33\s?|0033\s?|0)[1-9](?:[\s.-]?\d{2}){4}(?!\d)", "phone number", "PHONE"),
+    (r"(?<![0-9A-Za-z])(?!01[\s.-]?23[\s.-]?45[\s.-]?67[\s.-]?89(?!\d))(?:\+33\s?|0033\s?|0)[1-9](?:[\s.-]?\d{2}){4}(?![0-9A-Za-z])", "phone number", "PHONE"),
 ]
 
 GENERIC_IRREDUCIBLE = [
@@ -232,6 +232,21 @@ def _autotest():
         print("FAIL 6: expected go_to_py('a\\z')=='a\\Z', 'a\\\\z' unchanged, 0 BETTERLEAKS compile errors; got " + repr(got6a) + ", " + repr(got6b) + ", " + str(len(bad6)))
     all_pass = all_pass and ok
 
+    # Test 7
+    phone = GENERIC_ANONYMIZABLE[9][0]
+    hex_id = "48e1e0318640467b"
+    labeled = "Tel 06" + " 12 34 56 78"  # lang-ok
+    spaced = " 0612" + "345678 "
+    got7 = [re.search(phone, hex_id) is not None,
+            re.search(phone, labeled) is not None,
+            re.search(phone, spaced) is not None]
+    ok = got7 == [False, True, True]
+    if ok:
+        print("PASS 7: expected [False, True, True] for the phone rule on " + repr(hex_id) + ", " + repr(labeled) + ", " + repr(spaced) + "; got " + str(got7))
+    else:
+        print("FAIL 7: expected [False, True, True] for the phone rule on " + repr(hex_id) + ", " + repr(labeled) + ", " + repr(spaced) + "; got " + str(got7))
+    all_pass = all_pass and ok
+
     sys.exit(0 if all_pass else 1)
 
 
@@ -247,6 +262,7 @@ def _main():
             "EXAMPLE   python3 anon_rules.py --notice\n"
             "PITFALLS  2026-08-27 the old anonymiser carried private names in its own code: a leak dressed as protection.\n"
             "          2026-09-23 a misspelt key would have disarmed a rule silently; an unknown key is now an error.\n"
+            "          2026-11-06 a hexadecimal block id held ten digits and was refused as a phone number.\n"
         )
         sys.exit(0)
     if sys.argv[1] == "--autotest":

@@ -175,11 +175,15 @@ def run_autotest():
     """Execute the five proofs as subprocesses. Return 0 if all pass, 1 otherwise."""
     base = tempfile.mkdtemp()
     results = []
+    # Unset CLAUDECODE for test subprocesses to avoid TTY check interference
+    test_env = dict(os.environ)
+    test_env.pop("CLAUDECODE", None)
     try:
         # Test 1: new-project creates vault and hooks
         proc = subprocess.run(
             [sys.executable, __file__, "new-project", "demo", "--root", base],
-            capture_output=True, text=True
+            capture_output=True, text=True,
+            env=test_env
         )
         settings_path = os.path.join(base, "demo", ".claude", "settings.json")
         vault_log = os.path.join(base, "demo", "vault", "log.md")
@@ -206,7 +210,8 @@ def run_autotest():
         # Test 2: vault_check.py confirms vault integrity
         proc = subprocess.run(
             [sys.executable, os.path.join(BIN, "vault_check.py"), "--vault", os.path.join(base, "demo", "vault")],
-            capture_output=True, text=True
+            capture_output=True, text=True,
+            env=test_env
         )
         ok = proc.returncode == 0 and proc.stdout != ""
         results.append((2, ok, "vault_check.py exit 0 with non-empty output", "rc=%d" % proc.returncode))
@@ -214,7 +219,8 @@ def run_autotest():
         # Test 3: second new-project on same name is refused (exit 3)
         proc = subprocess.run(
             [sys.executable, __file__, "new-project", "demo", "--root", base],
-            capture_output=True, text=True
+            capture_output=True, text=True,
+            env=test_env
         )
         ok = proc.returncode == 3 and proc.stdout != ""
         results.append((3, ok, "repeat new-project demo exit 3 with non-empty output", "rc=%d" % proc.returncode))
@@ -227,7 +233,8 @@ def run_autotest():
             fh.write(OWN_SETTINGS)
         proc = subprocess.run(
             [sys.executable, __file__, COMMANDS[1], "own", "--root", base],
-            capture_output=True, text=True
+            capture_output=True, text=True,
+            env=test_env
         )
         own_vault_log = os.path.join(base, "own", "vault", "log.md")
         with open(own_settings, "r", encoding="utf-8") as fh:
@@ -249,15 +256,18 @@ def run_autotest():
         # Test 5: --notice, invalid NAME, unknown COMMAND
         proc_notice = subprocess.run(
             [sys.executable, __file__, "--notice"],
-            capture_output=True, text=True
+            capture_output=True, text=True,
+            env=test_env
         )
         proc_escape = subprocess.run(
             [sys.executable, __file__, "new-project", "../escape", "--root", base],
-            capture_output=True, text=True
+            capture_output=True, text=True,
+            env=test_env
         )
         proc_bogus = subprocess.run(
             [sys.executable, __file__, "bogus", "x"],
-            capture_output=True, text=True
+            capture_output=True, text=True,
+            env=test_env
         )
         ok = (
             proc_notice.returncode == 0
@@ -280,40 +290,40 @@ def run_autotest():
         r_init = subprocess.run(
             [sys.executable, __file__, "init", "--home", home6, "--claude-dir", claude6,
              "--ollama-url", "http://127.0.0.1:1", "--lmstudio-url", "http://127.0.0.1:1"],
-            capture_output=True, text=True, env=env6, cwd=base
+            capture_output=True, text=True, env=test_env, cwd=base
         )
         r_doctor = subprocess.run(
             [sys.executable, __file__, "doctor", "--home", home6, "--claude-dir", claude6,
              "--ollama-url", "http://127.0.0.1:1", "--lmstudio-url", "http://127.0.0.1:1"],
-            capture_output=True, text=True, env=env6, cwd=base
+            capture_output=True, text=True, env=test_env, cwd=base
         )
         r_config = subprocess.run(
             [sys.executable, __file__, "config", "--home", home6],
-            capture_output=True, text=True, env=env6, cwd=base
+            capture_output=True, text=True, env=test_env, cwd=base
         )
         r_on = subprocess.run(
             [sys.executable, __file__, "on", "--home", home6],
-            capture_output=True, text=True, env=env6, cwd=base
+            capture_output=True, text=True, env=test_env, cwd=base
         )
         r_off = subprocess.run(
             [sys.executable, __file__, "off", "--home", home6],
-            capture_output=True, text=True, env=env6, cwd=base
+            capture_output=True, text=True, env=test_env, cwd=base
         )
         r_mode = subprocess.run(
             [sys.executable, __file__, "mode", "silent", "--home", home6],
-            capture_output=True, text=True, env=env6, cwd=base
+            capture_output=True, text=True, env=test_env, cwd=base
         )
         r_display = subprocess.run(
             [sys.executable, __file__, "display", "statusline", "off", "--home", home6],
-            capture_output=True, text=True, env=env6, cwd=base
+            capture_output=True, text=True, env=test_env, cwd=base
         )
         r_display_bad = subprocess.run(
             [sys.executable, __file__, "display", "logo", "off", "--home", home6],
-            capture_output=True, text=True, env=env6, cwd=base
+            capture_output=True, text=True, env=test_env, cwd=base
         )
         r_bad = subprocess.run(
             [sys.executable, __file__, "init", "--mode", "bogus", "--home", home6, "--claude-dir", claude6],
-            capture_output=True, text=True, env=env6, cwd=base
+            capture_output=True, text=True, env=test_env, cwd=base
         )
         ok = (r_init.returncode == 0 and r_doctor.returncode == 0 and r_config.returncode == 0
               and r_on.returncode == 0 and r_off.returncode == 0 and r_mode.returncode == 0
@@ -331,7 +341,8 @@ def run_autotest():
         os.makedirs(root7, exist_ok=True)
         proc = subprocess.run(
             [sys.executable, __file__, "new-project", "loop", "--root", root7],
-            capture_output=True, text=True
+            capture_output=True, text=True,
+            env=test_env
         )
         project7 = os.path.join(root7, "loop")
         bin7 = os.path.join(project7, "bin")
@@ -434,6 +445,33 @@ def run_notes(args):
     return module.main([subcommand] + kept)
 
 
+def _is_setting_change_command(command, args):
+    """Check if the command/subcommand changes a FrugalFlow setting."""
+    if command in ("on", "off", "mode", "display", "init", "setup", "uninstall"):
+        return True
+    if command == "config" and args and args[0] == "set":
+        return True
+    if command == "memory" and args and args[0] == "decline":
+        return True
+    if command == "notes" and args and args[0] in ("add-pitfall", "merge", "measure"):
+        return True
+    if command == "run" and args and args[0] in ("model_notes", "model_notes.py"):
+        return True
+    return False
+
+
+def _check_claudecode_tty(command, args):
+    """Check CLAUDECODE env var and TTY status for setting-change commands."""
+    if not _is_setting_change_command(command, args):
+        return
+    if os.environ.get("CLAUDECODE") != "1":
+        return
+    if sys.stdin.isatty() and sys.stdout.isatty():
+        return
+    sys.stdout.write("Refused: this command changes a FrugalFlow setting; run it yourself in a terminal.\n")
+    sys.exit(3)
+
+
 def main():
     """Parse CLI arguments and dispatch to the appropriate action."""
     args = sys.argv[1:]
@@ -454,6 +492,9 @@ def main():
         sys.exit(0)
 
     command = args[0]
+
+    # Check CLAUDECODE + TTY for setting-change commands (but allow --notice, --help, status, doctor)
+    _check_claudecode_tty(command, args[1:])
 
     if command in COMMANDS:
         if len(args) < 2:
