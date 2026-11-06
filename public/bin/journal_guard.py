@@ -137,6 +137,11 @@ ATTESTATION_NAME = ".reading.json"
 
 CLAUDE_SETTINGS_NAMES = ("settings.json", "settings.local.json")
 
+# Container folders: a dependency tree, a virtualenv or a tool cache is never a
+# vault, so the descent of tree_holds_protected never enters one.
+TREE_SKIP_DIRS = (".git", ".mypy_cache", ".pytest_cache", ".tox", ".venv",
+                  "__pycache__", "node_modules", "venv")
+
 # C3: a file is a vault marker when it is a SCHEMA.md or overview.md
 # that has a log.md in the same folder (sibling).
 def is_vault_marker(path):
@@ -168,12 +173,18 @@ def is_claude_settings(path):
 
 def is_vault_journal(path):
     """Return True when path is the journal of a vault: a log.md whose folder
-    OR AN ANCESTOR contains a SCHEMA.md or an overview.md. Walk up to root. (C7)"""
+    OR AN ANCESTOR contains a SCHEMA.md or an overview.md. The walk up stops
+    before the root / and before the personal folder: neither is ever a vault. (C7)"""
     try:
         if unicodedata.normalize("NFC", os.path.basename(path)).casefold() != "log.md":
             return False
         d = os.path.dirname(path)
+        # The root and the personal folder never count as a vault: stop before them.
+        home = os.path.expanduser("~")
+        stop = {os.sep, home, os.path.realpath(home)}
         while d:
+            if d in stop:
+                break
             if any(os.path.isfile(os.path.join(d, m)) for m in VAULT_MARKERS):
                 return True
             parent = os.path.dirname(d)
@@ -201,6 +212,9 @@ def tree_holds_protected(d, protected, cwd):
 
     Returns False if d is not a directory or is a symlink.
     Walks with os.walk, returns True at first protected file.
+    The descent never enters a container folder (TREE_SKIP_DIRS): a dependency
+    tree, a virtualenv or a tool cache is not a vault; a walked root named so
+    is not one either.
     Cap of 20000 entries beyond which returns True (fail closed).
     Any exception returns True (fail closed)."""
     try:
@@ -213,6 +227,10 @@ def tree_holds_protected(d, protected, cwd):
         if base in (".claude", ".githooks"):
             return True
 
+        # A container folder is never a vault, not even as the walked root
+        if base in TREE_SKIP_DIRS:
+            return False
+
         # Normalize protected paths once
         protected_norm = [normal(x, cwd) for x in protected]
 
@@ -222,6 +240,9 @@ def tree_holds_protected(d, protected, cwd):
             for dirname in dirs:
                 if dirname.casefold() in (".claude", ".githooks"):
                     return True
+
+            # Never descend into a container folder
+            dirs[:] = [x for x in dirs if x.casefold() not in TREE_SKIP_DIRS]
 
             for fname in files:
                 count += 1
