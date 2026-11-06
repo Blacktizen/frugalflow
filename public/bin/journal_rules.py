@@ -3,11 +3,11 @@ import os
 import json
 import subprocess
 
-FIELDS = ["time", "role", "model_asked", "model_answered", "target", "sha256", "tokens_in", "tokens_out", "status", "reason", "subject", "seconds", "chars", "waiver"]
+FIELDS = ["time", "role", "model_asked", "model_answered", "target", "sha256", "tokens_in", "tokens_out", "status", "reason", "subject", "seconds", "chars", "waiver", "models_path", "models_sha256"]
 STATUSES = ["success", "failure", "refused"]
 
 S0 = {"role": "code", "model_asked": "alpha-7b", "model_answered": None, "target": "out.py", "tokens_in": None, "tokens_out": None, "status": "failure", "reason": "exit without conclusion", "subject": "NATURE: creation"}
-LINE0 = '{"time": "2026-09-23T10:00:00", "role": "code", "model_asked": "alpha-7b", "model_answered": null, "target": "out.py", "sha256": null, "tokens_in": null, "tokens_out": null, "status": "failure", "reason": "exit without conclusion", "subject": "NATURE: creation", "seconds": null, "chars": null, "waiver": null}'
+LINE0 = '{"time": "2026-09-23T10:00:00", "role": "code", "model_asked": "alpha-7b", "model_answered": null, "target": "out.py", "sha256": null, "tokens_in": null, "tokens_out": null, "status": "failure", "reason": "exit without conclusion", "subject": "NATURE: creation", "seconds": null, "chars": null, "waiver": null, "models_path": null, "models_sha256": null}'
 LOG = '{"status": "success"}\n\nnot json\n[1, 2]\n{"status": "weird"}\n'
 
 USAGE = "usage: journal_rules.py --notice | --autotest"

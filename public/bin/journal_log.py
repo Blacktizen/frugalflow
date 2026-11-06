@@ -22,11 +22,15 @@ def default_path():
     else:
         return os.path.join(os.path.expanduser("~"), ".frugalflow", "delegations.jsonl")
 
-def arm(path, role, model_asked, target, subject, chars=None, waiver=None):
+def arm(path, role, model_asked, target, subject, chars=None, waiver=None, models_path=None, models_sha256=None):
     global _PATH, _STATE, _REGISTERED
     _PATH = path
     _STATE = journal_rules.new_state(role, model_asked, os.path.realpath(target) if isinstance(target, str) and target else None, subject)
     _STATE.update(chars=chars, waiver=waiver, _t0=time.monotonic())
+    if models_path is not None:
+        _STATE["models_path"] = models_path
+    if models_sha256 is not None:
+        _STATE["models_sha256"] = models_sha256
     if not _REGISTERED:
         atexit.register(_write)
         _REGISTERED = True
