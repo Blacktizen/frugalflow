@@ -180,6 +180,10 @@ def _doctor(home, claude_dir, ollama_url, lmstudio_url):
                 print("FAIL guard.json checks lack reading_gate: the reading gate is off (" + fix + ")")
             else:
                 print("OK guard.json")
+                if guard_doc.get("allow_env_disarm", False) is True:
+                    print("INFO guard.json allow_env_disarm is true: FRUGALFLOW_GUARD=0 disarms the guard")
+                else:
+                    print("INFO guard.json allow_env_disarm is false: FRUGALFLOW_GUARD=0 is ignored")
         except (OSError, ValueError):
             fails += 1
             print("FAIL guard.json cannot be read (" + fix + ")")
@@ -430,6 +434,22 @@ def _autotest():
         d2 = run(tmp, home, claude)
         ok = ok and "WARN guard mode: OBSERVE" in d1.stdout and "NOT block" in d1.stdout and "OK guard mode: active" in d2.stdout
         results.append(("6 doctor shows the guard mode: WARN in observe, OK in active", ok, ""))
+
+    # Test 7: the allow_env_disarm line follows guard.json; an INFO line is never a fail.
+    with tempfile.TemporaryDirectory() as tmp:
+        home, claude = os.path.join(tmp, "home"), os.path.join(tmp, "claude")
+        ok = init(tmp, home, claude).returncode == 0
+        d1 = run(tmp, home, claude)
+        ok = ok and d1.returncode == 0 and \
+            "INFO guard.json allow_env_disarm is false: FRUGALFLOW_GUARD=0 is ignored" in d1.stdout
+        gp = os.path.join(home, "guard.json")
+        doc = json.load(open(gp, encoding="utf-8"))
+        doc["allow_env_disarm"] = True
+        json.dump(doc, open(gp, "w", encoding="utf-8"))
+        d2 = run(tmp, home, claude)
+        ok = ok and d2.returncode == 0 and \
+            "INFO guard.json allow_env_disarm is true: FRUGALFLOW_GUARD=0 disarms the guard" in d2.stdout
+        results.append(("7 doctor reports allow_env_disarm: false by default, true when set", ok, ""))
 
     all_pass = True
     for desc, passed, detail in results:
