@@ -6,6 +6,7 @@ import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ceilings
+import claudecode_check
 
 BIN = os.path.dirname(os.path.abspath(__file__))
 
@@ -185,6 +186,8 @@ def main(argv):
     if pos is None:
         print(USAGE)
         return 2
+    # A setting change inside Claude Code without a terminal is refused (exit 3).
+    claudecode_check.check_claudecode_tty(cmd, pos)
     home = home or os.environ.get("FRUGALFLOW_HOME") or os.path.expanduser("~/.frugalflow")
 
     prefs_path = os.path.join(home, "preferences.json")
@@ -242,6 +245,9 @@ def main(argv):
 
 def _autotest():
     import subprocess
+
+    # Unset CLAUDECODE for test subprocesses to avoid TTY check interference
+    os.environ.pop("CLAUDECODE", None)
 
     script = os.path.abspath(__file__)
     PREFS = {"schema_version": "1",

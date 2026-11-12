@@ -439,6 +439,9 @@ READER_HEADS = {
     "jq", "ls", "stat", "file", "du", "diff", "cmp", "shasum", "sha256sum", "md5",  # lang-ok
     "md5sum", "readlink", "realpath", "basename", "dirname", "test", "[", "echo",
     "printf", "cut",
+    # 2026-11-12: text-processing readers: they read their input and print it,
+    # they write nothing unless given an output file (see _strict_reader).
+    "sort", "tr", "comm", "join", "paste", "uniq",
 }
 STRUCT_KW = {"for", "while", "until", "select", "case", "fi", "esac", "done", "in", "{", "}"}
 STRIP_KW = {"then", "else", "elif", "do", "if", "time"}
@@ -977,6 +980,11 @@ def _git_is_reader(args):
 def _strict_reader(head, args):
     """Return True when the head is a plain reader, or a reader with read-only options."""
     if head in READER_HEADS:
+        # 2026-11-12: a reader given an output file writes it: sort -o TARGET and
+        # sort --output=TARGET stay writes on TARGET.
+        if head == "sort" and any(a == "-o" or a.startswith("-o") or a.startswith("--output")
+                                  for a in args):
+            return False
         return True
     if head == "sed":
         return _sed_is_reader(args)
@@ -1989,6 +1997,9 @@ def run_autotest():
             ("find ~/blocks -delete", "non-empty"),
             ("sh -c 'rm ~/blocks/g.jsonl'", "non-empty"),
             ("sort -o ~/blocks/g.jsonl /tmp/a", "non-empty"),
+            ("sort --output=~/blocks/g.jsonl /tmp/a", "non-empty"),
+            ("sort ~/blocks/g.jsonl | uniq -c", []),
+            ("tr a-z A-Z < ~/blocks/g.jsonl", []),
             ("grep -c x ~/blocks/g.jsonl", []),
             ('git commit -m "voir ~/blocks/g.jsonl" -- a.md', []),  # lang-ok
             ("cp ~/blocks/g.jsonl /tmp/c.jsonl", []),
