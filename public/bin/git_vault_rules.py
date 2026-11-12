@@ -121,6 +121,21 @@ def contains_vault(d, is_zone_file):
     return False
 
 
+def _plain_words(words):
+    return [w for w in words if not w.startswith("-")]
+
+
+def _worktree_target(args, base):
+    # git worktree add [-f] [-b BRANCH] TARGET [COMMIT]: the first plain word
+    # is the target folder, unless -b/-B names a new branch before it.
+    plain = _plain_words(args)
+    if any(w in ("-b", "-B") for w in args) and plain:
+        plain = plain[1:]
+    if not plain or plain[0] == "-" or base is None:
+        return base
+    return _resolve(plain[0], base)
+
+
 def git_refusals(args, cwd, is_zone_file):
     parsed = parse_git(args, cwd)
 
@@ -149,10 +164,26 @@ def git_refusals(args, cwd, is_zone_file):
         return []
 
     destructive = False
+    judge_dir = None  # worktree add is judged on its target folder
     if subcmd in ("checkout", "restore", "switch", "clean", "pull", "merge", "rebase"):
+        # Branch creation that leaves the working tree alone is allowed:
+        # checkout -b/-B and switch -c/-C with no other start point.
+        if subcmd == "checkout" and any(w in ("-b", "-B") for w in rest) and len(_plain_words(rest)) <= 1:
+            destructive = False
+        elif subcmd == "switch" and any(w in ("-c", "-C") for w in rest) and len(_plain_words(rest)) <= 1:
+            destructive = False
+        else:
+            destructive = True
+    elif subcmd == "reset" and any(w in ("--hard", "--keep", "--merge") for w in rest):
         destructive = True
-    elif subcmd == "reset" and "--hard" in rest:
+    elif subcmd == "read-tree" and any(w in ("-u", "--reset") for w in rest):
         destructive = True
+    elif subcmd in ("checkout-index", "cherry-pick", "revert", "am"):
+        destructive = True
+    elif subcmd == "worktree":
+        if rest and rest[0] == "add":
+            destructive = True
+            judge_dir = _worktree_target(rest[1:], parsed["dir"])
     elif subcmd == "stash":
         first_non_dash = None
         for w in rest:
@@ -160,7 +191,7 @@ def git_refusals(args, cwd, is_zone_file):
                 first_non_dash = w
                 break
         action = first_non_dash if first_non_dash else "push"
-        if action not in ("list", "show"):
+        if action not in ("list", "show", "drop"):
             destructive = True
 
     if not destructive:
@@ -169,7 +200,10 @@ def git_refusals(args, cwd, is_zone_file):
     if parsed["dir"] is None:
         return ["<unknown>"]
 
-    D = parsed["worktree"] if parsed["worktree"] is not None else parsed["dir"]
+    if judge_dir is not None:
+        D = judge_dir
+    else:
+        D = parsed["worktree"] if parsed["worktree"] is not None else parsed["dir"]
     if in_vault(D) or contains_vault(D, is_zone_file):
         return [D]
     return []
@@ -182,6 +216,10 @@ NOTICE = (
     "EXAMPLE   python3 git_vault_rules.py --notice\n"
     "PITFALLS  2026-11-05 git -C DIR checkout restored a vault log.md from a folder the guard did not watch.\n"
     "          2026-11-05 a vault without .git was not protected: the rule now looks at the folders, not at git.\n"
+    "          2026-11-12 read-tree -u/--reset, checkout-index, cherry-pick, revert, am, stash pop/apply,\n"
+    "          worktree add and reset --keep/--merge rewrote a vault tree while the guard watched nothing.\n"
+    "          2026-11-12 switch -c/-C and checkout -b/-B were refused in a repo holding a vault\n"
+    "          although they leave the working tree alone; pull, merge and rebase stay refused there.\n"
 )
 
 
@@ -227,6 +265,30 @@ if __name__ == "__main__" and "--casee" in sys.argv:
         r4 = git_refusals(["status"], proj, _no_zone)
         ok = (r1 == ["core.hooksPath"]) and (r2 == []) and (r3 == []) and (r4 == [])
         label = "config hooks safe reset status"
+    elif n == 6:
+        r1 = git_refusals(["read-tree", "-u", "--reset", "HEAD~1"], vault, _no_zone)
+        r2 = git_refusals(["checkout-index", "-a", "-f"], vault, _no_zone)
+        r3 = git_refusals(["cherry-pick", "HEAD~1"], vault, _no_zone)
+        r4 = git_refusals(["revert", "HEAD~1"], vault, _no_zone)
+        r5 = git_refusals(["am", "patch.mbox"], vault, _no_zone)
+        r6 = git_refusals(["worktree", "add", "--force", ".", "HEAD~1"], vault, _no_zone)
+        r7 = git_refusals(["reset", "--keep", "HEAD~1"], vault, _no_zone)
+        r8 = git_refusals(["reset", "--merge"], vault, _no_zone)
+        ok = all(len(r) > 0 for r in (r1, r2, r3, r4, r5, r6, r7, r8))
+        label = "read-tree checkout-index cherry-pick revert am worktree reset keep merge"
+    elif n == 7:
+        r1 = git_refusals(["reset", "--soft", "HEAD~1"], vault, _no_zone)
+        r2 = git_refusals(["stash", "list"], vault, _no_zone)
+        r3 = git_refusals(["stash", "drop"], vault, _no_zone)
+        r4 = git_refusals(["switch", "-c", "feature"], vault, _no_zone)
+        r5 = git_refusals(["checkout", "-b", "feature"], vault, _no_zone)
+        r6 = git_refusals(["branch", "feature"], vault, _no_zone)
+        r7 = git_refusals(["worktree", "add", "../outside", "HEAD"], vault, _no_zone)
+        r8 = git_refusals(["switch", "-c", "feature", "other"], vault, _no_zone)
+        r9 = git_refusals(["checkout", "-b", "feature", "other"], vault, _no_zone)
+        ok = (r1 == [] and r2 == [] and r3 == [] and r4 == [] and r5 == []
+              and r6 == [] and r7 == [] and len(r8) > 0 and len(r9) > 0)
+        label = "soft reset stash list drop branch creation outside worktree"
 
     if ok:
         print(f"PASS {n} {label}")
@@ -261,7 +323,7 @@ if __name__ == "__main__" and "--autotest" in sys.argv:
     ref_file = os.path.abspath(__file__)
     failed = False
 
-    for n in range(1, 6):
+    for n in range(1, 8):
         pyc = tempfile.mkdtemp(dir="/tmp")
         env = os.environ.copy()
         env["GVR_VAULT"] = vault

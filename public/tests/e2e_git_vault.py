@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# e2e_git_vault.py - end-to-end test: git vault protection (C4, C10, C19)
+# e2e_git_vault.py - end-to-end test: git vault protection (C4, C10, C19, D6, D11)
 
 import json
 import os
@@ -68,6 +68,39 @@ def new_project():
     os.makedirs(os.path.join(p, "build"), exist_ok=True)
     with open(os.path.join(p, "build", "o.txt"), "w", encoding="utf-8") as f:
         f.write("o\n")
+    subprocess.run(["git", "add", "."], cwd=p, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=p, capture_output=True)
+    return p
+
+
+def new_plain_vault():
+    # A vault folder without .git: the rule looks at the folders, not at git.
+    v = tempfile.mkdtemp(prefix="ff_git_plainvault_", dir="/tmp")
+    with open(os.path.join(v, "SCHEMA.md"), "w", encoding="utf-8") as f:
+        f.write("# Schema\n")
+    with open(os.path.join(v, "log.md"), "w", encoding="utf-8") as f:
+        f.write("# Log\n")
+    with open(os.path.join(v, "overview.md"), "w", encoding="utf-8") as f:
+        f.write("# Overview\n")
+    return v
+
+
+def new_project_with_vault():
+    # A git repo that holds a vault in a sub-folder.
+    p = tempfile.mkdtemp(prefix="ff_git_hold_", dir="/tmp")
+    subprocess.run(["git", "init"], cwd=p, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "fixture-user"], cwd=p, capture_output=True)
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=p, capture_output=True)
+    v = os.path.join(p, "vault")
+    os.makedirs(v)
+    with open(os.path.join(v, "SCHEMA.md"), "w", encoding="utf-8") as f:
+        f.write("# Schema\n")
+    with open(os.path.join(v, "log.md"), "w", encoding="utf-8") as f:
+        f.write("# Log\n")
+    with open(os.path.join(v, "overview.md"), "w", encoding="utf-8") as f:
+        f.write("# Overview\n")
+    with open(os.path.join(p, "a.txt"), "w", encoding="utf-8") as f:
+        f.write("a\n")
     subprocess.run(["git", "add", "."], cwd=p, capture_output=True)
     subprocess.run(["git", "commit", "-m", "init"], cwd=p, capture_output=True)
     return p
@@ -354,6 +387,196 @@ def proof_c19_hooksPath():
         shutil.rmtree(project, ignore_errors=True)
 
 
+def proof_d6_destructive_subcommands():
+    """D6: read-tree, checkout-index, cherry-pick, revert, am, worktree add,
+    reset --keep/--merge, stash pop/apply rewrite the tree and are refused."""
+    home = new_home()
+    vault = new_vault()
+    plain = new_plain_vault()
+    try:
+        results = []
+
+        # D6: git read-tree -u --reset in vault -> deny
+        ok, msg = run_case("D6: git read-tree -u --reset in vault", home, "Bash",
+                           {"command": "git read-tree -u --reset HEAD~1"}, vault, True)
+        results.append((ok, msg))
+
+        # D6: git checkout-index -a -f in vault -> deny
+        ok, msg = run_case("D6: git checkout-index in vault", home, "Bash",
+                           {"command": "git checkout-index -a -f"}, vault, True)
+        results.append((ok, msg))
+
+        # D6: git cherry-pick in vault -> deny
+        ok, msg = run_case("D6: git cherry-pick in vault", home, "Bash",
+                           {"command": "git cherry-pick HEAD~1"}, vault, True)
+        results.append((ok, msg))
+
+        # D6: git revert in vault -> deny
+        ok, msg = run_case("D6: git revert in vault", home, "Bash",
+                           {"command": "git revert HEAD"}, vault, True)
+        results.append((ok, msg))
+
+        # D6: git am in vault -> deny
+        ok, msg = run_case("D6: git am in vault", home, "Bash",
+                           {"command": "git am patch.mbox"}, vault, True)
+        results.append((ok, msg))
+
+        # D6: git worktree add --force . in vault -> deny (target is the vault itself)
+        ok, msg = run_case("D6: git worktree add --force . in vault", home, "Bash",
+                           {"command": "git worktree add --force . HEAD~1"}, vault, True)
+        results.append((ok, msg))
+
+        # D6: git reset --keep in vault -> deny
+        ok, msg = run_case("D6: git reset --keep in vault", home, "Bash",
+                           {"command": "git reset --keep HEAD~1"}, vault, True)
+        results.append((ok, msg))
+
+        # D6: git reset --merge in vault -> deny
+        ok, msg = run_case("D6: git reset --merge in vault", home, "Bash",
+                           {"command": "git reset --merge"}, vault, True)
+        results.append((ok, msg))
+
+        # D6: git stash pop in vault -> deny
+        ok, msg = run_case("D6: git stash pop in vault", home, "Bash",
+                           {"command": "git stash pop"}, vault, True)
+        results.append((ok, msg))
+
+        # D6: git stash apply in vault -> deny
+        ok, msg = run_case("D6: git stash apply in vault", home, "Bash",
+                           {"command": "git stash apply"}, vault, True)
+        results.append((ok, msg))
+
+        # D6 vault without .git: cherry-pick run inside it -> deny
+        ok, msg = run_case("D6 vault without .git: git cherry-pick inside", home, "Bash",
+                           {"command": "git cherry-pick HEAD~1"}, plain, True)
+        results.append((ok, msg))
+
+        # D6 vault without .git: worktree add --force . run inside it -> deny
+        ok, msg = run_case("D6 vault without .git: git worktree add --force .", home, "Bash",
+                           {"command": "git worktree add --force . HEAD~1"}, plain, True)
+        results.append((ok, msg))
+
+        # D6 witness: git reset --soft HEAD~1 in vault -> allow
+        ok, msg = run_case("D6 witness: git reset --soft in vault", home, "Bash",
+                           {"command": "git reset --soft HEAD~1"}, vault, False)
+        results.append((ok, msg))
+
+        # D6 witness: git stash list in vault -> allow
+        ok, msg = run_case("D6 witness: git stash list in vault", home, "Bash",
+                           {"command": "git stash list"}, vault, False)
+        results.append((ok, msg))
+
+        # D6 witness: git stash drop in vault -> allow
+        ok, msg = run_case("D6 witness: git stash drop in vault", home, "Bash",
+                           {"command": "git stash drop"}, vault, False)
+        results.append((ok, msg))
+
+        # D6 witness: git read-tree without -u/--reset in vault -> allow
+        ok, msg = run_case("D6 witness: git read-tree plain in vault", home, "Bash",
+                           {"command": "git read-tree HEAD~1"}, vault, False)
+        results.append((ok, msg))
+
+        # D6 witness: git worktree add to a folder outside the vault -> allow
+        ok, msg = run_case("D6 witness: git worktree add outside vault", home, "Bash",
+                           {"command": "git worktree add ../ff_git_wt_outside HEAD"}, vault, False)
+        results.append((ok, msg))
+
+        return results
+    finally:
+        shutil.rmtree(home, ignore_errors=True)
+        shutil.rmtree(vault, ignore_errors=True)
+        shutil.rmtree(plain, ignore_errors=True)
+
+
+def proof_d11_branch_creation():
+    """D11: branch creation without a tree change passes in a repo holding a vault;
+    pull, merge and rebase stay refused there (maintainer decision)."""
+    home = new_home()
+    hold = new_project_with_vault()
+    vault = new_vault()
+    try:
+        results = []
+
+        # D11: git switch -c feature in repo holding a vault -> allow
+        ok, msg = run_case("D11: git switch -c in repo holding a vault", home, "Bash",
+                           {"command": "git switch -c feature"}, hold, False)
+        results.append((ok, msg))
+
+        # D11: git switch -C feature -> allow
+        ok, msg = run_case("D11: git switch -C in repo holding a vault", home, "Bash",
+                           {"command": "git switch -C feature"}, hold, False)
+        results.append((ok, msg))
+
+        # D11: git checkout -b feature -> allow
+        ok, msg = run_case("D11: git checkout -b in repo holding a vault", home, "Bash",
+                           {"command": "git checkout -b feature"}, hold, False)
+        results.append((ok, msg))
+
+        # D11: git checkout -B feature -> allow
+        ok, msg = run_case("D11: git checkout -B in repo holding a vault", home, "Bash",
+                           {"command": "git checkout -B feature"}, hold, False)
+        results.append((ok, msg))
+
+        # D11: git branch feature -> allow
+        ok, msg = run_case("D11: git branch in repo holding a vault", home, "Bash",
+                           {"command": "git branch feature"}, hold, False)
+        results.append((ok, msg))
+
+        # D11: git switch -c feature main (start point changes the tree) -> deny
+        ok, msg = run_case("D11: git switch -c with start point", home, "Bash",
+                           {"command": "git switch -c feature main"}, hold, True)
+        results.append((ok, msg))
+
+        # D11: git checkout -b feature main -> deny
+        ok, msg = run_case("D11: git checkout -b with start point", home, "Bash",
+                           {"command": "git checkout -b feature main"}, hold, True)
+        results.append((ok, msg))
+
+        # D11: git switch main (changes the tree) -> deny
+        ok, msg = run_case("D11: git switch in repo holding a vault", home, "Bash",
+                           {"command": "git switch main"}, hold, True)
+        results.append((ok, msg))
+
+        # Maintainer decision: pull, merge, rebase stay refused -> deny
+        ok, msg = run_case("D11: git pull in repo holding a vault", home, "Bash",
+                           {"command": "git pull"}, hold, True)
+        results.append((ok, msg))
+
+        ok, msg = run_case("D11: git merge in repo holding a vault", home, "Bash",
+                           {"command": "git merge main"}, hold, True)
+        results.append((ok, msg))
+
+        ok, msg = run_case("D11: git rebase in repo holding a vault", home, "Bash",
+                           {"command": "git rebase main"}, hold, True)
+        results.append((ok, msg))
+
+        # D11: git worktree add aimed at the vault sub-folder -> deny
+        ok, msg = run_case("D11: git worktree add aimed at the vault", home, "Bash",
+                           {"command": "git worktree add vault HEAD~1"}, hold, True)
+        results.append((ok, msg))
+
+        # D11: git worktree add to a folder outside -> allow
+        ok, msg = run_case("D11: git worktree add outside the repo", home, "Bash",
+                           {"command": "git worktree add ../ff_git_wt_free HEAD"}, hold, False)
+        results.append((ok, msg))
+
+        # D11 witness: git switch -c feature inside a vault repo -> allow
+        ok, msg = run_case("D11: git switch -c inside a vault repo", home, "Bash",
+                           {"command": "git switch -c feature"}, vault, False)
+        results.append((ok, msg))
+
+        # D11 witness: git checkout -b feature inside a vault repo -> allow
+        ok, msg = run_case("D11: git checkout -b inside a vault repo", home, "Bash",
+                           {"command": "git checkout -b feature"}, vault, False)
+        results.append((ok, msg))
+
+        return results
+    finally:
+        shutil.rmtree(home, ignore_errors=True)
+        shutil.rmtree(hold, ignore_errors=True)
+        shutil.rmtree(vault, ignore_errors=True)
+
+
 def run_e2e():
     fail_k = 0
     case_num = 0
@@ -362,6 +585,8 @@ def run_e2e():
         (proof_c4_git_global_options, "C4 git global options"),
         (proof_c10_same_rule, "C10 same rule"),
         (proof_c19_hooksPath, "C19 core.hooksPath"),
+        (proof_d6_destructive_subcommands, "D6 destructive sub-commands"),
+        (proof_d11_branch_creation, "D11 branch creation"),
     ]:
         try:
             results = proof_func()
