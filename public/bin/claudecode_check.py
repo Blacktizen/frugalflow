@@ -37,3 +37,26 @@ def check_claudecode_tty(command, args):
         return
     sys.stdout.write(MESSAGE)
     sys.exit(3)
+
+
+NOTICE = (
+    "NAME      claudecode_check.py - refuses a FrugalFlow setting change launched by Claude Code without a terminal.\n"
+    "READS     the CLAUDECODE variable and whether stdin and stdout are terminals.\n"
+    "WRITES    nothing; exit 3 with the refusal message when the change must be run by hand.\n"
+    "EXAMPLE   python3 claudecode_check.py --notice\n"
+    "PITFALLS  2026-11-12 config_cmd.py and the other sub-tools did not check CLAUDECODE themselves: launching them directly changed a setting.\n"
+)
+
+
+def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "--notice":
+        sys.stdout.write(NOTICE)
+        sys.exit(0)
+    else:
+        sys.stdout.write("usage: claudecode_check.py --notice\n")
+        sys.exit(2)
+
+
+if __name__ == "__main__":
+    import exit_log
+    exit_log.run(main, "claudecode_check", sys.argv[1:])

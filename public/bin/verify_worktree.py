@@ -30,7 +30,7 @@ NOTICE = "\n".join([
     "WRITES    a temporary folder, removed afterwards; never the project: run_in_worktree() returns (code, output), 124 on timeout, 125 when the check wrote into the project.",
     "EXAMPLE   python3 verify_worktree.py --autotest",
     "PITFALLS  2026-10-03 a check ran in the project folder with every secret of the environment: it could write beside the code and read the keys; it now runs in a copy, and a write it still makes through an absolute path is caught and refused.",
-    "PITFALLS  2026-11-12 the second snapshot returned None when the check pushed the file count over the watch limit, so changed() saw nothing and the write passed; a None second snapshot is now refused like a detected write, and .git/config plus every file under .git/hooks/ are watched.",
+    "          2026-11-12 the second snapshot returned None when the check pushed the file count over the watch limit, so changed() saw nothing and the write passed; a None second snapshot is now refused like a detected write, and .git/config plus every file under .git/hooks/ are watched.",
 ])
 
 
