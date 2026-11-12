@@ -81,10 +81,13 @@ def main():
 
     try:
         # Step 1: --help shows exactly the six entries; no argument prints the same usage with exit 2.
+        # The init line must advertise --here (2026-11-13, B2): the old text said "in this folder" only.
         rc, out, err = run_ff(["--help"], env)
         names = sorted(visible_commands(out))
-        step(1, "--help exit 0 with exactly " + str(VISIBLE),
-             rc == 0 and names == VISIBLE, "rc=%d names=%r" % (rc, names))
+        init_lines = [l for l in out.splitlines() if l.startswith("  init ")]
+        step(1, "--help exit 0 with exactly " + str(VISIBLE) + " and one init line mentioning --here",
+             rc == 0 and names == VISIBLE and len(init_lines) == 1 and "--here" in init_lines[0],
+             "rc=%d names=%r init_lines=%r" % (rc, names, init_lines))
 
         rc2, out2, err2 = run_ff([], env)
         step(2, "no argument exit 2 with the same usage",
