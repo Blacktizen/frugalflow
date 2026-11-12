@@ -13,6 +13,27 @@ JOURNAL_EXTS = [".jsonl", ".json", ".log"]
 TOUCHING_HEADS = {"rm", "unlink", "truncate", "shred", "mv", "ln", "chflags", "chmod", "chown", "rsync", "install", "cp"}
 FILE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 
+# the analysis of a command grows without bound with its segment count; past
+# this cap the guard refuses at once (fail closed) instead of spending minutes
+# on one command.
+MAX_SEGMENTS = 1000
+
+
+class TooManySegments(Exception):
+    """A Bash command has more segments than the guard will analyse."""
+
+
+def check_segment_cap(command):
+    """Refuse a command cut into more segments than the cap, before any analysis."""
+    if not isinstance(command, str):
+        return
+    import shell_split
+    sp = shell_split.split_command(command)
+    if len(sp.get("segments", [])) > MAX_SEGMENTS:
+        raise TooManySegments(
+            "Guard refused: this command has more than %d segments; "
+            "split it into smaller commands." % MAX_SEGMENTS)
+
 # a literal output-file name: a write destination that ends with one of
 # these is a data file, not a protected journal, even when the folder is a variable.
 OUTPUT_SUFFIXES = (".txt", ".json", ".err", ".out", ".log", ".md", ".init", ".doc", ".np")
@@ -1387,6 +1408,10 @@ def touched(tool, tool_input, protected, cwd, depth=0, collect=None):
         import journal_read_proof
         import python_write_proof
 
+        # fail closed before any analysis: a command cut into more segments
+        # than the cap is refused at once, whatever its content.
+        check_segment_cap(command)
+
         cfg = {"code_extensions": JOURNAL_EXTS, "delegate_tools": []}
         judged = shell_rules.judge_command(command, cfg)
         targets = judged.get("targets", [])
@@ -1806,6 +1831,9 @@ def touched(tool, tool_input, protected, cwd, depth=0, collect=None):
                         result.append(t)
 
         return result
+    except TooManySegments:
+        # the cap refusal is the decision itself: it never folds into <unknown>.
+        raise
     except Exception:
         if collect is not None and "<unknown>" not in collect:
             collect.append("<unknown>")
