@@ -212,6 +212,8 @@ def tree_holds_protected(d, protected, cwd):
     - a vault journal (log.md with SCHEMA.md/overview.md in same or ancestor folder)
     - a vault marker (SCHEMA.md/overview.md with log.md sibling) (C3)
     - .reading.json
+    - a python startup file: any name ending in .pth, usercustomize.py,
+      sitecustomize.py, wherever it sits (D2)
     - any path from the protected list
     A directory named .claude or .githooks is itself refused as a source.
 
@@ -278,9 +280,23 @@ def tree_holds_protected(d, protected, cwd):
                 if is_claude_settings(fpath_norm):
                     return True
 
+                # 2026-11-12 (D2): a python startup file (.pth, usercustomize.py,
+                # sitecustomize.py) anywhere in the tree is protected.
+                if is_python_startup_file(fpath_norm):
+                    return True
+
         return False
     except Exception:
         return True  # fail closed
+
+def is_python_startup_file(path):
+    """Return True for a file python runs at startup, wherever it sits: any name
+    ending in .pth, or named usercustomize.py or sitecustomize.py.
+    2026-11-12 (D2): a hook command without -I executes these before the guard;
+    one planted line can end python at once and neutralize the whole guard."""
+    base = os.path.basename(str(path)).casefold()
+    return base.endswith(".pth") or base in ("usercustomize.py", "sitecustomize.py")
+
 
 def is_protected(path, protected, cwd):
     """Return True if path is protected."""
@@ -295,7 +311,10 @@ def is_protected(path, protected, cwd):
     # a log.md beside a SCHEMA.md or an overview.md. Reads stay free; only writes touch it.
     # 2026-11-05: Claude settings files and .githooks files are the user's too.
     # C3: SCHEMA.md and overview.md are protected when a log.md is in their folder.
-    return is_vault_journal(p) or is_vault_marker(p) or is_claude_settings(p)
+    # 2026-11-12 (D2): a python startup file (.pth, usercustomize.py, sitecustomize.py)
+    # is protected wherever it sits: it runs before any guard launched without -I.
+    return (is_vault_journal(p) or is_vault_marker(p) or is_claude_settings(p)
+            or is_python_startup_file(p) or is_python_startup_file(path))
 
 WRITE_DEST_HEADS = {"cp", "tee", "ln", "install", "rsync", "mv"}
 

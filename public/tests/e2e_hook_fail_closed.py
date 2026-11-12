@@ -105,11 +105,13 @@ def main():
         if cmd:
             ok_a = ok_a and cmd.endswith(" || exit 2")
             parts = shlex.split(cmd)
-            ok_a = ok_a and len(parts) == 6
+            # 2026-11-12: the command carries -I after the interpreter, so it
+            # has one more token than before; check the shape, not the count.
+            ok_a = ok_a and len(parts) >= 7 and "-I" in parts
         else:
             ok_a = False
         tag_a = "PASS" if ok_a else "FAIL"
-        print(f"{tag_a} a init installs guard command ending with ' || exit 2' (6 shlex tokens) | rc={rc} cmd={cmd!r}")
+        print(f"{tag_a} a init installs guard command ending with ' || exit 2' (with -I) | rc={rc} cmd={cmd!r}")
         if not ok_a:
             fail_k += 1
 
