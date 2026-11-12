@@ -18,6 +18,8 @@ NOTICE = (
     "PITFALLS  2026-10-25 hooks held the absolute path of the clone: "
     "moving it broke every hook without a word, and the commit gate "
     "never scanned for leaks.\n"
+    "          2026-11-12 the hook command runs the console script with -I: "
+    "the shim must be a python file, a /bin/sh shim would be read as python.\n"
 )
 
 CLEAN_PY = "def add(a, b):\n    return a + b\n"
@@ -59,11 +61,14 @@ def build_base_env(home_dir, pycache_dir):
 def make_shim(shim_dir, clone_bin_path):
     os.makedirs(shim_dir, exist_ok=True)
     shim_file = os.path.join(shim_dir, "frugalflow")
+    # A python file: the hook command launches the console script with -I,
+    # so a /bin/sh shim would be read as python and die on its first line.
+    target = os.path.join(clone_bin_path, "frugalflow.py")
     content = (
-        "#!/bin/sh\n"
-        "exec '" + sys.executable + "' '"
-        + os.path.join(clone_bin_path, "frugalflow.py")
-        + "' \"$@\"\n"
+        "#!" + sys.executable + "\n"
+        "import os\nimport sys\n"
+        "os.execv(sys.executable, [sys.executable, '-I', "
+        + repr(target) + "] + sys.argv[1:])\n"
     )
     with open(shim_file, "w") as fh:
         fh.write(content)
@@ -129,7 +134,7 @@ def file_content(path):
 
 
 def step1(tmp, clone_bin_a, env_cmd_a):
-    expected = "exit 0, 0 occurrences of clone path, >=6 commands starting 'frugalflow run '"
+    expected = "exit 0, 0 occurrences of clone path, >=6 commands with -I and 'run '"
     projects_dir = os.path.join(tmp, "projects")
     os.makedirs(projects_dir, exist_ok=True)
     cmd = [sys.executable, os.path.join(clone_bin_a, "frugalflow.py"),
@@ -159,8 +164,8 @@ def step1(tmp, clone_bin_a, env_cmd_a):
     if len(commands) < 6:
         return "FAIL " + expected + " | only " + str(len(commands)) + " commands", commands, demo_dir
     for c in commands:
-        if not c.startswith("frugalflow run "):
-            return "FAIL " + expected + " | command not starting 'frugalflow run ': " + c, commands, demo_dir
+        if " -I " not in c or " run " not in c:
+            return "FAIL " + expected + " | command without -I and run: " + c, commands, demo_dir
 
     return "PASS " + expected + " | exit=0, 0 clone paths, " + str(len(commands)) + " commands", commands, demo_dir
 
@@ -246,8 +251,8 @@ def step4(tmp, clone_bin_b, env_cmd_b):
         return "FAIL " + expected + " | settings.json empty after init"
     if clone_bin_b in stext or "clone_b" in stext:
         return "FAIL " + expected + " | clone path in init settings"
-    if "frugalflow run guard_hook --hook" not in stext:
-        return "FAIL " + expected + " | guard_hook --hook not found in settings"
+    if "run guard_hook --hook" not in stext or " -I " not in stext:
+        return "FAIL " + expected + " | guard_hook --hook with -I not found in settings"
 
     remove_cmd = init_cmd + ["--remove"]
     rc2, out2, err2 = run_sub(remove_cmd, cwd=tmp, env=env_cmd_b, timeout=120)
@@ -331,6 +336,10 @@ def main(argv):
         clone_b_dir = os.path.join(tmp, "clone_b")
         os.rename(clone_a_dir, clone_b_dir)
         clone_bin_b = os.path.join(clone_b_dir, "public", "bin")
+
+        # The install is reinstalled at the same path after the move: the
+        # commands already in settings.json keep pointing at a live script.
+        make_shim(shim_a_dir, clone_bin_b)
 
         shim_b_dir = os.path.join(tmp, "shim_b")
         make_shim(shim_b_dir, clone_bin_b)

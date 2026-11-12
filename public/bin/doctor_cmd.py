@@ -10,6 +10,7 @@ import claude_block
 import settings_merge
 import env_detect
 import ceilings
+import launcher
 
 BIN = os.path.dirname(os.path.abspath(__file__))
 
@@ -24,7 +25,29 @@ NOTICE = (
     "WRITES    nothing: one OK, WARN, INFO or FAIL line per check, then exits 0 when clean or 1 when a FAIL is found.\n"
     "EXAMPLE   python3 doctor_cmd.py --home ~/.frugalflow --claude-dir ~/.claude\n"
     "PITFALLS  2026-10-03 an engine that does not answer is a WARN, never a FAIL: a missing local model must not block a doctor run for something else.\n"
+    "          2026-11-12 a hook command without -I let a planted .pth file run before the guard; the doctor fails when a FrugalFlow hook command lost -I.\n"
 )
+
+
+def _hook_commands(doc):
+    """Return every command string in the hooks of a settings dict."""
+    hooks = doc.get("hooks")
+    if not isinstance(hooks, dict):
+        return []
+    out = []
+    for event in hooks.values():
+        if not isinstance(event, list):
+            continue
+        for group in event:
+            if not isinstance(group, dict):
+                continue
+            entries = group.get("hooks")
+            if not isinstance(entries, list):
+                continue
+            for entry in entries:
+                if isinstance(entry, dict) and isinstance(entry.get("command"), str):
+                    out.append(entry["command"])
+    return out
 
 
 def _read_json_object(path):
@@ -269,6 +292,29 @@ def _doctor(home, claude_dir, ollama_url, lmstudio_url):
                                         else:
                                             print("OK hook interpreter exists: " + first)
 
+            # 6d every FrugalFlow hook command runs python with -I: without it,
+            # python executes a .pth file planted in the user site-packages
+            # before the guard even starts.
+            commands = _hook_commands(doc)
+            status_line = doc.get("statusLine")
+            if isinstance(status_line, dict) and isinstance(status_line.get("command"), str):
+                commands.append(status_line["command"])
+            isolated = 0
+            for cmd in commands:
+                if not launcher.is_frugalflow_command(cmd, BIN):
+                    continue
+                try:
+                    tokens = shlex.split(cmd)
+                except ValueError:
+                    tokens = []
+                if "-I" in tokens:
+                    isolated += 1
+                else:
+                    fails += 1
+                    print("FAIL hook command runs python without -I: " + cmd + " (" + fix + ")")
+            if isolated:
+                print("OK hook commands run python with -I (" + str(isolated) + ")")
+
     # 7 switch
     enabled, mode = _read_switch(home)
     if enabled:
@@ -450,6 +496,26 @@ def _autotest():
         ok = ok and d2.returncode == 0 and \
             "INFO guard.json allow_env_disarm is true: FRUGALFLOW_GUARD=0 disarms the guard" in d2.stdout
         results.append(("7 doctor reports allow_env_disarm: false by default, true when set", ok, ""))
+
+    # Test 8: a hook command that lost -I is a FAIL (a planted .pth file would run first).
+    with tempfile.TemporaryDirectory() as tmp:
+        home, claude = os.path.join(tmp, "home"), os.path.join(tmp, "claude")
+        ok = init(tmp, home, claude).returncode == 0
+        sp = os.path.join(claude, "settings.json")
+        with open(sp, encoding="utf-8") as f:
+            doc = json.load(f)
+        stripped = 0
+        for group in doc.get("hooks", {}).get("PreToolUse", []):
+            for entry in group.get("hooks", []):
+                if " -I " in entry.get("command", ""):
+                    entry["command"] = entry["command"].replace(" -I ", " ")
+                    stripped += 1
+        with open(sp, "w", encoding="utf-8") as f:
+            json.dump(doc, f)
+        d = run(tmp, home, claude)
+        ok = ok and stripped > 0 and d.returncode == 1 and "without -I" in d.stdout
+        results.append(("8 doctor fails when a hook command lost -I", ok,
+                        "stripped=%d rc=%d" % (stripped, d.returncode)))
 
     all_pass = True
     for desc, passed, detail in results:

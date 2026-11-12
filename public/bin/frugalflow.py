@@ -502,7 +502,9 @@ def main():
         if not NAME_RULE.fullmatch(tool) or not os.path.isfile(path):
             sys.stdout.write(USAGE + "\n")
             sys.exit(2)
-        os.execv(sys.executable, [sys.executable, path] + args[2:])
+        # -I: the tool runs isolated from the user site-packages, so a planted
+        # .pth file cannot run before it. Each tool puts its own folder on the path.
+        os.execv(sys.executable, [sys.executable, "-I", path] + args[2:])
 
     if command in ("init", "doctor", "report", "lint", "setup", "scan", "uninstall", "resume"):
         rest = args[1:]
@@ -521,7 +523,7 @@ def main():
 
     if command == "memory" and len(args) > 1 and args[1] == "decline":
         path = os.path.join(BIN, "session_banner.py")
-        os.execv(sys.executable, [sys.executable, path, "decline"] + args[2:])
+        os.execv(sys.executable, [sys.executable, "-I", path, "decline"] + args[2:])
 
     sys.stdout.write(USAGE + "\n")
     sys.exit(2)

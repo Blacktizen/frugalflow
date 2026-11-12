@@ -224,6 +224,15 @@ def always_on_checks(res, tool, inp, payload, home, settings):
         except Exception as e:
             touched_paths = ["(the protected-files check failed: %s)" % e]
         if touched_paths:
+            fix_line = "To fix: never touch these files; read them only."
+            try:
+                # 2026-11-12 (D2): a python startup file (.pth, usercustomize.py,
+                # sitecustomize.py) is the user's to install; the assistant never
+                # writes it. The refusal hands the change back to the user.
+                if any(journal_guard.is_python_startup_file(p) for p in touched_paths):
+                    fix_line = "To fix: ask the user to make this change by hand."
+            except Exception:
+                pass
             res = guard_rules.result(
                 "deny",
                 "journal",
@@ -231,7 +240,7 @@ def always_on_checks(res, tool, inp, payload, home, settings):
                 "Guard refused: this call writes, removes, moves or links the guard's own logs "
                 "or a protected user file ("
                 + ", ".join(touched_paths)
-                + ").\nTo fix: never touch these files; read them only.",
+                + ").\n" + fix_line,
             )
 
     # Settings CLI guard check

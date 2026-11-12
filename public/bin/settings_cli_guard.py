@@ -17,7 +17,8 @@ REASON_TEXT = (
 
 FREE_ARGS = frozenset({"on", "off", "mode", "display", "init", "setup", "uninstall"})
 HEREDOC_HEADS = frozenset({"bash", "sh", "zsh", "dash", "ksh", "fish"})
-SCRIPT_RUN_HEADS = frozenset({"frugalflow.py", "config_cmd.py", "memory_cmd.py"})
+# 2026-11-12: "frugalflow" is the installed console script the hooks launch with -I.
+SCRIPT_RUN_HEADS = frozenset({"frugalflow.py", "frugalflow", "config_cmd.py", "memory_cmd.py"})
 SCRIPT_INIT_HEADS = frozenset({"init_cmd.py", "setup_cmd.py", "uninstall_cmd.py", "onboard_cmd.py"})
 RUN_INIT_TOOLS = frozenset({
     "init_cmd", "setup_cmd", "uninstall_cmd",
@@ -453,6 +454,8 @@ FIXTURE_FREE = [
     "frugalflow run config_cmd config",
     "python3 /opt/ff/bin/config_cmd.py --notice",
     "python3 /opt/ff/bin/setup_cmd.py --notice",
+    "python3 -I /opt/ff/bin/frugalflow run guard_hook --hook",
+    "python3 -I /opt/ff/bin/frugalflow run statusline",
     "echo frugalflow off",
     "grep mode off notes.txt",
     "cat <<EOF\nfrugalflow off\nEOF",
@@ -483,6 +486,8 @@ FIXTURE_DISGUISED = [
     "sudo frugalflow off",
     "/opt/ff/bin/frugalflow mode active",
     "python3 /opt/ff/bin/frugalflow.py off",
+    "python3 -I /opt/ff/bin/frugalflow off",
+    "python3 -I /opt/ff/bin/frugalflow init --mode active",
     "python3 /opt/ff/bin/config_cmd.py mode observe",
     "frugalflow run config_cmd off",
     "frugalflow run setup_cmd --yes",
@@ -548,6 +553,7 @@ def _do_notice():
     print("EXAMPLE   python3 settings_cli_guard.py --check 'frugalflow off'")
     print("PITFALLS  2026-11-05 the assistant could turn the guard off with frugalflow off; the settings belong to the user.")
     print("          2026-11-05 xargs frugalflow passed: the subcommand came from stdin; a launcher naming frugalflow is refused.")
+    print("          2026-11-12 the hooks launch the installed console script with -I; python3 -I <path>/frugalflow off is refused like frugalflow.py off.")
     sys.exit(0)
 
 
