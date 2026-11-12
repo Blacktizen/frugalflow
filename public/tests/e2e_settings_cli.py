@@ -122,6 +122,23 @@ def test_settings_cli_guard_refused():
         "python3 <<'EOF'\nimport subprocess\nsubprocess.run(['frugalflow','off'])\nEOF",
         "python3 -c \"import subprocess; subprocess.run(['frugalflow','off'])\"",
         "echo 'frugalflow off' | python3",
+        # 2026-11-12 (F1): a command substitution, a link or an alias hides the head.
+        "$(echo frugalflow) off",
+        "`echo frugalflow` off",
+        "$(which frugalflow) mode observe",
+        "ln -s /opt/ff/bin/frugalflow /tmp/ff && /tmp/ff off",
+        "alias f=frugalflow; f off",
+        # 2026-11-12 (G1): a plain assignment in the same command is resolved
+        # first; an executed or hidden head with a setting word anywhere refuses.
+        "F=off; frugalflow $F",
+        "CMD='frugalflow off'; $CMD",
+        "CMD=frugalflow; ARG=off; $CMD $ARG",
+        "echo frugalflow off | xargs bash -c",
+        'bash -c "$(echo frugalflow off)"',
+        'eval "$(echo frugalflow off)"',
+        "ln -s $(which frugalflow) /tmp/ff && /tmp/ff off",
+        # 2026-11-12 (G1): a link made at a full path, called by its base name through PATH.
+        "ln -s $(which frugalflow) /opt/ff/bin/ff && ff off",
     ]
     failed = 0
     for cmd in refused_cases:
@@ -165,6 +182,14 @@ def test_settings_cli_guard_free():
         "uv run python /opt/ff/bin/frugalflow.py doctor",
         "/opt/ff/bin/config_cmd.py --notice",
         "/opt/ff/bin/init_cmd.py --notice",
+        # 2026-11-12 (F1): a substitution or a link naming no FrugalFlow tool stays free.
+        "$(echo echo) hello",
+        "ln -s /opt/a /tmp/b",
+        # 2026-11-12 (G1): text, a reader and a reading subcommand stay free.
+        "grep -rn 'frugalflow off' docs",
+        "F=hello; echo $F",
+        "ls | xargs wc -l",
+        "S=status; frugalflow $S",
     ]
     failed = 0
     for cmd in free_cases:

@@ -184,6 +184,22 @@ def main():
                           {"tool_name": "Bash", "tool_input": {"command": "echo x > " + os.path.join(work_a, "evil2.pth")}})
         cases.append(("A Bash write to a .pth file refuses", decision(out) == "deny",
                       "expected deny, got " + decision(out)))
+        # 2026-11-12 (G2): a copy into a directory writes DEST/source-name; that
+        # joined path is judged. Nothing is actually written here: the hook only judges.
+        dest_dir = os.path.join(work_a, "DEST")
+        os.makedirs(dest_dir, exist_ok=True)
+        _, out = run_hook(ff_a, home_a, work_a,
+                          {"tool_name": "Bash", "tool_input": {"command": "cp /tmp/x.pth " + dest_dir + "/"}})
+        cases.append(("A Bash cp of x.pth into a folder refuses", decision(out) == "deny",
+                      "expected deny, got " + decision(out)))
+        _, out = run_hook(ff_a, home_a, work_a,
+                          {"tool_name": "Bash", "tool_input": {"command": "cp x.pth /usr/local/lib/python3.11/dist-packages/"}})
+        cases.append(("A Bash cp of x.pth into dist-packages refuses", decision(out) == "deny",
+                      "expected deny, got " + decision(out)))
+        _, out = run_hook(ff_a, home_a, work_a,
+                          {"tool_name": "Bash", "tool_input": {"command": "cp /tmp/x.txt " + dest_dir + "/"}})
+        cases.append(("OK control: a Bash cp of x.txt into a folder allows", decision(out) == "allow",
+                      "expected allow, got " + decision(out)))
         _, out = run_hook(ff_a, home_a, work_a,
                           {"tool_name": "Write", "tool_input": {"file_path": os.path.join(work_a, "ok.py"), "content": "a = 1\n"}})
         cases.append(("OK control: a small ordinary .py in the work folder allows", decision(out) == "allow",

@@ -1490,6 +1490,21 @@ def touched(tool, tool_input, protected, cwd, depth=0, collect=None):
                         or (parent and _parent_zone(full))) and dest not in result:
                     result.append(dest)
 
+            def _is_dir_dest(d):
+                """True when a cp, mv, install, rsync or ln destination is a folder:
+                a trailing slash, or a directory that exists."""
+                if not d:
+                    return False
+                if d.endswith("/"):
+                    return True
+                try:
+                    p = os.path.expanduser(d)
+                    if not os.path.isabs(p):
+                        p = os.path.join(cwd_local, p)
+                    return os.path.isdir(p)
+                except Exception:
+                    return False
+
             for s in segs_list:
                 try:
                     words = shlex.split(s)
@@ -1579,6 +1594,7 @@ def touched(tool, tool_input, protected, cwd, depth=0, collect=None):
                         for f in files:
                             judge(f)
                 dests = []
+                sources = []
                 if head in ("tee", "touch"):
                     dests = [w for w in words[1:] if not w.startswith("-")]
                 elif head in ("cp", "mv", "install", "ln"):
@@ -1593,14 +1609,33 @@ def touched(tool, tool_input, protected, cwd, depth=0, collect=None):
                             t_dirs.append(a.split("=", 1)[1])
                     if t_dirs:
                         dests = t_dirs
+                        sources = nonopt
                     elif nonopt:
                         dests = [nonopt[-1]]
+                        sources = nonopt[:-1]
+                elif head == "rsync":
+                    # 2026-11-12 (G2): rsync -t means --times, not --target-directory:
+                    # the last non-option argument is the destination, the others sources.
+                    nonopt = [w for w in words[1:] if not w.startswith("-")]
+                    if nonopt:
+                        dests = [nonopt[-1]]
+                        sources = nonopt[:-1]
                 elif head in WRITE_DEST_HEADS:
                     nonopt = [w for w in words[1:] if not w.startswith("-")]
                     if nonopt:
                         dests = [nonopt[-1]]
                 if head == "dd":
                     dests += [a[3:] for a in words[1:] if a.startswith("of=")]
+                # 2026-11-12 (G2): when cp, mv, install, rsync or ln writes into a
+                # directory, the file written is DEST/basename(source): judge that
+                # path with the same protected rules. cp /tmp/x.txt DEST/ stays free.
+                if head in ("cp", "mv", "install", "ln", "rsync"):
+                    for d in dests:
+                        if _is_dir_dest(d):
+                            for src in sources:
+                                name = os.path.basename(src.rstrip("/"))
+                                if name:
+                                    judge(os.path.join(d.rstrip("/"), name))
                 dests += _redirection_dests(s)
                 for d in dests:
                     judge(d)
@@ -2288,6 +2323,7 @@ def print_notice():
         "          2026-10-15 a heredoc body read by a shell, a json.tool output file and an unreadable target named guard.json were never judged: they are now.\n"
         "          2026-11-05 the zone stopped at the guard's own folder: the user's Claude settings file (~/.claude/settings.json) and the journal of a vault (log.md beside a SCHEMA.md or an overview.md) are now protected too, wherever they sit; they are read freely, never written, and journal_add.py remains the legitimate gesture.\n"
         "          2026-11-12 the install state was outside the zone: a forged setup-manifest.json let an uninstall remove any file of the machine, and a rewritten session log erased a gesture's trace so the R1 guard stopped blocking; setup-manifest.json, setup-backups, sessions and sessions-anchors are protected now, and only the FrugalFlow tools write them.\n"
+        "          2026-11-12 (G2) cp /tmp/x.pth DEST/ and cp x.pth /usr/local/lib/python3.11/dist-packages/ passed: when cp, mv, install, rsync or ln writes into a directory, the file written is DEST/source-name, and that joined path is judged like any protected target.\n"
     )
     print(notice)
 
