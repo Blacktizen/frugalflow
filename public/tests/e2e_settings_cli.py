@@ -139,6 +139,14 @@ def test_settings_cli_guard_refused():
         "ln -s $(which frugalflow) /tmp/ff && /tmp/ff off",
         # 2026-11-12 (G1): a link made at a full path, called by its base name through PATH.
         "ln -s $(which frugalflow) /opt/ff/bin/ff && ff off",
+        # 2026-11-12 (H1): the subcommand is a command substitution: only an
+        # `echo <literal words>` substitution is judged; any other is refused.
+        "frugalflow $(echo off)",
+        "frugalflow `echo off`",
+        "frugalflow $(cat x)",
+        "frugalflow $(echo mode) observe",
+        "frugalflow run $(echo config_cmd) off",
+        "python3 /opt/ff/bin/frugalflow.py $(echo off)",
     ]
     failed = 0
     for cmd in refused_cases:
@@ -190,6 +198,10 @@ def test_settings_cli_guard_free():
         "F=hello; echo $F",
         "ls | xargs wc -l",
         "S=status; frugalflow $S",
+        # 2026-11-12 (H1): an echo substitution of literal words is judged by those words.
+        "frugalflow $(echo status)",
+        "frugalflow $(echo doctor)",
+        "python3 /opt/ff/bin/frugalflow.py $(echo doctor)",
     ]
     failed = 0
     for cmd in free_cases:
