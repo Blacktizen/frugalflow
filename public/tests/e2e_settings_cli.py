@@ -128,6 +128,17 @@ def test_settings_cli_guard_refused():
         "$(which frugalflow) mode observe",
         "ln -s /opt/ff/bin/frugalflow /tmp/ff && /tmp/ff off",
         "alias f=frugalflow; f off",
+        # 2026-11-12 (G1): a plain assignment in the same command is resolved
+        # first; an executed or hidden head with a setting word anywhere refuses.
+        "F=off; frugalflow $F",
+        "CMD='frugalflow off'; $CMD",
+        "CMD=frugalflow; ARG=off; $CMD $ARG",
+        "echo frugalflow off | xargs bash -c",
+        'bash -c "$(echo frugalflow off)"',
+        'eval "$(echo frugalflow off)"',
+        "ln -s $(which frugalflow) /tmp/ff && /tmp/ff off",
+        # 2026-11-12 (G1): a link made at a full path, called by its base name through PATH.
+        "ln -s $(which frugalflow) /opt/ff/bin/ff && ff off",
     ]
     failed = 0
     for cmd in refused_cases:
@@ -174,6 +185,11 @@ def test_settings_cli_guard_free():
         # 2026-11-12 (F1): a substitution or a link naming no FrugalFlow tool stays free.
         "$(echo echo) hello",
         "ln -s /opt/a /tmp/b",
+        # 2026-11-12 (G1): text, a reader and a reading subcommand stay free.
+        "grep -rn 'frugalflow off' docs",
+        "F=hello; echo $F",
+        "ls | xargs wc -l",
+        "S=status; frugalflow $S",
     ]
     failed = 0
     for cmd in free_cases:

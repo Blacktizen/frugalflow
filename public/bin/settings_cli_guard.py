@@ -8,6 +8,7 @@ import sys
 
 from shell_split import split_command
 from shell_tokens import tokenize, strip_prefixes
+from shell_vars import resolve
 
 REASON_TEXT = (
     "Guard refused: FrugalFlow settings belong to the user; "
@@ -67,6 +68,25 @@ INTERPRETER_E_HEADS = frozenset({"perl", "ruby", "node"})
 NON_READER_INTERPRETERS = frozenset({
     "python", "python3", "perl", "ruby", "node", "bash", "sh", "zsh", "dash", "ksh", "fish",
 })
+
+# 2026-11-12 (G1): heads that run the text they are given, so the command they
+# really run is hidden from the guard.
+EXEC_HEADS = frozenset({"eval", "source", "."})
+
+
+def _segment_is_executed(head, toks):
+    """True when the segment runs something the guard cannot see: eval, source,
+    ., xargs, a shell with -c, or a head that is a variable or a command substitution."""
+    return (head in EXEC_HEADS or head == "xargs"
+            or _is_shell_with_c_option(head, toks)
+            or _head_is_variable_expansion(toks[0])
+            or toks[0] == SUB_HEAD)
+
+
+def _command_hides_settings(command):
+    """True when the command text names frugalflow (or a *_cmd.py tool) and
+    carries a setting-changing subcommand anywhere in it."""
+    return ("frugalflow" in command or "_cmd.py" in command) and bool(SETTING_SUB_RE.search(command))
 
 
 def _basename(token):
@@ -157,7 +177,7 @@ def _ff_tool_target(target):
     return "frugalflow" in target or target.endswith("_cmd.py")
 
 
-def _alias_map(segments):
+def _alias_map(segments, command):
     """Names the command itself creates with ln or alias, pointing at a FrugalFlow tool.
     A segment headed by such a name is judged as the tool it points to."""
     aliases = {}
@@ -168,8 +188,18 @@ def _alias_map(segments):
         head = _basename(toks[0])
         if head == "ln":
             words = [t for t in toks[1:] if not t.startswith("-")]
-            if len(words) >= 2 and _ff_tool_target(words[0]):
-                aliases[words[-1]] = words[0]
+            if len(words) >= 2:
+                target = words[0]
+                # 2026-11-12 (G1): a link whose target is a command substitution
+                # ($(which frugalflow)) is followed like a link to that tool.
+                if target == SUB_HEAD and ("frugalflow" in command or "_cmd.py" in command):
+                    target = "frugalflow"
+                if _ff_tool_target(target):
+                    aliases[words[-1]] = target
+                    # 2026-11-12 (G1): a link made at a full path is also reached by
+                    # its base name through PATH: ln -s $(which frugalflow)
+                    # /opt/ff/bin/ff && ff off is judged like frugalflow off.
+                    aliases[_basename(words[-1])] = target
         elif head == "alias":
             for tok in toks[1:]:
                 if tok.startswith("-"):
@@ -344,6 +374,10 @@ LAUNCHER_HEADS = {"xargs", "parallel", "watch", "timeout", "gtimeout", "nice", "
 
 def changes_settings(command):
     """Return the list of faulty segment strings; empty means the command is free."""
+    # 2026-11-12 (G1): a variable assigned plainly earlier in the same command is
+    # resolved first (shell_vars.py): F=off; frugalflow $F is judged as
+    # frugalflow off, and S=status; frugalflow $S stays free.
+    command = resolve(command)
     result = split_command(command)
     segments = result.get("segments", [])
     bodies = result.get("bodies", [])
@@ -359,7 +393,7 @@ def changes_settings(command):
 
     # 2026-11-12 (F1): names the command creates with ln or alias that point at a
     # FrugalFlow tool: /tmp/ff off and f off hide the head and are judged as the tool.
-    aliases = _alias_map(segments)
+    aliases = _alias_map(segments, command)
 
     # Check for pipe to shell (e.g., echo 'frugalflow off' | sh)
     # and here-string to shell (e.g., sh <<< 'frugalflow off')
@@ -426,15 +460,12 @@ def changes_settings(command):
         # by its options (the -c alias check above), not by its raw text.
         elif head != "git" and _raw_text_changes_settings(seg) and head not in READER_HEADS:
             faulty.append(seg)
-        # A segment headed by a variable expansion ($F off) hides the command:
-        # when the command text names frugalflow and the segment carries a
-        # setting-changing subcommand, refuse. Reading subcommands stay free.
-        elif _head_is_variable_expansion(toks[0]) and "frugalflow" in command and SETTING_SUB_RE.search(seg):
-            faulty.append(seg)
-        # A segment headed by a command substitution ($(...) or backticks) hides the
-        # command: when the command text names frugalflow and the segment carries a
-        # setting-changing subcommand, refuse. Reading subcommands stay free.
-        elif toks[0] == SUB_HEAD and "frugalflow" in command and SETTING_SUB_RE.search(seg):
+        # 2026-11-12 (G1): a segment run by eval, source, ., xargs or a shell with -c,
+        # or headed by a variable or a command substitution, hides the command it
+        # really runs: when the command text names frugalflow (or a *_cmd.py tool)
+        # with a setting-changing subcommand anywhere in it, refuse. Reading
+        # subcommands stay free.
+        elif _segment_is_executed(head, toks) and _command_hides_settings(command):
             faulty.append(seg)
 
     # Rule 6: heredoc bodies opened by non-reader interpreters
@@ -613,6 +644,12 @@ def _do_notice():
     print("          2026-11-12 the hooks launch the installed console script with -I; python3 -I <path>/frugalflow off is refused like frugalflow.py off.")
     print("          2026-11-12 $(echo frugalflow) off and alias f=frugalflow; f off passed: a command")
     print("          substitution, a link or an alias naming a FrugalFlow tool is judged as the tool itself.")
+    print("          2026-11-12 (G1) F=off; frugalflow $F and eval \"$(echo frugalflow off)\" passed: an")
+    print("          assignment made in the same command is resolved first, and a segment run by eval,")
+    print("          source, ., xargs or a shell with -c is refused when the command text names a")
+    print("          FrugalFlow tool with a setting-changing subcommand anywhere in it.")
+    print("          2026-11-12 (G1) ln -s $(which frugalflow) /opt/ff/bin/ff && ff off passed: a link")
+    print("          made at a full path is followed by its full path or its base name (found through PATH).")
     sys.exit(0)
 
 
