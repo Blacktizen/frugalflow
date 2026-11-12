@@ -5,6 +5,7 @@ import json
 import subprocess
 import tempfile
 import shutil
+import time
 
 ROOT = os.environ.get("FF_ROOT") or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BIN = os.path.join(ROOT, "bin")
@@ -220,6 +221,62 @@ def main():
                 check(check_num, expected[i], dec, f"C18 Edit call {i+1}")
                 check_num += 1
                 check(check_num, expected_labels[i], lbl, f"C18 Edit call {i+1} audit label")
+
+    # Scenario 11: D8 segment cap - a command cut into more than 1000 segments
+    # is refused at once, in under 2 seconds; 100 segments still pass.
+    check_num += 1
+    with tempfile.TemporaryDirectory() as home:
+        with tempfile.TemporaryDirectory() as work:
+            setup_home(home)
+            os.makedirs(work, exist_ok=True)
+            decision, reason, audit = run_hook(home, work, "Bash", {"command": "rm x; " * 100})
+            check(check_num, "allow", decision, "D8 witness: 100 segments")
+            check_num += 1
+            started = time.time()
+            decision, reason, audit = run_hook(home, work, "Bash", {"command": "rm x; " * 3000})
+            elapsed = time.time() - started
+            check(check_num, "deny", decision, "D8: 3000 segments refused")
+            check_num += 1
+            check(check_num, True, "more than 1000 segments" in reason, "D8: refusal names the segment cap")
+            check_num += 1
+            check(check_num, True, elapsed < 2.0, f"D8: refusal in {elapsed:.2f} s (under 2 s)")
+
+    # Scenario 12: D10 extensions - .sql and Makefile count as code; 60-line
+    # .md and .csv still pass.
+    check_num += 1
+    with tempfile.TemporaryDirectory() as home:
+        with tempfile.TemporaryDirectory() as work:
+            setup_home(home)
+            os.makedirs(work, exist_ok=True)
+            content60 = "\n".join(f"x{i} = {i}" for i in range(60)) + "\n"
+            d1, _, _ = run_hook(home, work, "Write", {"file_path": os.path.join(work, "query.sql"), "content": content60})
+            check(check_num, "deny", d1, "D10: 60 lines .sql")
+            check_num += 1
+            d2, _, _ = run_hook(home, work, "Write", {"file_path": os.path.join(work, "Makefile"), "content": content60})
+            check(check_num, "deny", d2, "D10: 60 lines Makefile")
+
+    # Scenario 13: D10 shebang after a byte-order mark and blank lines -> deny
+    check_num += 1
+    with tempfile.TemporaryDirectory() as home:
+        with tempfile.TemporaryDirectory() as work:
+            setup_home(home)
+            os.makedirs(work, exist_ok=True)
+            content = "\ufeff\n\n#!/usr/bin/env python3\n" + "\n".join(f"x{i} = {i}" for i in range(60)) + "\n"
+            decision, reason, audit = run_hook(home, work, "Write", {"file_path": os.path.join(work, "tool_bom"), "content": content})
+            check(check_num, "deny", decision, "D10: BOM + blank lines + shebang, 60 lines")
+
+    # Scenario 14: D10 witness - 60-line .md and .csv -> allow
+    check_num += 1
+    with tempfile.TemporaryDirectory() as home:
+        with tempfile.TemporaryDirectory() as work:
+            setup_home(home)
+            os.makedirs(work, exist_ok=True)
+            content60 = "\n".join(f"line{i}" for i in range(60)) + "\n"
+            d1, _, _ = run_hook(home, work, "Write", {"file_path": os.path.join(work, "notes.md"), "content": content60})
+            d2, _, _ = run_hook(home, work, "Write", {"file_path": os.path.join(work, "data.csv"), "content": content60})
+            check(check_num, "allow", d1, "D10 witness: notes.md 60 lines")
+            check_num += 1
+            check(check_num, "allow", d2, "D10 witness: data.csv 60 lines")
 
     print(f"\nTotal checks: {check_num}, Failures: {failures}")
     return 1 if failures else 0

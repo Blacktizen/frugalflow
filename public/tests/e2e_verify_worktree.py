@@ -100,6 +100,55 @@ def test_max_watch_threshold(root):
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def test_watch_limit_exceeded_after_check(root):
+    """Case 3: first snapshot fits, the check adds files past the watch limit
+    -> run_in_worktree refuses like a detected write (125, exact message)."""
+    vw = import_from_root(root)
+    tmp = tempfile.mkdtemp(prefix="e2e_test3_")
+    try:
+        for i in range(3):
+            with open(os.path.join(tmp, f"f{i}.txt"), "w") as f:
+                f.write("x")
+        cand = os.path.join(tmp, "cand.py")
+        with open(cand, "w") as f:
+            f.write("pass\n")
+        cmd = 'touch "%s/n1.txt" "%s/n2.txt"' % (tmp, tmp)
+        code, output = vw.run_in_worktree(cmd, cand, cand, tmp, 30, max_watch=5)
+        expected = (125, "VERIFY WROTE TO THE PROJECT: the file count went over the watch limit")
+        if (code, output) == expected:
+            return True, f"code={code} output={output!r}"
+        return False, f"expected {expected!r}, got code={code} output={output!r}"
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_git_config_and_hooks_watched(root):
+    """Case 4: .git is no longer fully skipped: .git/config and every file
+    under .git/hooks/ are watched; other .git contents stay unwatched."""
+    vw = import_from_root(root)
+    tmp = tempfile.mkdtemp(prefix="e2e_test4_")
+    try:
+        os.makedirs(os.path.join(tmp, ".git", "hooks"))
+        os.makedirs(os.path.join(tmp, ".git", "objects"))
+        for rel in [".git/config", ".git/hooks/pre-commit", ".git/objects/zz"]:
+            with open(os.path.join(tmp, rel), "w") as f:
+                f.write("x")
+        cand = os.path.join(tmp, "cand.py")
+        with open(cand, "w") as f:
+            f.write("pass\n")
+        code1, out1 = vw.run_in_worktree('echo evil > "%s/.git/config"' % tmp, cand, cand, tmp, 30)
+        code2, out2 = vw.run_in_worktree('echo evil > "%s/.git/hooks/post-commit"' % tmp, cand, cand, tmp, 30)
+        code3, out3 = vw.run_in_worktree('touch "%s/.git/objects/yy"' % tmp, cand, cand, tmp, 30)
+        ok1 = code1 == 125 and ".git/config" in out1
+        ok2 = code2 == 125 and ".git/hooks/post-commit" in out2
+        ok3 = code3 == 0
+        if ok1 and ok2 and ok3:
+            return True, "config=125 hooks=125 objects=0"
+        return False, f"config=({code1},{out1!r}) hooks=({code2},{out2!r}) objects=({code3},{out3!r})"
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def main():
     args = parse_args()
     if args.notice:
@@ -127,6 +176,22 @@ def main():
         print(f"PASS max_watch_threshold {detail}")
     else:
         print(f"FAIL max_watch_threshold expected code=126 REFUSED marker_absent got {detail}")
+        all_pass = False
+
+    # Test 3
+    ok, detail = test_watch_limit_exceeded_after_check(root)
+    if ok:
+        print(f"PASS watch_limit_exceeded_after_check {detail}")
+    else:
+        print(f"FAIL watch_limit_exceeded_after_check expected code=125 with the watch-limit message got {detail}")
+        all_pass = False
+
+    # Test 4
+    ok, detail = test_git_config_and_hooks_watched(root)
+    if ok:
+        print(f"PASS git_config_and_hooks_watched {detail}")
+    else:
+        print(f"FAIL git_config_and_hooks_watched expected 125 on .git/config and .git/hooks writes and 0 on .git/objects got {detail}")
         all_pass = False
 
     return 0 if all_pass else 1

@@ -30,6 +30,7 @@ NOTICE = "\n".join([
     "WRITES    a temporary folder, removed afterwards; never the project: run_in_worktree() returns (code, output), 124 on timeout, 125 when the check wrote into the project.",
     "EXAMPLE   python3 verify_worktree.py --autotest",
     "PITFALLS  2026-10-03 a check ran in the project folder with every secret of the environment: it could write beside the code and read the keys; it now runs in a copy, and a write it still makes through an absolute path is caught and refused.",
+    "          2026-11-12 the second snapshot returned None when the check pushed the file count over the watch limit, so changed() saw nothing and the write passed; a None second snapshot is now refused like a detected write, and .git/config plus every file under .git/hooks/ are watched.",
 ])
 
 
@@ -117,7 +118,17 @@ def snapshot(project_dir, max_watch=MAX_WATCH):
     result = {}
     count = 0
     for dirpath, dirnames, filenames in os.walk(project_dir):
-        dirnames[:] = [dirname for dirname in dirnames if dirname not in SKIP_DIRS]
+        relative_dir = os.path.relpath(dirpath, project_dir)
+        if relative_dir == ".":
+            # .git stays walked at the root: a write to .git/config or under
+            # .git/hooks/ is a write into the project. Other skipped dirs stay.
+            dirnames[:] = [dirname for dirname in dirnames
+                           if dirname not in SKIP_DIRS or dirname == ".git"]
+        elif relative_dir == ".git":
+            dirnames[:] = ["hooks"] if "hooks" in dirnames else []
+            filenames = [filename for filename in filenames if filename == "config"]
+        else:
+            dirnames[:] = [dirname for dirname in dirnames if dirname not in SKIP_DIRS]
         for filename in filenames:
             count += 1
             if count > max_watch:
@@ -192,7 +203,12 @@ def run_in_worktree(verify_cmd, candidate_path, out_path, project_dir, timeout, 
                 pass
             proc.communicate()
             return (124, "VERIFY TIMEOUT after " + str(timeout) + " s")
-        written = changed(before, snapshot(project_dir, max_watch=max_watch))
+        after = snapshot(project_dir, max_watch=max_watch)
+        if after is None:
+            # the first snapshot fit under the limit; it does not anymore:
+            # files were added. Refuse like a detected write.
+            return (125, "VERIFY WROTE TO THE PROJECT: the file count went over the watch limit")
+        written = changed(before, after)
         if written:
             return (125, "VERIFY WROTE TO THE PROJECT: " + ", ".join(written[:5]))
         return (proc.returncode, output or "")

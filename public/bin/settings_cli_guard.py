@@ -17,8 +17,9 @@ REASON_TEXT = (
 
 FREE_ARGS = frozenset({"on", "off", "mode", "display", "init", "setup", "uninstall"})
 HEREDOC_HEADS = frozenset({"bash", "sh", "zsh", "dash", "ksh", "fish"})
-SCRIPT_RUN_HEADS = frozenset({"frugalflow.py", "config_cmd.py"})
-SCRIPT_INIT_HEADS = frozenset({"init_cmd.py", "setup_cmd.py", "uninstall_cmd.py"})
+# 2026-11-12: "frugalflow" is the installed console script the hooks launch with -I.
+SCRIPT_RUN_HEADS = frozenset({"frugalflow.py", "frugalflow", "config_cmd.py", "memory_cmd.py"})
+SCRIPT_INIT_HEADS = frozenset({"init_cmd.py", "setup_cmd.py", "uninstall_cmd.py", "onboard_cmd.py"})
 RUN_INIT_TOOLS = frozenset({
     "init_cmd", "setup_cmd", "uninstall_cmd",
     "init_cmd.py", "setup_cmd.py", "uninstall_cmd.py",
@@ -31,10 +32,8 @@ READER_HEADS = frozenset({
     "less", "more", "ls", "wc", "diff", "file", "stat",
 })
 
-# Python options to skip when detecting script execution
-PYTHON_SKIP_OPTS = frozenset({
-    "-I", "-u", "-O", "-B", "-E", "-s", "-S", "-X", "-W",
-})
+# Python options that take a separate argument when not attached: -W ignore
+PYTHON_ARG_OPTS = frozenset({"-X", "-W", "--check-hash-based-pycs"})
 
 # Regex to detect frugalflow setting-changing subcommands in raw text
 # Matches frugalflow or frugalflow.py followed by setting-changing subcommand
@@ -73,30 +72,38 @@ def _basename(token):
 
 def _is_python(token):
     base = _basename(token)
-    return base in ("python", "python3") or base.startswith("python3.")
+    return base in ("python", "python3", "pypy", "pypy3") or base.startswith("python3.")
 
 
-def _skip_python_opts(tokens):
-    """Skip Python interpreter options (-I, -u, -O, -B, -E, -s, -S, -X, -W, -c, -m).
-    Returns the index of the first non-option token after the python command, or len(tokens) if none."""
-    i = 1  # Start after the python command itself
+def _python_head_index(tokens):
+    """Index of the python head token: python, python3, python3.N, pypy, pypy3,
+    or the python of a 'uv run python' launcher; -1 when there is none."""
+    if _is_python(tokens[0]):
+        return 0
+    if _basename(tokens[0]) == "uv" and len(tokens) > 2 and tokens[1] == "run" and _is_python(tokens[2]):
+        return 2
+    return -1
+
+
+def _skip_python_opts(tokens, start=0):
+    """Scan the python interpreter options after the head at index `start`.
+    Every token starting with '-' before the first one that is not is an option:
+    grouped options (-IS) and attached options (-Wignore) are options; -X, -W and
+    --check-hash-based-pycs take a separate argument when not attached (-W ignore).
+    -c and -m are returned as-is: the caller reads the code or module after them.
+    Returns the index of the first token that is not an option: the -c/-m flag,
+    or the script."""
+    i = start + 1
     while i < len(tokens):
         tok = tokens[i]
-        if tok == "-c" or tok == "-m":
-            # -c and -m take an argument; skip both
-            return i + 2 if i + 1 < len(tokens) else len(tokens)
-        if tok in PYTHON_SKIP_OPTS:
-            # These options may take an argument (-X value, -W value)
-            if tok in ("-X", "-W") and i + 1 < len(tokens):
-                i += 2
-            else:
-                i += 1
-            continue
-        # Long options like --version, --help, etc.
-        if tok.startswith("--"):
+        if tok in ("-c", "-m"):
+            return i
+        if not tok.startswith("-"):
+            break
+        if tok in PYTHON_ARG_OPTS and i + 1 < len(tokens) and not tokens[i + 1].startswith("-"):
+            i += 2
+        else:
             i += 1
-            continue
-        break
     return i
 
 
@@ -199,18 +206,19 @@ def segment_changes(tokens):
             return True
         return False
 
-    # Rule 7: python/python3/python3.N with -c
-    if _is_python(tokens[0]):
-        # Skip python options first
-        idx = _skip_python_opts(tokens)
+    # Rule 7: python/python3/python3.N/pypy with options, -c, -m or a script
+    pidx = _python_head_index(tokens)
+    if pidx >= 0:
+        # Scan the python options first
+        idx = _skip_python_opts(tokens, pidx)
         if idx < len(tokens):
-            # Check if the next token after options is -c
+            # -c: the code after it is executed
             if tokens[idx] == "-c" and idx + 1 < len(tokens):
                 code = " ".join(tokens[idx+1:])
                 if "frugalflow" in code or "_cmd" in code:
                     return True
                 return False
-            # Check if it's -m module
+            # -m module
             if tokens[idx] == "-m" and idx + 1 < len(tokens):
                 module = tokens[idx+1]
                 if "frugalflow" in module:
@@ -221,10 +229,12 @@ def segment_changes(tokens):
                         return True
                     return _rule4(inner_args)
                 return False
-            # Check if it's a direct script execution (frugalflow.py)
+            # A setting script run through the interpreter
             script = _basename(tokens[idx])
-            if script in SCRIPT_RUN_HEADS or script == "frugalflow.py":
+            if script in SCRIPT_RUN_HEADS:
                 args = tokens[idx+1:]
+                if script == "memory_cmd.py":
+                    args = ["memory"] + args
                 changed, args = _resolve_run(args)
                 if changed:
                     return True
@@ -259,13 +269,19 @@ def segment_changes(tokens):
             return True
         return _rule4(args)
 
-    # Direct execution of frugalflow.py (basename is frugalflow.py)
-    if head == "frugalflow.py":
+    # Direct execution of a setting script: /opt/ff/bin/config_cmd.py off
+    if head in SCRIPT_RUN_HEADS:
         args = tokens[1:]
+        if head == "memory_cmd.py":
+            args = ["memory"] + args
         changed, args = _resolve_run(args)
         if changed:
             return True
         return _rule4(args)
+    if head in SCRIPT_INIT_HEADS:
+        if len(tokens) > 1 and tokens[1] in ("--notice", "--help"):
+            return False
+        return True
 
     # git -c alias.x='!frugalflow off' x
     if head == "git":
@@ -342,25 +358,30 @@ def changes_settings(command):
                 relevant = True
             elif head in LAUNCHER_HEADS:
                 relevant = True
-            elif _is_python(toks[0]):
-                # Check after skipping python options
-                idx = _skip_python_opts(toks)
+            elif _python_head_index(toks) >= 0:
+                # Check after scanning the python options
+                idx = _skip_python_opts(toks, _python_head_index(toks))
                 if idx < len(toks):
                     if toks[idx] == "-c":
                         relevant = True
                     elif toks[idx] == "-m" and idx + 1 < len(toks) and "frugalflow" in toks[idx+1]:
                         relevant = True
-                    elif _basename(toks[idx]) in (SCRIPT_RUN_HEADS | SCRIPT_INIT_HEADS | {"frugalflow.py"}):
+                    elif _basename(toks[idx]) in (SCRIPT_RUN_HEADS | SCRIPT_INIT_HEADS):
                         relevant = True
             elif _is_interpreter_with_e_option(head, toks):
+                relevant = True
+            elif head in (SCRIPT_RUN_HEADS | SCRIPT_INIT_HEADS):
+                # A setting script run directly: /opt/ff/bin/config_cmd.py off
                 relevant = True
             elif head == "git":
                 relevant = True
 
         if relevant and segment_changes(toks):
             faulty.append(seg)
-        # Also check raw text for cases where tokenization might miss things
-        elif _raw_text_changes_settings(seg) and head not in READER_HEADS:
+        # Also check raw text for cases where tokenization might miss things.
+        # 2026-11-12: a git -m message is text git never executes: git is judged
+        # by its options (the -c alias check above), not by its raw text.
+        elif head != "git" and _raw_text_changes_settings(seg) and head not in READER_HEADS:
             faulty.append(seg)
         # A segment headed by a variable expansion ($F off) hides the command:
         # when the command text names frugalflow and the segment carries a
@@ -389,19 +410,19 @@ def changes_settings(command):
     return faulty
 
 
+# 2026-11-12: a string piped to an interpreter or fed to it with <<< is executed
+# code, not text: echo 'frugalflow off' | python3 is a setting change.
+FEED_HEADS_RE = r"(?:python3?(?:\.\d+)?|pypy3?|perl|ruby|node|bash|sh|zsh|dash|ksh|fish)"
+
+
 def _command_feeds_shell_via_pipe_or_herestring(command):
-    """Check if the command pipes to a shell or uses a here-string to feed a shell."""
-    # Pipe to shell: ... | sh, ... | bash, etc.
-    # Here-string to shell: sh <<< '...', bash <<< '...'
-    masked = command
-    # Simple check for pipe followed by shell
-    for shell in SHELL_C_HEADS:
-        # Pipe pattern: | shell
-        if re.search(r'\|\s*' + re.escape(shell) + r'(\s|$)', masked):
-            return True
-        # Here-string pattern: shell <<<
-        if re.search(r'\b' + re.escape(shell) + r'\s*<<<', masked):
-            return True
+    """Check if the command pipes to a shell/interpreter or feeds one with a here-string."""
+    # Pipe to shell or interpreter: ... | sh, ... | python3, etc.
+    # Here-string: sh <<< '...', python3 <<< '...'
+    if re.search(r'\|\s*' + FEED_HEADS_RE + r'(\s|$)', command):
+        return True
+    if re.search(r'\b' + FEED_HEADS_RE + r'\s*<<<', command):
+        return True
     return False
 
 
@@ -433,9 +454,18 @@ FIXTURE_FREE = [
     "frugalflow run config_cmd config",
     "python3 /opt/ff/bin/config_cmd.py --notice",
     "python3 /opt/ff/bin/setup_cmd.py --notice",
+    "python3 -I /opt/ff/bin/frugalflow run guard_hook --hook",
+    "python3 -I /opt/ff/bin/frugalflow run statusline",
     "echo frugalflow off",
     "grep mode off notes.txt",
     "cat <<EOF\nfrugalflow off\nEOF",
+    "git commit -m 'doc: explain frugalflow off'",
+    "echo 'frugalflow off'",
+    "grep 'frugalflow off' notes.txt",
+    "python3 -W ignore /opt/ff/bin/config_cmd.py --notice",
+    "uv run python /opt/ff/bin/frugalflow.py doctor",
+    "/opt/ff/bin/config_cmd.py --notice",
+    "/opt/ff/bin/init_cmd.py --notice",
 ]
 
 FIXTURE_DIRECT = [
@@ -456,6 +486,8 @@ FIXTURE_DISGUISED = [
     "sudo frugalflow off",
     "/opt/ff/bin/frugalflow mode active",
     "python3 /opt/ff/bin/frugalflow.py off",
+    "python3 -I /opt/ff/bin/frugalflow off",
+    "python3 -I /opt/ff/bin/frugalflow init --mode active",
     "python3 /opt/ff/bin/config_cmd.py mode observe",
     "frugalflow run config_cmd off",
     "frugalflow run setup_cmd --yes",
@@ -467,6 +499,17 @@ FIXTURE_DISGUISED = [
     "python3 -c \"import subprocess; subprocess.run(['frugalflow','off'])\"",
     "bash <<EOF\nfrugalflow off\nEOF",
     'frugalflow off "',
+    "python3 -Wignore /opt/ff/bin/config_cmd.py off",
+    "python3 -q /opt/ff/bin/init_cmd.py --mode observe",
+    "python3 -P /opt/ff/bin/setup_cmd.py --yes",
+    "python3 -bb /opt/ff/bin/uninstall_cmd.py",
+    "python3 -IS /opt/ff/bin/onboard_cmd.py --mode active",
+    "python3 -W ignore /opt/ff/bin/frugalflow.py off",
+    "uv run python /opt/ff/bin/config_cmd.py off",
+    "/opt/ff/bin/config_cmd.py off",
+    "/opt/ff/bin/init_cmd.py --mode observe",
+    "python3 <<'EOF'\nimport subprocess\nsubprocess.run(['frugalflow','off'])\nEOF",
+    "echo 'frugalflow off' | python3",
 ]
 
 
@@ -510,6 +553,7 @@ def _do_notice():
     print("EXAMPLE   python3 settings_cli_guard.py --check 'frugalflow off'")
     print("PITFALLS  2026-11-05 the assistant could turn the guard off with frugalflow off; the settings belong to the user.")
     print("          2026-11-05 xargs frugalflow passed: the subcommand came from stdin; a launcher naming frugalflow is refused.")
+    print("          2026-11-12 the hooks launch the installed console script with -I; python3 -I <path>/frugalflow off is refused like frugalflow.py off.")
     sys.exit(0)
 
 

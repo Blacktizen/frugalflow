@@ -13,6 +13,27 @@ JOURNAL_EXTS = [".jsonl", ".json", ".log"]
 TOUCHING_HEADS = {"rm", "unlink", "truncate", "shred", "mv", "ln", "chflags", "chmod", "chown", "rsync", "install", "cp"}
 FILE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 
+# the analysis of a command grows without bound with its segment count; past
+# this cap the guard refuses at once (fail closed) instead of spending minutes
+# on one command.
+MAX_SEGMENTS = 1000
+
+
+class TooManySegments(Exception):
+    """A Bash command has more segments than the guard will analyse."""
+
+
+def check_segment_cap(command):
+    """Refuse a command cut into more segments than the cap, before any analysis."""
+    if not isinstance(command, str):
+        return
+    import shell_split
+    sp = shell_split.split_command(command)
+    if len(sp.get("segments", [])) > MAX_SEGMENTS:
+        raise TooManySegments(
+            "Guard refused: this command has more than %d segments; "
+            "split it into smaller commands." % MAX_SEGMENTS)
+
 # a literal output-file name: a write destination that ends with one of
 # these is a data file, not a protected journal, even when the folder is a variable.
 OUTPUT_SUFFIXES = (".txt", ".json", ".err", ".out", ".log", ".md", ".init", ".doc", ".np")
@@ -80,6 +101,13 @@ def protected_paths(home, settings):
     add("delegations.jsonl")
     add("guard.json")
     add("blocks")
+    # 2026-11-12 (D4/D5): the install state and the session trace are guard state. The setup
+    # manifest decides what an uninstall deletes, its backups hold the originals, and the session
+    # logs are the trace a gesture leaves. Only the FrugalFlow tools write them, outside this guard.
+    add("setup-manifest.json")
+    add("setup-backups")
+    add("sessions")
+    add("sessions-anchors")
     # 2026-11-05: the user's settings are the user's: the assistant never writes them, neither
     # to tighten nor to loosen (preferences.json held the switch the assistant could turn off).
     for name in SETTINGS_FILES:
@@ -212,6 +240,8 @@ def tree_holds_protected(d, protected, cwd):
     - a vault journal (log.md with SCHEMA.md/overview.md in same or ancestor folder)
     - a vault marker (SCHEMA.md/overview.md with log.md sibling) (C3)
     - .reading.json
+    - a python startup file: any name ending in .pth, usercustomize.py,
+      sitecustomize.py, wherever it sits (D2)
     - any path from the protected list
     A directory named .claude or .githooks is itself refused as a source.
 
@@ -278,9 +308,23 @@ def tree_holds_protected(d, protected, cwd):
                 if is_claude_settings(fpath_norm):
                     return True
 
+                # 2026-11-12 (D2): a python startup file (.pth, usercustomize.py,
+                # sitecustomize.py) anywhere in the tree is protected.
+                if is_python_startup_file(fpath_norm):
+                    return True
+
         return False
     except Exception:
         return True  # fail closed
+
+def is_python_startup_file(path):
+    """Return True for a file python runs at startup, wherever it sits: any name
+    ending in .pth, or named usercustomize.py or sitecustomize.py.
+    2026-11-12 (D2): a hook command without -I executes these before the guard;
+    one planted line can end python at once and neutralize the whole guard."""
+    base = os.path.basename(str(path)).casefold()
+    return base.endswith(".pth") or base in ("usercustomize.py", "sitecustomize.py")
+
 
 def is_protected(path, protected, cwd):
     """Return True if path is protected."""
@@ -295,7 +339,10 @@ def is_protected(path, protected, cwd):
     # a log.md beside a SCHEMA.md or an overview.md. Reads stay free; only writes touch it.
     # 2026-11-05: Claude settings files and .githooks files are the user's too.
     # C3: SCHEMA.md and overview.md are protected when a log.md is in their folder.
-    return is_vault_journal(p) or is_vault_marker(p) or is_claude_settings(p)
+    # 2026-11-12 (D2): a python startup file (.pth, usercustomize.py, sitecustomize.py)
+    # is protected wherever it sits: it runs before any guard launched without -I.
+    return (is_vault_journal(p) or is_vault_marker(p) or is_claude_settings(p)
+            or is_python_startup_file(p) or is_python_startup_file(path))
 
 WRITE_DEST_HEADS = {"cp", "tee", "ln", "install", "rsync", "mv"}
 
@@ -439,6 +486,9 @@ READER_HEADS = {
     "jq", "ls", "stat", "file", "du", "diff", "cmp", "shasum", "sha256sum", "md5",  # lang-ok
     "md5sum", "readlink", "realpath", "basename", "dirname", "test", "[", "echo",
     "printf", "cut",
+    # 2026-11-12: text-processing readers: they read their input and print it,
+    # they write nothing unless given an output file (see _strict_reader).
+    "sort", "tr", "comm", "join", "paste", "uniq",
 }
 STRUCT_KW = {"for", "while", "until", "select", "case", "fi", "esac", "done", "in", "{", "}"}
 STRIP_KW = {"then", "else", "elif", "do", "if", "time"}
@@ -539,7 +589,7 @@ def _zone_rel(path, protected, cwd):
 
 def _zone_markers(protected):
     """Return the protected names: the fixed zone names and the dotted basenames."""
-    markers = [".frugalflow", ".guardian", "blocks"]
+    markers = [".frugalflow", ".guardian", "blocks", "setup-backups", "sessions", "sessions-anchors"]
     for x in protected:
         b = os.path.basename(x)
         if "." in b and b not in markers:
@@ -977,6 +1027,11 @@ def _git_is_reader(args):
 def _strict_reader(head, args):
     """Return True when the head is a plain reader, or a reader with read-only options."""
     if head in READER_HEADS:
+        # 2026-11-12: a reader given an output file writes it: sort -o TARGET and
+        # sort --output=TARGET stay writes on TARGET.
+        if head == "sort" and any(a == "-o" or a.startswith("-o") or a.startswith("--output")
+                                  for a in args):
+            return False
         return True
     if head == "sed":
         return _sed_is_reader(args)
@@ -1352,6 +1407,10 @@ def touched(tool, tool_input, protected, cwd, depth=0, collect=None):
         import shell_targets
         import journal_read_proof
         import python_write_proof
+
+        # fail closed before any analysis: a command cut into more segments
+        # than the cap is refused at once, whatever its content.
+        check_segment_cap(command)
 
         cfg = {"code_extensions": JOURNAL_EXTS, "delegate_tools": []}
         judged = shell_rules.judge_command(command, cfg)
@@ -1772,6 +1831,9 @@ def touched(tool, tool_input, protected, cwd, depth=0, collect=None):
                         result.append(t)
 
         return result
+    except TooManySegments:
+        # the cap refusal is the decision itself: it never folds into <unknown>.
+        raise
     except Exception:
         if collect is not None and "<unknown>" not in collect:
             collect.append("<unknown>")
@@ -1989,6 +2051,9 @@ def run_autotest():
             ("find ~/blocks -delete", "non-empty"),
             ("sh -c 'rm ~/blocks/g.jsonl'", "non-empty"),
             ("sort -o ~/blocks/g.jsonl /tmp/a", "non-empty"),
+            ("sort --output=~/blocks/g.jsonl /tmp/a", "non-empty"),
+            ("sort ~/blocks/g.jsonl | uniq -c", []),
+            ("tr a-z A-Z < ~/blocks/g.jsonl", []),
             ("grep -c x ~/blocks/g.jsonl", []),
             ('git commit -m "voir ~/blocks/g.jsonl" -- a.md', []),  # lang-ok
             ("cp ~/blocks/g.jsonl /tmp/c.jsonl", []),
@@ -2222,6 +2287,7 @@ def print_notice():
         "          2026-10-14 a proven read run from a folder of the zone was taken for a write: a python segment whose inline code is a proven read is a reader there.\n"
         "          2026-10-15 a heredoc body read by a shell, a json.tool output file and an unreadable target named guard.json were never judged: they are now.\n"
         "          2026-11-05 the zone stopped at the guard's own folder: the user's Claude settings file (~/.claude/settings.json) and the journal of a vault (log.md beside a SCHEMA.md or an overview.md) are now protected too, wherever they sit; they are read freely, never written, and journal_add.py remains the legitimate gesture.\n"
+        "          2026-11-12 the install state was outside the zone: a forged setup-manifest.json let an uninstall remove any file of the machine, and a rewritten session log erased a gesture's trace so the R1 guard stopped blocking; setup-manifest.json, setup-backups, sessions and sessions-anchors are protected now, and only the FrugalFlow tools write them.\n"
     )
     print(notice)
 

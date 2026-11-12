@@ -222,8 +222,21 @@ def always_on_checks(res, tool, inp, payload, home, settings):
             protected = journal_guard.protected_paths(home, settings)
             touched_paths = journal_guard.touched(tool, inp, protected, cwd)
         except Exception as e:
+            if journal_guard is not None and isinstance(e, journal_guard.TooManySegments):
+                # a command cut into more segments than the cap is refused at once;
+                # its own message stands, nothing is analysed.
+                return guard_rules.result("deny", "too_many_segments", [], str(e))
             touched_paths = ["(the protected-files check failed: %s)" % e]
         if touched_paths:
+            fix_line = "To fix: never touch these files; read them only."
+            try:
+                # 2026-11-12 (D2): a python startup file (.pth, usercustomize.py,
+                # sitecustomize.py) is the user's to install; the assistant never
+                # writes it. The refusal hands the change back to the user.
+                if any(journal_guard.is_python_startup_file(p) for p in touched_paths):
+                    fix_line = "To fix: ask the user to make this change by hand."
+            except Exception:
+                pass
             res = guard_rules.result(
                 "deny",
                 "journal",
@@ -231,7 +244,7 @@ def always_on_checks(res, tool, inp, payload, home, settings):
                 "Guard refused: this call writes, removes, moves or links the guard's own logs "
                 "or a protected user file ("
                 + ", ".join(touched_paths)
-                + ").\nTo fix: never touch these files; read them only.",
+                + ").\n" + fix_line,
             )
 
     # Settings CLI guard check
@@ -305,6 +318,14 @@ def run_hook(stdin_text):
     inp = payload.get("tool_input")
     if not isinstance(inp, dict):
         inp = {}
+
+    # A Bash command cut into more segments than the cap is refused at once,
+    # in every mode: analysing it would take minutes and decide nothing.
+    if tool == "Bash" and journal_guard is not None:
+        try:
+            journal_guard.check_segment_cap(inp.get("command", ""))
+        except journal_guard.TooManySegments as e:
+            return (deny_json(str(e)), False)
 
     # Disarmed mode (FRUGALFLOW_GUARD=0 with allow_env_disarm true, or settings.active=False)
     if (os.environ.get("FRUGALFLOW_GUARD") == "0" and settings.get("allow_env_disarm", False) is True) or settings.get("active", True) is False:

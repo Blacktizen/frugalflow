@@ -1,5 +1,5 @@
 {
-  "code_extensions": [".py", ".sh", ".js", ".ts", ".ipynb", ".tsx", ".jsx", ".go", ".rs", ".rb", ".java", ".kt", ".swift", ".c", ".cc", ".cpp", ".h", ".hpp", ".cs", ".php", ".pl", ".lua", ".mjs", ".cjs", ".zsh", ".bash", ".ps1"],
+  "code_extensions": [".py", ".sh", ".js", ".ts", ".ipynb", ".tsx", ".jsx", ".go", ".rs", ".rb", ".java", ".kt", ".swift", ".c", ".cc", ".cpp", ".h", ".hpp", ".cs", ".php", ".pl", ".lua", ".mjs", ".cjs", ".zsh", ".bash", ".ps1", ".pyw", ".pyi", ".sql", ".vue", ".svelte", ".mts", ".cts", ".scala", ".dart", ".ex", ".exs", ".erl", ".hs", ".ml", ".jl", ".tf", ".bat", ".cmd", ".fish", ".gradle", ".cmake"],
   "delegation_logs": ["delegations.jsonl"],
   "audit_log": "audit.jsonl",
   "line_threshold": 20,

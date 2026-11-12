@@ -97,6 +97,9 @@ def proof_e1():
             ("Write settings.json", "Write", {"file_path": settings_path, "content": SETTINGS_TEXT}),
             ("Write vault log.md", "Write", {"file_path": log_path, "content": "x\n"}),
             ("Bash echo append log.md", "Bash", {"command": "echo x >> " + log_path}),
+            # 2026-11-12: sort with an output file writes it, even though sort reads.
+            ("Bash sort -o log.md", "Bash",
+             {"command": "sort -o " + log_path + " /tmp/ff_zone_sort_in"}),
         ]
         for label, tool, tool_input in deny_calls:
             code, decision, reason = HOOK_CALL(home, tool, tool_input, home)
@@ -106,21 +109,24 @@ def proof_e1():
                 detail.append(label + "=" + str(decision) + "/code=" + str(code) + "/reason=" + repr(reason[:120]))
 
         read_calls = [
-            ("Read settings.json", {"file_path": settings_path}),
-            ("Read vault log.md", {"file_path": log_path}),
+            ("Read settings.json", "Read", {"file_path": settings_path}),
+            ("Read vault log.md", "Read", {"file_path": log_path}),
+            # 2026-11-12: text-processing readers (sort, tr) are not writes.
+            ("Bash sort log.md | uniq -c", "Bash", {"command": "sort " + log_path + " | uniq -c"}),
+            ("Bash tr a-z A-Z < log.md", "Bash", {"command": "tr a-z A-Z < " + log_path}),
         ]
-        for label, tool_input in read_calls:
-            code, decision, reason = HOOK_CALL(home, "Read", tool_input, home)
+        for label, tool, tool_input in read_calls:
+            code, decision, reason = HOOK_CALL(home, tool, tool_input, home)
             if code == 0 and decision == "allow":
                 reads += 1
             else:
                 detail.append(label + "=" + str(decision) + "/code=" + str(code) + "/reason=" + repr(reason[:120]))
 
-        expected = "3 denies with a To fix: line and 2 reads allowed"
+        expected = "4 denies with a To fix: line and 4 reads allowed"
         got = "%d denies with a To fix: line and %d reads allowed" % (denies, reads)
         if detail:
             got += " (" + "; ".join(detail) + ")"
-        return (denies == 3 and reads == 2, expected, got)
+        return (denies == 4 and reads == 4, expected, got)
     finally:
         shutil.rmtree(home, ignore_errors=True)
         shutil.rmtree(vault, ignore_errors=True)

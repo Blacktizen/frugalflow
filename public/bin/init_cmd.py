@@ -12,6 +12,7 @@ import settings_merge
 import banner_merge
 import env_detect
 import ceilings
+import claudecode_check
 
 BIN = os.path.dirname(os.path.abspath(__file__))
 BANNER_COMMAND = settings_merge.launcher.command(BIN, sys.executable, "session_banner")
@@ -356,6 +357,9 @@ def main(argv):
     if argv == ["--autotest"]:
         return _autotest()
 
+    # init changes a FrugalFlow setting: refused inside Claude Code without a terminal.
+    claudecode_check.check_claudecode_tty("init", [])
+
     mode = None
     remove = False
     home = None
@@ -418,6 +422,8 @@ def main(argv):
 
 
 def _autotest():
+    # Unset CLAUDECODE for test subprocesses to avoid TTY check interference
+    os.environ.pop("CLAUDECODE", None)
     script = os.path.abspath(__file__)
     config_dir = os.path.join(os.path.dirname(BIN), "config")
     results = []

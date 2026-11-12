@@ -15,6 +15,7 @@ BIN = os.path.dirname(os.path.abspath(__file__))
 if BIN not in sys.path:
     sys.path.insert(0, BIN)
 import launcher
+import claudecode_check
 NAME_RULE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 COMMANDS = ("new-project", "nouveau-projet")   # lang-ok: French alias
 
@@ -24,7 +25,7 @@ USAGE = (
     "  init [--mode observe|active|silent] [--remove] [options]\n"
     "  scan [PATH] [--staged] [--rules FILE] [--quiet]   (finds secrets and private data in a folder or repo; exit 12 on a leak; needs no model)\n"
     "  setup [--yes] [--home DIR] [--claude-dir DIR] [--engine ENGINE] [--endpoint URL]   (guided: detects your engines, backs up, writes, runs doctor)\n"
-    "  uninstall [--home DIR] [--claude-dir DIR]   (restores the backups made by setup)\n"
+    "  uninstall [--home DIR] [--claude-dir DIR] [--project-dir DIR]   (restores the backups made by setup)\n"
     "  resume [--vault DIR] [--entries N]   (prints a text to paste into a new session: where the project stands, open todos, recent decisions)\n"
     "  run TOOL [ARGS]   (runs one tool of the installed package; the hooks call this, so they survive a move or a pipx install)\n"
     "  setup --layers [--home DIR] [--answer ROLE=MODEL_ID]...[--ollama-url URL] [--lmstudio-url URL]   (walks the layers, proposes the detected models first)\n"
@@ -445,31 +446,10 @@ def run_notes(args):
     return module.main([subcommand] + kept)
 
 
-def _is_setting_change_command(command, args):
-    """Check if the command/subcommand changes a FrugalFlow setting."""
-    if command in ("on", "off", "mode", "display", "init", "setup", "uninstall"):
-        return True
-    if command == "config" and args and args[0] == "set":
-        return True
-    if command == "memory" and args and args[0] == "decline":
-        return True
-    if command == "notes" and args and args[0] in ("add-pitfall", "merge", "measure"):
-        return True
-    if command == "run" and args and args[0] in ("model_notes", "model_notes.py"):
-        return True
-    return False
-
-
-def _check_claudecode_tty(command, args):
-    """Check CLAUDECODE env var and TTY status for setting-change commands."""
-    if not _is_setting_change_command(command, args):
-        return
-    if os.environ.get("CLAUDECODE") != "1":
-        return
-    if sys.stdin.isatty() and sys.stdout.isatty():
-        return
-    sys.stdout.write("Refused: this command changes a FrugalFlow setting; run it yourself in a terminal.\n")
-    sys.exit(3)
+# The CLAUDECODE + TTY check lives in claudecode_check, shared with the setting
+# tools (config_cmd, init_cmd, setup_cmd, uninstall_cmd, onboard_cmd).
+_is_setting_change_command = claudecode_check.is_setting_change_command
+_check_claudecode_tty = claudecode_check.check_claudecode_tty
 
 
 def main():
@@ -522,7 +502,9 @@ def main():
         if not NAME_RULE.fullmatch(tool) or not os.path.isfile(path):
             sys.stdout.write(USAGE + "\n")
             sys.exit(2)
-        os.execv(sys.executable, [sys.executable, path] + args[2:])
+        # -I: the tool runs isolated from the user site-packages, so a planted
+        # .pth file cannot run before it. Each tool puts its own folder on the path.
+        os.execv(sys.executable, [sys.executable, "-I", path] + args[2:])
 
     if command in ("init", "doctor", "report", "lint", "setup", "scan", "uninstall", "resume"):
         rest = args[1:]
@@ -541,7 +523,7 @@ def main():
 
     if command == "memory" and len(args) > 1 and args[1] == "decline":
         path = os.path.join(BIN, "session_banner.py")
-        os.execv(sys.executable, [sys.executable, path, "decline"] + args[2:])
+        os.execv(sys.executable, [sys.executable, "-I", path, "decline"] + args[2:])
 
     sys.stdout.write(USAGE + "\n")
     sys.exit(2)
