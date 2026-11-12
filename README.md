@@ -68,6 +68,16 @@ FrugalFlow was built with its own method, and its method runs every day on long-
 
 More than 100 small tools, each with `--notice` (its contract and pitfalls) and `--autotest`; a test suite that runs in a fresh clone with no key and no model, in CI on Python 3.11 and 3.12; standard library only, no dependency.
 
+## Roadmap
+
+- Isolated mode on the native Claude Code sandbox, with receipts written outside the sandbox.
+- Claude Code plugin install (`/plugin install frugalflow`).
+- PyPI package (`pipx install frugalflow`).
+- Five visible commands: `init`, `resume`, `delegate`, `close`, `doctor`.
+- `frugalflow init` in an existing repository.
+- A decisive pre-registered bench: alone, discipline, FrugalFlow, native subagent.
+- Cut the per-session token cost.
+
 ## Join in
 
 FrugalFlow gets better the way it was built: from other people's real cases. You do not need to write much code to help.
@@ -82,6 +92,8 @@ Every change keeps the tests green and adds a bench case when a refusal was wron
 
 ## Documentation
 
+- [`SECURITY.md`](SECURITY.md): scope, reporting, the adversarial review program
+- [`CHANGELOG.md`](CHANGELOG.md): what each version fixed, and who found it
 - [`docs/INSTALL.md`](docs/INSTALL.md): install, scan, setup, uninstall, release check
 - [`docs/METHOD.md`](docs/METHOD.md): the principles behind the tools, with neutral examples
 - [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md): every figure, its scope, and how to replay it
