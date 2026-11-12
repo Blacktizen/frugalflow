@@ -30,6 +30,13 @@ frugalflow new-project myapp --root ~/projects
 frugalflow resume
 ```
 
+Or as a Claude Code plugin:
+
+```
+/plugin marketplace add Blacktizen/frugalflow
+/plugin install frugalflow@frugalflow
+```
+
 `init` starts in `observe` mode (nothing is blocked); `doctor` shows the mode; `frugalflow mode active` turns enforcement on. Install details: [public/QUICKSTART.md](public/QUICKSTART.md), [docs/INSTALL.md](docs/INSTALL.md).
 
 ## How the memory works

@@ -30,6 +30,17 @@ Pre-commit hook (`.git/hooks/pre-commit`, then `chmod +x`): `exec frugalflow sca
 
 `doctor` prints one `OK`, `INFO` or `WARN` line per check; a `WARN` saying the engine does not answer is expected until your model server runs, and nothing else needs it for the tests. `init` starts in `observe` mode: rules watch and log but **do not block anything**. `doctor` shows the effective guard mode and warns while it is `observe`; `frugalflow mode active` turns enforcement on. Start a project with `frugalflow new-project demo --root ~/projects`. See [`public/QUICKSTART.md`](public/QUICKSTART.md).
 
+## In an existing repository
+
+To mount the memory in a project you already have, without touching your global Claude Code settings:
+
+```
+cd my-repo
+frugalflow init --here
+```
+
+It writes `vault/` (the memory), `bin/`, `bench/cases.json`, `.githooks/pre-commit`, the project hooks in `.claude/settings.json`, and adds `.claude/settings.json` and `.githooks/` to your `.gitignore` (only the lines that are missing). It never runs `git init`, never commits, and never changes a `core.hooksPath` you already set — it tells you what to add by hand instead. Nothing is blocked until `frugalflow mode active`. At the end of a session: `frugalflow close`, then `frugalflow resume`.
+
 `run_all.py` exits 1 if any item failed, after running all (`--fail-fast` stops at the first). It judges only exit codes, never the words a test prints. Verify one tool with `python3 public/bin/<tool>.py --autotest`.
 
 To check a tree before sharing it, use a clean copy with no `.git` and no cache files:
@@ -40,3 +51,18 @@ python3 public/bin/release_check.py check --tree ../ff-check --skip-e2e
 ```
 
 The last line is `RELEASE READY` when every check passes.
+
+## As a Claude Code plugin
+
+The repository is its own plugin marketplace: the plugin lives at its root, so its hooks find the tools under `${CLAUDE_PLUGIN_ROOT}/public/bin`.
+
+```
+/plugin marketplace add Blacktizen/frugalflow
+/plugin install frugalflow@frugalflow
+```
+
+What the plugin installs: the six hook events (session log, session summary and banner at `SessionStart`, the guard on `PreToolUse`, the R1 guard and the token receipt at `Stop`), the slash commands `/resume`, `/close`, `/doctor`, and the `frugalflow-memory` skill.
+
+First run: when `~/.frugalflow` (or `$FRUGALFLOW_HOME`) does not exist yet, a hook seeds it once in `observe` mode — the five settings files are written, nothing is blocked, and the plugin says so on stderr. It never touches `CLAUDE.md` or your Claude Code `settings.json`. Turn enforcement on from your own terminal: `frugalflow mode active`. An existing home is never re-seeded: a missing or broken `guard.json` there stays a refusal.
+
+To remove it: `/plugin uninstall frugalflow@frugalflow`. The hooks, commands and skill are gone; `~/.frugalflow` is yours and stays — delete it by hand if you want.

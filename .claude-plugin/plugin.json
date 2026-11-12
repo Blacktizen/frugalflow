@@ -1,0 +1,11 @@
+{
+  "name": "frugalflow",
+  "version": "0.1.7",
+  "description": "Project memory your coding agent can't skip: a vault, a reading gate and a sealed journal.",
+  "author": {
+    "name": "FrugalFlow contributors"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/Blacktizen/frugalflow",
+  "repository": "https://github.com/Blacktizen/frugalflow"
+}

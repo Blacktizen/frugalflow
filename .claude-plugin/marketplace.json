@@ -1,0 +1,14 @@
+{
+  "name": "frugalflow",
+  "description": "FrugalFlow's own marketplace: the plugin that gives Claude Code a project memory it can't skip.",
+  "owner": {
+    "name": "FrugalFlow contributors"
+  },
+  "plugins": [
+    {
+      "name": "frugalflow",
+      "source": "./",
+      "description": "Project memory your coding agent can't skip: a vault, a reading gate and a sealed journal."
+    }
+  ]
+}
