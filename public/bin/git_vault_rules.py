@@ -193,6 +193,10 @@ def git_refusals(args, cwd, is_zone_file):
         action = first_non_dash if first_non_dash else "push"
         if action not in ("list", "show", "drop"):
             destructive = True
+    elif subcmd == "rm" and "--cached" not in rest:
+        # 2026-11-12: git rm -r . deleted a vault journal. git rm is destructive in,
+        # under or above a vault, except git rm --cached (the working tree stays).
+        destructive = True
 
     if not destructive:
         return []
@@ -220,6 +224,8 @@ NOTICE = (
     "          worktree add and reset --keep/--merge rewrote a vault tree while the guard watched nothing.\n"
     "          2026-11-12 switch -c/-C and checkout -b/-B were refused in a repo holding a vault\n"
     "          although they leave the working tree alone; pull, merge and rebase stay refused there.\n"
+    "          2026-11-12 git rm -r . deleted a vault journal; git rm is now destructive in, under or\n"
+    "          above a vault, except git rm --cached, which leaves the working tree alone.\n"
 )
 
 
@@ -289,6 +295,16 @@ if __name__ == "__main__" and "--casee" in sys.argv:
         ok = (r1 == [] and r2 == [] and r3 == [] and r4 == [] and r5 == []
               and r6 == [] and r7 == [] and len(r8) > 0 and len(r9) > 0)
         label = "soft reset stash list drop branch creation outside worktree"
+    elif n == 8:
+        r1 = git_refusals(["rm", "-r", "."], vault, _no_zone)
+        r2 = git_refusals(["rm", "--cached", "-r", "."], vault, _no_zone)
+        r3 = git_refusals(["rm", "-r", "."], tmp, _no_zone)
+        r4 = git_refusals(["rm", "-r", "log.md"], os.path.join(vault, "05-reference"), _no_zone)
+        r5 = git_refusals(["rm", "-r", "."], proj, _no_zone)
+        r6 = git_refusals(["rm", "--cached", "a.txt"], proj, _no_zone)
+        ok = (len(r1) > 0 and r2 == [] and len(r3) > 0 and len(r4) > 0
+              and r5 == [] and r6 == [])
+        label = "git rm vault cached above under outside"
 
     if ok:
         print(f"PASS {n} {label}")
@@ -323,7 +339,7 @@ if __name__ == "__main__" and "--autotest" in sys.argv:
     ref_file = os.path.abspath(__file__)
     failed = False
 
-    for n in range(1, 8):
+    for n in range(1, 9):
         pyc = tempfile.mkdtemp(dir="/tmp")
         env = os.environ.copy()
         env["GVR_VAULT"] = vault

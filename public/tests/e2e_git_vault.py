@@ -577,6 +577,63 @@ def proof_d11_branch_creation():
         shutil.rmtree(vault, ignore_errors=True)
 
 
+def proof_f2_git_rm():
+    """F2: git rm is destructive in, under or above a vault; git rm --cached passes."""
+    home = new_home()
+    vault = new_vault()
+    hold = new_project_with_vault()
+    project = new_project()
+    try:
+        results = []
+
+        # F2: git rm -r . in vault -> deny
+        ok, msg = run_case("F2: git rm -r . in vault", home, "Bash",
+                           {"command": "git rm -r ."}, vault, True)
+        results.append((ok, msg))
+
+        # F2: git rm log.md in vault -> deny
+        ok, msg = run_case("F2: git rm log.md in vault", home, "Bash",
+                           {"command": "git rm log.md"}, vault, True)
+        results.append((ok, msg))
+
+        # F2: git rm -r log.md run under the vault (vault sub-folder) -> deny
+        ok, msg = run_case("F2: git rm in vault sub-folder", home, "Bash",
+                           {"command": "git rm -r log.md"}, os.path.join(vault, "05-reference"), True)
+        results.append((ok, msg))
+
+        # F2: git rm -r vault in a repo holding a vault (above) -> deny
+        ok, msg = run_case("F2: git rm -r aimed at the vault", home, "Bash",
+                           {"command": "git rm -r vault"}, hold, True)
+        results.append((ok, msg))
+
+        # F2: git rm -r . in a repo holding a vault -> deny
+        ok, msg = run_case("F2: git rm -r . in repo holding a vault", home, "Bash",
+                           {"command": "git rm -r ."}, hold, True)
+        results.append((ok, msg))
+
+        # F2 witness: git rm --cached -r . in vault -> allow (working tree untouched)
+        ok, msg = run_case("F2 witness: git rm --cached in vault", home, "Bash",
+                           {"command": "git rm --cached -r ."}, vault, False)
+        results.append((ok, msg))
+
+        # F2 witness: git rm -r . in project (no vault) -> allow
+        ok, msg = run_case("F2 witness: git rm -r . in project", home, "Bash",
+                           {"command": "git rm -r ."}, project, False)
+        results.append((ok, msg))
+
+        # F2 witness: git rm --cached a.txt in project -> allow
+        ok, msg = run_case("F2 witness: git rm --cached in project", home, "Bash",
+                           {"command": "git rm --cached a.txt"}, project, False)
+        results.append((ok, msg))
+
+        return results
+    finally:
+        shutil.rmtree(home, ignore_errors=True)
+        shutil.rmtree(vault, ignore_errors=True)
+        shutil.rmtree(hold, ignore_errors=True)
+        shutil.rmtree(project, ignore_errors=True)
+
+
 def run_e2e():
     fail_k = 0
     case_num = 0
@@ -587,6 +644,7 @@ def run_e2e():
         (proof_c19_hooksPath, "C19 core.hooksPath"),
         (proof_d6_destructive_subcommands, "D6 destructive sub-commands"),
         (proof_d11_branch_creation, "D11 branch creation"),
+        (proof_f2_git_rm, "F2 git rm"),
     ]:
         try:
             results = proof_func()

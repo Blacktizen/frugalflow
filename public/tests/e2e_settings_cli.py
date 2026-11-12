@@ -122,6 +122,12 @@ def test_settings_cli_guard_refused():
         "python3 <<'EOF'\nimport subprocess\nsubprocess.run(['frugalflow','off'])\nEOF",
         "python3 -c \"import subprocess; subprocess.run(['frugalflow','off'])\"",
         "echo 'frugalflow off' | python3",
+        # 2026-11-12 (F1): a command substitution, a link or an alias hides the head.
+        "$(echo frugalflow) off",
+        "`echo frugalflow` off",
+        "$(which frugalflow) mode observe",
+        "ln -s /opt/ff/bin/frugalflow /tmp/ff && /tmp/ff off",
+        "alias f=frugalflow; f off",
     ]
     failed = 0
     for cmd in refused_cases:
@@ -165,6 +171,9 @@ def test_settings_cli_guard_free():
         "uv run python /opt/ff/bin/frugalflow.py doctor",
         "/opt/ff/bin/config_cmd.py --notice",
         "/opt/ff/bin/init_cmd.py --notice",
+        # 2026-11-12 (F1): a substitution or a link naming no FrugalFlow tool stays free.
+        "$(echo echo) hello",
+        "ln -s /opt/a /tmp/b",
     ]
     failed = 0
     for cmd in free_cases:

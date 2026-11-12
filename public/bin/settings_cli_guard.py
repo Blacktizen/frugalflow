@@ -51,6 +51,9 @@ FRUGALFLOW_SETTING_RE = re.compile(
 # The command it runs is unknown until the shell resolves it.
 VAR_HEAD_RE = re.compile(r"^\$[{]?[A-Za-z_][A-Za-z0-9_]*[}]?$")
 
+# Head token left by a command substitution ($(...) or backticks) after extraction.
+SUB_HEAD = "__SUB__"
+
 # A setting-changing subcommand appearing anywhere in raw segment text
 SETTING_SUB_RE = re.compile(r"\b(?:" + SETTING_SUBCOMMANDS + r")\b", re.IGNORECASE)
 
@@ -147,6 +150,34 @@ def _raw_text_changes_settings(text):
 def _head_is_variable_expansion(token):
     """True if the head token is a variable expansion ($F, ${F}, "$F"): the command is hidden."""
     return bool(VAR_HEAD_RE.match(token))
+
+
+def _ff_tool_target(target):
+    """True if a link or alias target names frugalflow or a *_cmd.py tool."""
+    return "frugalflow" in target or target.endswith("_cmd.py")
+
+
+def _alias_map(segments):
+    """Names the command itself creates with ln or alias, pointing at a FrugalFlow tool.
+    A segment headed by such a name is judged as the tool it points to."""
+    aliases = {}
+    for seg in segments:
+        toks = strip_prefixes(tokenize(seg) or [])
+        if not toks:
+            continue
+        head = _basename(toks[0])
+        if head == "ln":
+            words = [t for t in toks[1:] if not t.startswith("-")]
+            if len(words) >= 2 and _ff_tool_target(words[0]):
+                aliases[words[-1]] = words[0]
+        elif head == "alias":
+            for tok in toks[1:]:
+                if tok.startswith("-"):
+                    continue
+                name, sep, target = tok.partition("=")
+                if sep and _ff_tool_target(target):
+                    aliases[name] = target
+    return aliases
 
 
 def _is_shell_with_c_option(head, tokens):
@@ -326,6 +357,10 @@ def changes_settings(command):
 
     faulty = []
 
+    # 2026-11-12 (F1): names the command creates with ln or alias that point at a
+    # FrugalFlow tool: /tmp/ff off and f off hide the head and are judged as the tool.
+    aliases = _alias_map(segments)
+
     # Check for pipe to shell (e.g., echo 'frugalflow off' | sh)
     # and here-string to shell (e.g., sh <<< 'frugalflow off')
     if _command_feeds_shell_via_pipe_or_herestring(command):
@@ -345,6 +380,14 @@ def changes_settings(command):
         if not toks:
             continue
         head = _basename(toks[0])
+
+        # 2026-11-12 (F1): the head is a link or alias name made by this command to
+        # point at a FrugalFlow tool: judge the segment as the tool it points to.
+        if toks[0] in aliases:
+            target_toks = tokenize(aliases[toks[0]]) or [aliases[toks[0]]]
+            if segment_changes(target_toks + toks[1:]):
+                faulty.append(seg)
+            continue
 
         relevant = False
         # Reader heads (echo, printf, grep, etc.) are never relevant unless they feed a shell
@@ -387,6 +430,11 @@ def changes_settings(command):
         # when the command text names frugalflow and the segment carries a
         # setting-changing subcommand, refuse. Reading subcommands stay free.
         elif _head_is_variable_expansion(toks[0]) and "frugalflow" in command and SETTING_SUB_RE.search(seg):
+            faulty.append(seg)
+        # A segment headed by a command substitution ($(...) or backticks) hides the
+        # command: when the command text names frugalflow and the segment carries a
+        # setting-changing subcommand, refuse. Reading subcommands stay free.
+        elif toks[0] == SUB_HEAD and "frugalflow" in command and SETTING_SUB_RE.search(seg):
             faulty.append(seg)
 
     # Rule 6: heredoc bodies opened by non-reader interpreters
@@ -466,6 +514,9 @@ FIXTURE_FREE = [
     "uv run python /opt/ff/bin/frugalflow.py doctor",
     "/opt/ff/bin/config_cmd.py --notice",
     "/opt/ff/bin/init_cmd.py --notice",
+    # 2026-11-12 (F1): a substitution or a link naming no FrugalFlow tool stays free.
+    "$(echo echo) hello",
+    "ln -s /opt/a /tmp/b",
 ]
 
 FIXTURE_DIRECT = [
@@ -510,6 +561,12 @@ FIXTURE_DISGUISED = [
     "/opt/ff/bin/init_cmd.py --mode observe",
     "python3 <<'EOF'\nimport subprocess\nsubprocess.run(['frugalflow','off'])\nEOF",
     "echo 'frugalflow off' | python3",
+    # 2026-11-12 (F1): a command substitution, a link or an alias hides the head.
+    "$(echo frugalflow) off",
+    "`echo frugalflow` off",
+    "$(which frugalflow) mode observe",
+    "ln -s /opt/ff/bin/frugalflow /tmp/ff && /tmp/ff off",
+    "alias f=frugalflow; f off",
 ]
 
 
@@ -554,6 +611,8 @@ def _do_notice():
     print("PITFALLS  2026-11-05 the assistant could turn the guard off with frugalflow off; the settings belong to the user.")
     print("          2026-11-05 xargs frugalflow passed: the subcommand came from stdin; a launcher naming frugalflow is refused.")
     print("          2026-11-12 the hooks launch the installed console script with -I; python3 -I <path>/frugalflow off is refused like frugalflow.py off.")
+    print("          2026-11-12 $(echo frugalflow) off and alias f=frugalflow; f off passed: a command")
+    print("          substitution, a link or an alias naming a FrugalFlow tool is judged as the tool itself.")
     sys.exit(0)
 
 
