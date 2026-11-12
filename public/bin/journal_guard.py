@@ -80,6 +80,13 @@ def protected_paths(home, settings):
     add("delegations.jsonl")
     add("guard.json")
     add("blocks")
+    # 2026-11-12 (D4/D5): the install state and the session trace are guard state. The setup
+    # manifest decides what an uninstall deletes, its backups hold the originals, and the session
+    # logs are the trace a gesture leaves. Only the FrugalFlow tools write them, outside this guard.
+    add("setup-manifest.json")
+    add("setup-backups")
+    add("sessions")
+    add("sessions-anchors")
     # 2026-11-05: the user's settings are the user's: the assistant never writes them, neither
     # to tighten nor to loosen (preferences.json held the switch the assistant could turn off).
     for name in SETTINGS_FILES:
@@ -561,7 +568,7 @@ def _zone_rel(path, protected, cwd):
 
 def _zone_markers(protected):
     """Return the protected names: the fixed zone names and the dotted basenames."""
-    markers = [".frugalflow", ".guardian", "blocks"]
+    markers = [".frugalflow", ".guardian", "blocks", "setup-backups", "sessions", "sessions-anchors"]
     for x in protected:
         b = os.path.basename(x)
         if "." in b and b not in markers:
@@ -2252,6 +2259,7 @@ def print_notice():
         "          2026-10-14 a proven read run from a folder of the zone was taken for a write: a python segment whose inline code is a proven read is a reader there.\n"
         "          2026-10-15 a heredoc body read by a shell, a json.tool output file and an unreadable target named guard.json were never judged: they are now.\n"
         "          2026-11-05 the zone stopped at the guard's own folder: the user's Claude settings file (~/.claude/settings.json) and the journal of a vault (log.md beside a SCHEMA.md or an overview.md) are now protected too, wherever they sit; they are read freely, never written, and journal_add.py remains the legitimate gesture.\n"
+        "          2026-11-12 the install state was outside the zone: a forged setup-manifest.json let an uninstall remove any file of the machine, and a rewritten session log erased a gesture's trace so the R1 guard stopped blocking; setup-manifest.json, setup-backups, sessions and sessions-anchors are protected now, and only the FrugalFlow tools write them.\n"
     )
     print(notice)
 
