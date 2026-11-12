@@ -29,15 +29,32 @@ def effective_extensions(config):
     return exts
 
 
+# Extension-less files whose name alone is a build or container recipe are code.
+CODE_NAMES = {"makefile", "dockerfile", "justfile", "cmakelists.txt",
+              "rakefile", "gemfile", "jenkinsfile"}
+
+
 def is_code(path, config, content=""):
-    """True if the extension is .ipynb or in effective set, or content starts with #!."""
+    """True if the extension is .ipynb or in effective set, if the file is a
+    known recipe name without extension, or if the content starts with #!
+    after blank lines or a byte-order mark."""
     ext = os.path.splitext(path)[1].lower() if isinstance(path, str) and path else ""
     if ext == ".ipynb":
         return True
     if ext in effective_extensions(config):
         return True
-    if isinstance(content, str) and content.startswith("#!"):
+    if isinstance(path, str) and os.path.basename(path).lower() in CODE_NAMES:
         return True
+    if isinstance(content, str):
+        head = content
+        while True:
+            head = head.lstrip(" \t\r\n")
+            if head.startswith("\ufeff"):
+                head = head[1:]
+                continue
+            break
+        if head.startswith("#!"):
+            return True
     return False
 
 
