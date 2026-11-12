@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import setup_manifest
 import init_cmd
 
-USAGE = "usage: uninstall_cmd.py [--home DIR] [--claude-dir DIR] | --notice | --autotest"
+USAGE = "usage: uninstall_cmd.py [--home DIR] [--claude-dir DIR] [--project-dir DIR] | --notice | --autotest"
 
 NOTICE = (
     "NAME      uninstall_cmd.py - the frugalflow uninstall subcommand: "
@@ -24,7 +24,10 @@ NOTICE = (
     "edited since setup would have lost their lines; such a file is now kept "
     "and cut precisely.\n"
     "          2026-10-25 an uninstall with no record of a setup used to fail; "
-    "it now removes the block and the hook only."
+    "it now removes the block and the hook only.\n"
+    "          2026-11-12 a manifest written by hand named any absolute path and "
+    "the uninstall deleted it; restore now receives the install folders (home, "
+    "claude-dir, project-dir) and skips every entry outside them."
 )
 
 
@@ -50,6 +53,7 @@ def main(argv):
     if not home:
         home = os.path.expanduser("~/.frugalflow")
     claude_dir = os.path.expanduser("~/.claude")
+    project_dir = None
 
     i = 0
     while i < len(argv):
@@ -65,6 +69,12 @@ def main(argv):
                 return 2
             claude_dir = argv[i + 1]
             i += 2
+        elif argv[i] == "--project-dir":
+            if i + 1 >= len(argv):
+                print(USAGE)
+                return 2
+            project_dir = argv[i + 1]
+            i += 2
         elif argv[i] in ("--notice", "--autotest"):
             print(USAGE)
             return 2
@@ -72,7 +82,11 @@ def main(argv):
             print(USAGE)
             return 2
 
-    lines, code = setup_manifest.restore(home)
+    # 2026-11-12 (D4): restore only acts inside the folders the install knows.
+    install_dirs = [home, claude_dir]
+    if project_dir:
+        install_dirs.append(project_dir)
+    lines, code = setup_manifest.restore(home, install_dirs)
 
     if code == 3:
         print("NO SETUP RECORD, removing the FrugalFlow block and hook only")

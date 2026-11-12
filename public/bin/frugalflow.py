@@ -24,7 +24,7 @@ USAGE = (
     "  init [--mode observe|active|silent] [--remove] [options]\n"
     "  scan [PATH] [--staged] [--rules FILE] [--quiet]   (finds secrets and private data in a folder or repo; exit 12 on a leak; needs no model)\n"
     "  setup [--yes] [--home DIR] [--claude-dir DIR] [--engine ENGINE] [--endpoint URL]   (guided: detects your engines, backs up, writes, runs doctor)\n"
-    "  uninstall [--home DIR] [--claude-dir DIR]   (restores the backups made by setup)\n"
+    "  uninstall [--home DIR] [--claude-dir DIR] [--project-dir DIR]   (restores the backups made by setup)\n"
     "  resume [--vault DIR] [--entries N]   (prints a text to paste into a new session: where the project stands, open todos, recent decisions)\n"
     "  run TOOL [ARGS]   (runs one tool of the installed package; the hooks call this, so they survive a move or a pipx install)\n"
     "  setup --layers [--home DIR] [--answer ROLE=MODEL_ID]...[--ollama-url URL] [--lmstudio-url URL]   (walks the layers, proposes the detected models first)\n"

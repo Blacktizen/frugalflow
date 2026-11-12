@@ -20,7 +20,10 @@ NOTICE = (
     "PITFALLS  2026-10-25 a second setup would have saved the already configured "
     "file over the original; the first backup of each file now wins.\n"
     "          2026-10-25 a file edited by the user after setup is never "
-    "overwritten by a restore; it is reported as KEPT."
+    "overwritten by a restore; it is reported as KEPT.\n"
+    "          2026-11-12 a manifest written by hand named any absolute path and "
+    "an uninstall deleted it; restore now acts only inside the install folders it "
+    "is given, and an entry outside them is reported as SKIPPED, never touched."
 )
 
 
@@ -80,7 +83,22 @@ def finish(home, manifest):
     return manifest_path
 
 
-def restore(home):
+def _inside(path, install_dirs):
+    # 2026-11-12 (D4): a manifest is a plain file anyone can write; a restore that
+    # trusts its paths deletes arbitrary files. Only paths inside a folder the install
+    # knows about are ever restored or removed.
+    try:
+        p = os.path.realpath(os.path.expanduser(path))
+        for d in install_dirs:
+            rd = os.path.realpath(os.path.expanduser(d))
+            if p == rd or p.startswith(rd + os.sep):
+                return True
+        return False
+    except Exception:
+        return False
+
+
+def restore(home, install_dirs=None):
     manifest_path = os.path.join(home, MANIFEST_NAME)
     if not os.path.isfile(manifest_path):
         return (["NO MANIFEST " + manifest_path], 3)
@@ -88,11 +106,15 @@ def restore(home):
     with open(manifest_path, "r", encoding="utf-8") as f:
         manifest = json.load(f)
 
+    allowed = list(install_dirs) if install_dirs else [home]
     lines = []
     kept_count = 0
 
     for entry in manifest["entries"]:
         path = entry["path"]
+        if not _inside(path, allowed):
+            lines.append("SKIPPED " + path + ": outside the install folders")
+            continue
         cur = sha256_file(path)
         existed = entry["existed"]
         after_sha = entry["after_sha"]
@@ -154,7 +176,7 @@ def _autotest():
         with open(a, "wb") as f:
             f.write(CHANGED)
         finish(home, m)
-        lines, code = restore(home)
+        lines, code = restore(home, [home, work])
         content = open(a, "rb").read() if os.path.isfile(a) else None
         manifest_exists = os.path.isfile(os.path.join(home, MANIFEST_NAME))
         backup_exists = os.path.isdir(os.path.join(home, BACKUP_DIR))
@@ -182,7 +204,7 @@ def _autotest():
         with open(b, "wb") as f:
             f.write(CHANGED)
         finish(home, m)
-        lines, code = restore(home)
+        lines, code = restore(home, [home, work])
         exists_after = os.path.isfile(b)
         ok = (
             code == 0
@@ -209,7 +231,7 @@ def _autotest():
         finish(home, m)
         with open(a, "wb") as f:
             f.write(EDITED)
-        lines, code = restore(home)
+        lines, code = restore(home, [home, work])
         content = open(a, "rb").read()
         manifest_exists = os.path.isfile(os.path.join(home, MANIFEST_NAME))
         expected_lines = [
@@ -245,7 +267,7 @@ def _autotest():
         with open(a, "wb") as f:
             f.write(EDITED)
         finish(home, m2)
-        lines, code = restore(home)
+        lines, code = restore(home, [home, work])
         content = open(a, "rb").read() if os.path.isfile(a) else None
         ok = code == 0 and content == ORIGINAL
         results.append(
@@ -287,6 +309,34 @@ def _autotest():
              + " subprocess=" + str(proc.returncode) + ":" + proc.stdout.strip())
         )
 
+    # Test 6: an entry outside the install folders is skipped, never touched
+    with tempfile.TemporaryDirectory() as tmp:
+        home = os.path.join(tmp, "home")
+        outside = os.path.join(tmp, "outside")
+        os.makedirs(home)
+        os.makedirs(outside)
+        secret = os.path.join(outside, "secret.txt")
+        with open(secret, "wb") as f:
+            f.write(ORIGINAL)
+        manifest = {"version": 1, "entries": [
+            {"path": secret, "existed": False, "backup": None, "after_sha": None},
+        ]}
+        with open(os.path.join(home, MANIFEST_NAME), "w", encoding="utf-8") as f:
+            json.dump(manifest, f)
+        lines, code = restore(home, [home])
+        still_there = os.path.isfile(secret)
+        content = open(secret, "rb").read() if still_there else None
+        ok = (
+            code == 0
+            and lines == ["SKIPPED " + secret + ": outside the install folders"]
+            and still_there
+            and content == ORIGINAL
+        )
+        results.append(
+            ("6", ok, "code=0 SKIPPED-line file survives untouched",
+             "code=" + str(code) + " lines=" + str(lines) + " exists=" + str(still_there))
+        )
+
     pass_count = 0
     for (num, ok, expected, got) in results:
         if ok:
@@ -295,8 +345,8 @@ def _autotest():
         else:
             print("FAIL " + num + " expected=" + expected + " got=" + got)
 
-    print("AUTOTEST " + str(pass_count) + "/5")
-    return 0 if pass_count == 5 else 1
+    print("AUTOTEST " + str(pass_count) + "/6")
+    return 0 if pass_count == 6 else 1
 
 
 def main():
