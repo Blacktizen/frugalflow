@@ -149,7 +149,8 @@ def judge_segment(seg, config):
                     nested = {"kind": "command", "text": args[k+1]}
                     break
 
-        elif head == "eval":
+        elif head in ("eval", "source", "."):
+            # 2026-11-12 (I1): source and . run their remainder like eval does.
             if args:
                 nested = {"kind": "command", "text": " ".join(args)}
 

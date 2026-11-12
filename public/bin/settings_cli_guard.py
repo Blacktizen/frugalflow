@@ -248,6 +248,16 @@ def _ff_tool_target(target):
     return "frugalflow" in target or target.endswith("_cmd.py")
 
 
+def _sub_tool_target(target, command):
+    """2026-11-12 (I1): a link or alias whose target is a command substitution
+    ($(which frugalflow)) runs the tool the substitution resolves to: when the
+    command text names frugalflow (or a *_cmd.py tool), the target is that tool."""
+    if target == SUB_HEAD or "$(" in target or "`" in target:
+        if "frugalflow" in command or "_cmd.py" in command:
+            return "frugalflow"
+    return None
+
+
 def _alias_map(segments, command):
     """Names the command itself creates with ln or alias, pointing at a FrugalFlow tool.
     A segment headed by such a name is judged as the tool it points to."""
@@ -263,8 +273,9 @@ def _alias_map(segments, command):
                 target = words[0]
                 # 2026-11-12 (G1): a link whose target is a command substitution
                 # ($(which frugalflow)) is followed like a link to that tool.
-                if target == SUB_HEAD and ("frugalflow" in command or "_cmd.py" in command):
-                    target = "frugalflow"
+                sub = _sub_tool_target(target, command)
+                if sub is not None:
+                    target = sub
                 if _ff_tool_target(target):
                     aliases[words[-1]] = target
                     # 2026-11-12 (G1): a link made at a full path is also reached by
@@ -276,7 +287,15 @@ def _alias_map(segments, command):
                 if tok.startswith("-"):
                     continue
                 name, sep, target = tok.partition("=")
-                if sep and _ff_tool_target(target):
+                if not sep:
+                    continue
+                # 2026-11-12 (I1): an alias made to a command substitution that
+                # runs frugalflow (alias f='$(which frugalflow)') is an alias to
+                # that tool: f off is judged as frugalflow off.
+                sub = _sub_tool_target(target, command)
+                if sub is not None:
+                    target = sub
+                if _ff_tool_target(target):
                     aliases[name] = target
     return aliases
 
@@ -334,8 +353,9 @@ def segment_changes(tokens, subs=None):
                 break
         return False
 
-    # Rule 5: eval -> recurse on the remainder joined by spaces
-    if head == "eval":
+    # Rule 5: eval, source and . run their remainder as a command of its own
+    # (2026-11-12, I1): recurse on it, like a shell with -c.
+    if head in EXEC_HEADS:
         inner = " ".join(tokens[1:])
         if inner and changes_settings(inner):
             return True
@@ -352,6 +372,13 @@ def segment_changes(tokens, subs=None):
                 code = " ".join(tokens[idx+1:])
                 if "frugalflow" in code or "_cmd" in code:
                     return True
+                # 2026-11-12 (I1): a shell call made by literal arguments inside
+                # the code runs a command of its own: rejudge it as a command.
+                import python_shell_calls
+                cmds, _hidden = python_shell_calls.shell_calls(code)
+                for cmd in cmds:
+                    if changes_settings(cmd):
+                        return True
                 return False
             # -m module
             if tokens[idx] == "-m" and idx + 1 < len(tokens):
@@ -438,6 +465,27 @@ def segment_changes(tokens, subs=None):
                 config_val = tok[2:]
                 if _raw_text_changes_settings(config_val):
                     return True
+        # 2026-11-12 (I1): git config alias.NAME VALUE writes a command git runs
+        # later (git NAME). A value that holds frugalflow is refused; a value
+        # starting with ! is rejudged as a Bash command of its own.
+        sub_idx = next((i for i, t in enumerate(tokens[1:], 1) if not t.startswith("-")), None)
+        if sub_idx is not None and _basename(tokens[sub_idx]) == "config":
+            j = sub_idx + 1
+            while j < len(tokens):
+                tok = tokens[j]
+                m = re.fullmatch(r"alias\.[A-Za-z0-9._]+=(.*)", tok)
+                if m:
+                    value = m.group(1)
+                elif re.fullmatch(r"alias\.[A-Za-z0-9._]+", tok) and j + 1 < len(tokens):
+                    value = tokens[j + 1]
+                else:
+                    j += 1
+                    continue
+                if "frugalflow" in value or "_cmd.py" in value:
+                    return True
+                if value.startswith("!") and changes_settings(value[1:]):
+                    return True
+                j += 2
 
     # 2026-11-05: `xargs frugalflow < f` passed: a launcher that runs its arguments as a
     # command hides the head. When in doubt, refuse.
@@ -518,7 +566,7 @@ def changes_settings(command):
                 relevant = True
             elif _is_shell_with_c_option(head, toks):
                 relevant = True
-            elif head == "eval":
+            elif head in EXEC_HEADS:
                 relevant = True
             elif head in LAUNCHER_HEADS:
                 relevant = True

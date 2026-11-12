@@ -634,6 +634,45 @@ def proof_f2_git_rm():
         shutil.rmtree(project, ignore_errors=True)
 
 
+def proof_i1_eval_and_inline_python():
+    """I1: the body of eval, and a shell call made by literal arguments inside
+    inline Python, are judged as commands of their own inside a vault."""
+    home = new_home()
+    vault = new_vault()
+    try:
+        results = []
+
+        # I1: eval 'git reset --hard' in vault -> deny
+        ok, msg = run_case("I1: eval git reset --hard in vault", home, "Bash",
+                           {"command": "eval 'git reset --hard'"}, vault, True)
+        results.append((ok, msg))
+
+        # I1: python3 -c running subprocess.run(['git','reset','--hard']) in vault -> deny
+        ok, msg = run_case("I1: python3 -c subprocess git reset --hard in vault", home, "Bash",
+                           {"command": "python3 -c \"import subprocess; subprocess.run(['git','reset','--hard'])\""}, vault, True)
+        results.append((ok, msg))
+
+        # I1 witness: eval 'echo hello' -> allow
+        ok, msg = run_case("I1 witness: eval echo hello in vault", home, "Bash",
+                           {"command": "eval 'echo hello'"}, vault, False)
+        results.append((ok, msg))
+
+        # I1 witness: python3 -c "print(1)" -> allow
+        ok, msg = run_case("I1 witness: python3 -c print(1) in vault", home, "Bash",
+                           {"command": "python3 -c \"print(1)\""}, vault, False)
+        results.append((ok, msg))
+
+        # I2 witness: git rm --cached log.md in vault -> allow (index only, tree untouched)
+        ok, msg = run_case("I2 witness: git rm --cached log.md in vault", home, "Bash",
+                           {"command": "git rm --cached log.md"}, vault, False)
+        results.append((ok, msg))
+
+        return results
+    finally:
+        shutil.rmtree(home, ignore_errors=True)
+        shutil.rmtree(vault, ignore_errors=True)
+
+
 def run_e2e():
     fail_k = 0
     case_num = 0
@@ -645,6 +684,7 @@ def run_e2e():
         (proof_d6_destructive_subcommands, "D6 destructive sub-commands"),
         (proof_d11_branch_creation, "D11 branch creation"),
         (proof_f2_git_rm, "F2 git rm"),
+        (proof_i1_eval_and_inline_python, "I1 eval and inline Python"),
     ]:
         try:
             results = proof_func()

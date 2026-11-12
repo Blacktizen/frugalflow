@@ -113,6 +113,9 @@ def deny_cases():
         ("ak", "git rm {L}", True),
         ("al", "git status > {L}", True),
         ("am", "git blame {L} > {P}", True),
+        # 2026-11-12 (I1): the body of eval is a command of its own; a write to a
+        # python startup file (.pth) hidden behind eval is denied.
+        ("an", "eval 'echo x > /opt/ff/.local/lib/python3.11/site-packages/x.pth'", True),
     ]
 
 
