@@ -97,6 +97,7 @@ Every change keeps the tests green and adds a bench case when a refusal was wron
 - [`docs/INSTALL.md`](docs/INSTALL.md): install, scan, setup, uninstall, release check
 - [`docs/METHOD.md`](docs/METHOD.md): the principles behind the tools, with neutral examples
 - [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md): every figure, its scope, and how to replay it
+- [`docs/LATENCY.md`](docs/LATENCY.md): what the PreToolUse hook costs per tool call, measured
 - [`docs/PIPELINE.md`](docs/PIPELINE.md): how a task flows through the tools, with a diagram
 - [`docs/DELEGATION.md`](docs/DELEGATION.md): delegation, briefs, per-model notes
 - [`docs/PRIVACY.md`](docs/PRIVACY.md): anonymization and secret scanning
