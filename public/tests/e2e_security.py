@@ -89,6 +89,7 @@ def make_home(port, prefs, project, with_rules):
         "location": "remote",
         "endpoint": "http://127.0.0.1:" + str(port) + "/v1",
         "context_window": 8192,
+        "paid": False,
         "trust": "trusted_third_party",
         "key_env": "",
         "max_output": 1024,
@@ -98,6 +99,7 @@ def make_home(port, prefs, project, with_rules):
     FAR["trust"] = "untrusted_third_party"
 
     models = {
+        "schema_version": "1",
         "models": [OWN, FAR],
         "layers": [{"name": "work", "delegable": True}],
         "roles": [

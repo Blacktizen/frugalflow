@@ -36,10 +36,11 @@ def MODELS(port):
     own = {
         "id": "own", "name": "alpha-7b", "location": "remote",
         "endpoint": "http://127.0.0.1:" + str(port) + "/v1",
-        "context_window": 8192, "trust": "trusted_third_party", "key_env": "",
+        "context_window": 8192, "paid": False, "trust": "trusted_third_party", "key_env": "",
         "max_output": 1024,
     }
     return {
+        "schema_version": "1",
         "models": [own],
         "layers": [{"name": "work", "delegable": True}],
         "roles": [{"name": "documents", "layer": "work", "model": "own"}],

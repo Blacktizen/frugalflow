@@ -42,7 +42,8 @@ NOTICE = (
     "PITFALLS  2026-09-18 a failed last attempt landed in the target; the target now only receives a verified attempt.\n"
     "          2026-09-23 the candidate lost its extension and the check could not load it; it keeps the target's extension.\n"
     "          2026-09-26 a faulty brief could be sent and a check naming the target failed every attempt; the brief is checked before sending, the check is corrected to the candidate.\n"
-    "          2026-11-06 a --models file from another folder brought that folder's preferences.json as the ceilings; the ceilings now come only from the home folder."
+    "          2026-11-06 a --models file from another folder brought that folder's preferences.json as the ceilings; the ceilings now come only from the home folder.\n"
+    "          2026-11-06 the receipt left models_path and models_sha256 null; arm now carries them, so every line names the models file it was sent under."
 )
 
 
@@ -274,7 +275,8 @@ def main():
     try:
         # Step 11
         first_line = prompt.split("\n", 1)[0]
-        journal_log.arm(journal_log.default_path(), args.role, plan["name"], args.out, first_line, chars=len(prompt), waiver=waiver)
+        journal_log.arm(journal_log.default_path(), args.role, plan["name"], args.out, first_line, chars=len(prompt), waiver=waiver,
+                        models_path=models_path, models_sha256=models_sha256)
 
         # Step 12
         base = [{"role": "system", "content": system_sent}, {"role": "user", "content": to_send}]
@@ -374,9 +376,9 @@ def autotest():
     def models_doc(port):
         own = {"id": "own", "name": "alpha-7b", "location": "remote",
                "endpoint": "http://127.0.0.1:" + str(port) + "/v1",
-               "context_window": 8192, "trust": "trusted_third_party", "key_env": "", "max_output": 1024}
+               "context_window": 8192, "paid": False, "trust": "trusted_third_party", "key_env": "", "max_output": 1024}
         far = dict(own, id="far", trust="untrusted_third_party")
-        return {"models": [own, far],
+        return {"schema_version": "1", "models": [own, far],
                 "layers": [{"name": "work", "delegable": True}],
                 "roles": [{"name": "code", "layer": "work", "model": "own"},
                           {"name": "far", "layer": "work", "model": "far"}]}
@@ -421,6 +423,8 @@ def autotest():
 
     with open(os.path.join(D, "models.json"), "w", encoding="utf-8") as f:
         json.dump(models_doc(port), f)
+    with open(os.path.join(D, "models.json"), "rb") as f:
+        models_sha = hashlib.sha256(f.read()).hexdigest()
     with open(os.path.join(D, "rules.json"), "w", encoding="utf-8") as f:
         json.dump(RULES, f)
     with open(os.path.join(D, "task.md"), "w", encoding="utf-8") as f:
@@ -490,6 +494,12 @@ def autotest():
         if jl.get("waiver") is not None:
             ok = False
             details.append("waiver=" + str(jl.get("waiver")))
+        if jl.get("models_path") != os.path.join(D, "models.json"):
+            ok = False
+            details.append("models_path=" + str(jl.get("models_path")))
+        if jl.get("models_sha256") != models_sha:
+            ok = False
+            details.append("models_sha256=" + str(jl.get("models_sha256")))
         sec = jl.get("seconds")
         if isinstance(sec, bool) or not isinstance(sec, (int, float)) or sec < 0:
             ok = False
@@ -497,7 +507,7 @@ def autotest():
     except Exception as ex:
         ok = False
         details.append("journal error: " + str(ex))
-    results.append(("test1", ok, "code=0 a.py=print(42) 1req success alpha-7b", "; ".join(details) if details else "ok"))
+    results.append(("test1", ok, "code=0 a.py=print(42) 1req success alpha-7b models fields set", "; ".join(details) if details else "ok"))
 
     # --- Test 2 ---
     reset()
