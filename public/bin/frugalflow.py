@@ -20,6 +20,17 @@ NAME_RULE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 COMMANDS = ("new-project", "nouveau-projet")   # lang-ok: French alias
 
 USAGE = (
+    "usage: frugalflow COMMAND [ARGS] | --notice | --autotest\n"
+    "  init [--mode observe|active|silent] [options]   (installs FrugalFlow in this folder; starts in observe mode)\n"
+    "  resume [--vault DIR] [--entries N]   (prints the handoff for a new session)\n"
+    "  delegate --role ROLE --file BRIEF --out FILE [--verify CMD]   (sends a checked brief to a cheaper model)\n"
+    "  close [--vault DIR] [--repo DIR]   (the closing pass: checks the vault and says if the handoff is ready)\n"
+    "  doctor [options]   (one line per check)\n"
+    "  run COMMAND [ARGS]   (every other command: frugalflow help all)\n"
+    "  options: --home DIR --claude-dir DIR --ollama-url URL --lmstudio-url URL (any OpenAI-compatible server, with or without /v1)"
+)
+
+USAGE_ALL = (
     "usage: frugalflow.py COMMAND [ARGS] | --notice | --autotest\n"
     "  new-project NAME [--root DIR]   (creates DIR/NAME; DIR defaults to the current folder)\n"
     "  init [--mode observe|active|silent] [--remove] [options]\n"
@@ -27,6 +38,8 @@ USAGE = (
     "  setup [--yes] [--home DIR] [--claude-dir DIR] [--engine ENGINE] [--endpoint URL]   (guided: detects your engines, backs up, writes, runs doctor)\n"
     "  uninstall [--home DIR] [--claude-dir DIR] [--project-dir DIR]   (restores the backups made by setup)\n"
     "  resume [--vault DIR] [--entries N]   (prints a text to paste into a new session: where the project stands, open todos, recent decisions)\n"
+    "  delegate --role ROLE --file BRIEF --out FILE [--verify CMD]   (sends a checked brief to a cheaper model)\n"
+    "  close [--vault DIR] [--repo DIR]   (the closing pass: checks the vault and says if the handoff is ready)\n"
     "  run TOOL [ARGS]   (runs one tool of the installed package; the hooks call this, so they survive a move or a pipx install)\n"
     "  setup --layers [--home DIR] [--answer ROLE=MODEL_ID]...[--ollama-url URL] [--lmstudio-url URL]   (walks the layers, proposes the detected models first)\n"
     "  notes add-pitfall|show|check|merge|measure [--home DIR] [...]   (pitfalls and measures per model, each with its proof)\n"
@@ -40,6 +53,18 @@ USAGE = (
     "  options: --home DIR --claude-dir DIR --ollama-url URL --lmstudio-url URL (any OpenAI-compatible server, with or without /v1)"
 )
 
+DELEGATE_USAGE = (
+    "usage: frugalflow delegate --role ROLE --file BRIEF --out FILE [--verify CMD] "
+    "[--tries N] [--trust LEVEL] [--models FILE] [--effort LEVEL] [--no-thinking] "
+    "[--bench] [--max-tokens N] [--brief-waiver REASON] [--verify-weak REASON] "
+    "[--verify-timeout SECONDS] | --notice"
+)
+
+# Commands that change a FrugalFlow setting: they never pass through run.
+SETTINGS_COMMANDS = ("init", "setup", "uninstall", "config", "on", "off", "mode", "display", "memory")
+# Commands that keep their full behavior behind run.
+DISPATCH_COMMANDS = COMMANDS + ("scan", "report", "lint", "notes", "resume", "doctor", "delegate", "close")
+
 NOTICE = (
     "NAME      frugalflow.py - the product entry point: new-project mounts a project, init installs FrugalFlow, doctor checks it, config, on, off, mode and display steer the switch and the screen.\n"
     "READS     COMMAND and its arguments; the subcommand it dispatches to; new-project reads NAME and --root (default: the current folder).\n"
@@ -50,6 +75,7 @@ NOTICE = (
     "          init wires the guard and the status line in the user settings, ~/.claude/settings.json.\n"
     "          2026-10-05 a newcomer read --root as the project folder and got DIR/NAME/NAME: the usage now says DIR/NAME.\n"
     "          2026-10-05 a project tool refused for weeks without a trace: new-project now lays the refusal log loop, the bench and the commit gate.\n"
+    "          2026-11-12 newcomers saw 17 commands; --help now shows five and run; the rest are listed by frugalflow help all.\n"
 )
 
 OWN_SETTINGS = "{\"permissions\": {}}\n"
@@ -276,7 +302,7 @@ def run_autotest():
             and proc_notice.stdout.startswith("NAME      frugalflow.py")
             and proc_escape.returncode == 2
             and proc_bogus.returncode == 2
-            and "usage: frugalflow.py" in proc_bogus.stdout
+            and "usage: frugalflow" in proc_bogus.stdout
         )
         detail = "notice_rc=%d escape_rc=%d bogus_rc=%d" % (
             proc_notice.returncode, proc_escape.returncode, proc_bogus.returncode
@@ -468,13 +494,35 @@ def main():
         sys.exit(2)
 
     if args[0] in ("--help", "-h", "help"):
-        sys.stdout.write(USAGE + "\n")
+        if len(args) > 1 and args[1] == "all":
+            sys.stdout.write(USAGE_ALL + "\n")
+        else:
+            sys.stdout.write(USAGE + "\n")
         sys.exit(0)
 
     command = args[0]
 
     # Check CLAUDECODE + TTY for setting-change commands (but allow --notice, --help, status, doctor)
     _check_claudecode_tty(command, args[1:])
+
+    if command == "run":
+        tool = args[1] if len(args) > 1 else ""
+        if tool in SETTINGS_COMMANDS:
+            sys.stdout.write("run does not change settings: type frugalflow " + tool + " yourself, in your own terminal.\n")
+            sys.exit(2)
+        if tool in DISPATCH_COMMANDS:
+            # run COMMAND behaves exactly like COMMAND itself, the CLAUDECODE check included.
+            command = tool
+            args = args[1:]
+            _check_claudecode_tty(command, args[1:])
+        else:
+            path = os.path.join(BIN, tool + ".py")
+            if not NAME_RULE.fullmatch(tool) or not os.path.isfile(path):
+                sys.stdout.write(USAGE + "\n")
+                sys.exit(2)
+            # -I: the tool runs isolated from the user site-packages, so a planted
+            # .pth file cannot run before it. Each tool puts its own folder on the path.
+            os.execv(sys.executable, [sys.executable, "-I", path] + args[2:])
 
     if command in COMMANDS:
         if len(args) < 2:
@@ -496,17 +544,15 @@ def main():
             print(line)
         sys.exit(code)
 
-    if command == "run":
-        tool = args[1] if len(args) > 1 else ""
-        path = os.path.join(BIN, tool + ".py")
-        if not NAME_RULE.fullmatch(tool) or not os.path.isfile(path):
-            sys.stdout.write(USAGE + "\n")
+    if command == "delegate":
+        rest = args[1:]
+        if not rest:
+            sys.stdout.write(DELEGATE_USAGE + "\n")
             sys.exit(2)
-        # -I: the tool runs isolated from the user site-packages, so a planted
-        # .pth file cannot run before it. Each tool puts its own folder on the path.
-        os.execv(sys.executable, [sys.executable, "-I", path] + args[2:])
+        # -I: same isolation as run; delegate.py puts its own folder on the path.
+        os.execv(sys.executable, [sys.executable, "-I", os.path.join(BIN, "delegate.py")] + rest)
 
-    if command in ("init", "doctor", "report", "lint", "setup", "scan", "uninstall", "resume"):
+    if command in ("init", "doctor", "report", "lint", "setup", "scan", "uninstall", "resume", "close"):
         rest = args[1:]
         if command == "setup" and "--layers" not in rest and "--answer" not in rest:
             command = "onboard"
