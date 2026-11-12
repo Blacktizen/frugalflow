@@ -6,7 +6,9 @@ import re
 import subprocess
 import sys
 
-from shell_split import split_command
+import shell_quotes
+import subshells
+from shell_split import split_command, split_segments
 from shell_tokens import tokenize, strip_prefixes
 from shell_vars import resolve
 
@@ -172,6 +174,75 @@ def _head_is_variable_expansion(token):
     return bool(VAR_HEAD_RE.match(token))
 
 
+# 2026-11-12 (H1): a word an `echo` substitution can print: no shell sign left.
+LITERAL_WORD_RE = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_./:@+=,%-]*")
+
+
+def _echo_words(inner):
+    """Words printed by a substitution that is exactly `echo <literal words>`;
+    None when the substitution prints something the guard cannot judge."""
+    toks = tokenize(inner)
+    if not toks or toks[0] != "echo":
+        return None
+    words = toks[1:]
+    for w in words:
+        if not LITERAL_WORD_RE.fullmatch(w):
+            return None
+    return words
+
+
+def _expand_sub_args(args, subs):
+    """2026-11-12 (H1): judge FrugalFlow tool arguments that are command substitutions:
+    `$(echo words)` becomes those words; any other substitution hides an argument
+    and cannot be judged: return None (refuse)."""
+    out = []
+    k = 0
+    for a in args:
+        if a == SUB_HEAD:
+            if k >= len(subs):
+                return None
+            words = _echo_words(subs[k])
+            k += 1
+            if words is None:
+                return None
+            out.extend(words)
+        elif SUB_HEAD in a:
+            # A word built from a substitution and other text ($(echo o)$(echo ff)): unknown.
+            return None
+        else:
+            out.append(a)
+    return out
+
+
+def _segment_subs(command):
+    """Per segment, in split_command order, the texts of the command substitutions
+    it holds (H1): the guard needs `frugalflow $(echo off)` to carry "echo off".
+    Mirrors shell_split.split_command; None when the text cannot be read."""
+    subs = []
+
+    def walk(text, depth):
+        if depth > 5:
+            raise ValueError("nesting deeper than 5")
+        rest, _bodies = shell_quotes.extract_heredocs(text)
+        rest = shell_quotes.strip_comments(rest)
+        if not shell_quotes.quotes_closed(rest):
+            raise ValueError("unterminated quote")
+        outer, inners = subshells.extract_subshells(rest)
+        k = 0
+        for seg in split_segments(outer):
+            n = seg.count(SUB_HEAD)
+            subs.append(inners[k:k + n])
+            k += n
+        for inner in inners:
+            walk(inner, depth + 1)
+
+    try:
+        walk(command, 0)
+    except ValueError:
+        return None
+    return subs
+
+
 def _ff_tool_target(target):
     """True if a link or alias target names frugalflow or a *_cmd.py tool."""
     return "frugalflow" in target or target.endswith("_cmd.py")
@@ -243,8 +314,11 @@ def _is_non_reader_interpreter(head):
     return base in NON_READER_INTERPRETERS
 
 
-def segment_changes(tokens):
-    """True if this token list (already strip_prefixed) changes FrugalFlow settings."""
+def segment_changes(tokens, subs=None):
+    """True if this token list (already strip_prefixed) changes FrugalFlow settings.
+    `subs` carries the texts of the segment's command substitutions, in order (H1)."""
+    if subs is None:
+        subs = []
     if not tokens:
         return False
     head = _basename(tokens[0])
@@ -284,7 +358,9 @@ def segment_changes(tokens):
                 module = tokens[idx+1]
                 if "frugalflow" in module:
                     # Treat as running frugalflow script
-                    inner_args = tokens[idx+2:]
+                    inner_args = _expand_sub_args(tokens[idx+2:], subs)
+                    if inner_args is None:
+                        return True
                     changed, inner_args = _resolve_run(inner_args)
                     if changed:
                         return True
@@ -293,7 +369,9 @@ def segment_changes(tokens):
             # A setting script run through the interpreter
             script = _basename(tokens[idx])
             if script in SCRIPT_RUN_HEADS:
-                args = tokens[idx+1:]
+                args = _expand_sub_args(tokens[idx+1:], subs)
+                if args is None:
+                    return True
                 if script == "memory_cmd.py":
                     args = ["memory"] + args
                 changed, args = _resolve_run(args)
@@ -324,7 +402,9 @@ def segment_changes(tokens):
 
     # Rule 1: head is frugalflow
     if head == "frugalflow":
-        args = tokens[1:]
+        args = _expand_sub_args(tokens[1:], subs)
+        if args is None:
+            return True
         changed, args = _resolve_run(args)
         if changed:
             return True
@@ -332,7 +412,9 @@ def segment_changes(tokens):
 
     # Direct execution of a setting script: /opt/ff/bin/config_cmd.py off
     if head in SCRIPT_RUN_HEADS:
-        args = tokens[1:]
+        args = _expand_sub_args(tokens[1:], subs)
+        if args is None:
+            return True
         if head == "memory_cmd.py":
             args = ["memory"] + args
         changed, args = _resolve_run(args)
@@ -391,6 +473,10 @@ def changes_settings(command):
 
     faulty = []
 
+    # 2026-11-12 (H1): the text of every substitution, paired with its segment,
+    # so `frugalflow $(echo off)` can be judged as `frugalflow off`.
+    seg_subs = _segment_subs(command)
+
     # 2026-11-12 (F1): names the command creates with ln or alias that point at a
     # FrugalFlow tool: /tmp/ff off and f off hide the head and are judged as the tool.
     aliases = _alias_map(segments, command)
@@ -402,7 +488,8 @@ def changes_settings(command):
             faulty.append(command)
             return faulty
 
-    for seg in segments:
+    for i, seg in enumerate(segments):
+        subs = seg_subs[i] if seg_subs is not None and i < len(seg_subs) else []
         raw = tokenize(seg)
         # xargs/parallel take the arguments from stdin: the subcommand cannot be known.
         names = [_basename(t) for t in raw]
@@ -419,7 +506,7 @@ def changes_settings(command):
         # point at a FrugalFlow tool: judge the segment as the tool it points to.
         if toks[0] in aliases:
             target_toks = tokenize(aliases[toks[0]]) or [aliases[toks[0]]]
-            if segment_changes(target_toks + toks[1:]):
+            if segment_changes(target_toks + toks[1:], subs):
                 faulty.append(seg)
             continue
 
@@ -453,7 +540,7 @@ def changes_settings(command):
             elif head == "git":
                 relevant = True
 
-        if relevant and segment_changes(toks):
+        if relevant and segment_changes(toks, subs):
             faulty.append(seg)
         # Also check raw text for cases where tokenization might miss things.
         # 2026-11-12: a git -m message is text git never executes: git is judged
@@ -548,6 +635,10 @@ FIXTURE_FREE = [
     # 2026-11-12 (F1): a substitution or a link naming no FrugalFlow tool stays free.
     "$(echo echo) hello",
     "ln -s /opt/a /tmp/b",
+    # 2026-11-12 (H1): an echo substitution of literal words is judged by those words.
+    "frugalflow $(echo status)",
+    "frugalflow $(echo doctor)",
+    "python3 /opt/ff/bin/frugalflow.py $(echo doctor)",
 ]
 
 FIXTURE_DIRECT = [
@@ -598,6 +689,15 @@ FIXTURE_DISGUISED = [
     "$(which frugalflow) mode observe",
     "ln -s /opt/ff/bin/frugalflow /tmp/ff && /tmp/ff off",
     "alias f=frugalflow; f off",
+    # 2026-11-12 (H1): the subcommand is a command substitution: only an
+    # `echo <literal words>` substitution is judged; any other is refused.
+    "frugalflow $(echo off)",
+    "frugalflow `echo off`",
+    "frugalflow $(cat x)",
+    "frugalflow $(echo mode) observe",
+    "frugalflow run $(echo config_cmd) off",
+    "python3 /opt/ff/bin/frugalflow.py $(echo off)",
+    "frugalflow $(echo o)$(echo ff)",
 ]
 
 
@@ -650,6 +750,9 @@ def _do_notice():
     print("          FrugalFlow tool with a setting-changing subcommand anywhere in it.")
     print("          2026-11-12 (G1) ln -s $(which frugalflow) /opt/ff/bin/ff && ff off passed: a link")
     print("          made at a full path is followed by its full path or its base name (found through PATH).")
+    print("          2026-11-12 (H1) frugalflow $(echo off) and frugalflow `echo off` passed: a tool")
+    print("          argument hidden in a command substitution is judged when the substitution is")
+    print("          exactly echo + literal words; any other substitution in a tool argument is refused.")
     sys.exit(0)
 
 
