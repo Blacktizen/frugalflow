@@ -147,6 +147,10 @@ def test_settings_cli_guard_refused():
         "frugalflow $(echo mode) observe",
         "frugalflow run $(echo config_cmd) off",
         "python3 /opt/ff/bin/frugalflow.py $(echo off)",
+        # 2026-11-12 (I1): a git config alias whose value starts with ! is the
+        # command git runs later; an alias made to $(which frugalflow) is that tool.
+        "git config alias.ff '!frugalflow off'",
+        "alias f='$(which frugalflow)'; f off",
     ]
     failed = 0
     for cmd in refused_cases:
@@ -202,6 +206,8 @@ def test_settings_cli_guard_free():
         "frugalflow $(echo status)",
         "frugalflow $(echo doctor)",
         "python3 /opt/ff/bin/frugalflow.py $(echo doctor)",
+        # 2026-11-12 (I1): a git alias to a plain git subcommand stays free.
+        "git config alias.st status",
     ]
     failed = 0
     for cmd in free_cases:

@@ -1242,9 +1242,12 @@ def _whitelist_touches(command, sp, protected, cwd):
             for reason in git_vault_rules.git_refusals(args, cwd_now, is_zone):
                 if reason not in out:
                     out.append(reason)
-            # Also apply strict reader check for non-git-specific zone touches
+            # Also apply strict reader check for non-git-specific zone touches.
+            # 2026-11-12 (I2): git rm --cached only drops index entries, the
+            # working tree is untouched: it passes whatever the path is.
             if not _strict_reader("git", gitg["sub"]):
-                if zone_word is not None and zone_word not in out:
+                rm_cached = gitg["sub"][:1] == ["rm"] and "--cached" in gitg["sub"][1:]
+                if zone_word is not None and not rm_cached and zone_word not in out:
                     out.append(zone_word)
         else:
             if zone_word is not None and not _strict_reader(head, args):
@@ -1864,6 +1867,82 @@ def touched(tool, tool_input, protected, cwd, depth=0, collect=None):
                 for t in touched("Bash", {"command": body}, protected, cwd, depth + 1, collect):
                     if t not in result:
                         result.append(t)
+
+        # 2026-11-12 (I1): the body given to eval, source or . is a command of
+        # its own, judged by touched itself, exactly like the body of a shell
+        # with -c. A shell call made by literal arguments inside inline Python
+        # (subprocess.run/call/Popen/check_call/check_output, os.system,
+        # os.popen) is rejudged as a command too; such a call whose argument is
+        # not a literal is a contact when the code names git or frugalflow.
+        # The value of a git config alias starting with ! is the command git
+        # runs later: its body is judged as a command of its own.
+        if depth < 3:
+            import python_shell_calls
+
+            for s in segs:
+                try:
+                    words = shlex.split(s)
+                except ValueError:
+                    continue
+                i = 0
+                while i < len(words) and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", words[i]):
+                    i += 1
+                if i < len(words) and words[i] == "env":
+                    i += 1
+                    while i < len(words) and (
+                            words[i].startswith("-")
+                            or re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", words[i])):
+                        i += 1
+                if i >= len(words):
+                    continue
+                head = os.path.basename(words[i])
+                rest = words[i + 1:]
+                if head in ("eval", "source", ".") and rest:
+                    body = " ".join(rest)
+                    # a body read through a process substitution runs code the
+                    # guard cannot read: a contact.
+                    if "<(" in body or "__SUB__" in body:
+                        if collect is not None and "<unknown>" not in collect:
+                            collect.append("<unknown>")
+                        if "<unknown>" not in result:
+                            result.append("<unknown>")
+                        continue
+                    for t in touched("Bash", {"command": body}, protected, cwd, depth + 1, collect):
+                        if t not in result:
+                            result.append(t)
+                    continue
+                if head == "git":
+                    sub = next((w for w in rest if not w.startswith("-")), "")
+                    if sub == "config":
+                        k = rest.index(sub) + 1
+                        while k < len(rest):
+                            tok = rest[k]
+                            m = re.fullmatch(r"alias\.[A-Za-z0-9._]+=(.*)", tok)
+                            if m:
+                                value = m.group(1)
+                            elif re.fullmatch(r"alias\.[A-Za-z0-9._]+", tok) and k + 1 < len(rest):
+                                value = rest[k + 1]
+                            else:
+                                k += 1
+                                continue
+                            if value.startswith("!"):
+                                for t in touched("Bash", {"command": value[1:]}, protected, cwd, depth + 1, collect):
+                                    if t not in result:
+                                        result.append(t)
+                            k += 2
+                    continue
+                _ph, _pa, codes, _phd = _python_inline_codes(s, bodies)
+                if _ph is None:
+                    continue
+                for code in codes:
+                    cmds, hidden = python_shell_calls.shell_calls(code)
+                    for cmd in cmds:
+                        for t in touched("Bash", {"command": cmd}, protected, cwd, depth + 1, collect):
+                            if t not in result:
+                                result.append(t)
+                    if hidden and ("git" in code or "frugalflow" in code):
+                        if "<unknown>" not in result:
+                            result.append("<unknown>")
 
         return result
     except TooManySegments:
