@@ -17,6 +17,7 @@ import doctor_cmd
 import config_rules
 import setup_manifest
 import onboard_choice
+import claudecode_check
 
 NOTICE = (
     "NAME      onboard_cmd.py - the guided frugalflow setup: detects your engines, asks which one to use, backs up, writes the settings, runs doctor.\n"
@@ -145,6 +146,9 @@ def main(argv):
 
     if isinstance(parsed, tuple) and parsed[0] == "autotest":
         return _autotest()
+
+    # onboard writes FrugalFlow settings: refused inside Claude Code without a terminal.
+    claudecode_check.check_claudecode_tty("onboard", [])
 
     opts = parsed
 
@@ -358,6 +362,8 @@ def _fetch_openai_model(endpoint):
 # ---------------------------------------------------------------------------
 
 def _autotest():
+    # Unset CLAUDECODE for test subprocesses to avoid TTY check interference
+    os.environ.pop("CLAUDECODE", None)
     script = os.path.abspath(__file__)
     passes = 0
     results = []

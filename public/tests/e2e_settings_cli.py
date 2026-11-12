@@ -108,6 +108,20 @@ def test_settings_cli_guard_refused():
         "node -e 'require(\"child_process\").execSync(\"frugalflow off\")'",
         "git -c alias.x='!frugalflow off' x",
         "F=frugalflow; $F off",
+        # 2026-11-12 (D1): python options are scanned, not skipped from a closed list.
+        "python3 -Wignore /opt/ff/bin/config_cmd.py off",
+        "python3 -q /opt/ff/bin/init_cmd.py --mode observe",
+        "python3 -P /opt/ff/bin/setup_cmd.py --yes",
+        "python3 -bb /opt/ff/bin/uninstall_cmd.py",
+        "python3 -IS /opt/ff/bin/onboard_cmd.py --mode active",
+        "python3 -W ignore /opt/ff/bin/frugalflow.py off",
+        "uv run python /opt/ff/bin/config_cmd.py off",
+        "/opt/ff/bin/config_cmd.py off",
+        "/opt/ff/bin/init_cmd.py --mode observe",
+        # 2026-11-12 (D12): code fed to an interpreter stays refused.
+        "python3 <<'EOF'\nimport subprocess\nsubprocess.run(['frugalflow','off'])\nEOF",
+        "python3 -c \"import subprocess; subprocess.run(['frugalflow','off'])\"",
+        "echo 'frugalflow off' | python3",
     ]
     failed = 0
     for cmd in refused_cases:
@@ -142,6 +156,15 @@ def test_settings_cli_guard_free():
         "cat <<EOF\nfrugalflow off\nEOF",
         "grep -n frugalflow README.md",
         "F=frugalflow; $F status",
+        # 2026-11-12 (D12): a git -m message or an echo/grep argument is text, not code.
+        "git commit -m 'doc: explain frugalflow off'",
+        "echo 'frugalflow off'",
+        "grep 'frugalflow off' notes.txt",
+        # 2026-11-12 (D1): scanned options before a read-only script stay free.
+        "python3 -W ignore /opt/ff/bin/config_cmd.py --notice",
+        "uv run python /opt/ff/bin/frugalflow.py doctor",
+        "/opt/ff/bin/config_cmd.py --notice",
+        "/opt/ff/bin/init_cmd.py --notice",
     ]
     failed = 0
     for cmd in free_cases:
@@ -231,6 +254,86 @@ def test_claudecode_tty_check():
     return failed
 
 
+def run_cmd_script(script, args, home=None, env_extra=None, stdin_data=None):
+    """Run a *_cmd.py script directly with given args and environment."""
+    env = os.environ.copy()
+    env["HOME"] = throwaway_home()
+    env.pop("CLAUDECODE", None)
+    if home:
+        env["FRUGALFLOW_HOME"] = home
+    if env_extra:
+        env.update(env_extra)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    bin_dir = os.path.join(script_dir, "..", "bin")
+    env["PYTHONPATH"] = bin_dir + (os.pathsep + env["PYTHONPATH"]) if env.get("PYTHONPATH") else bin_dir
+    proc = subprocess.run(
+        [sys.executable, os.path.join(bin_dir, script)] + args,
+        capture_output=True,
+        text=True,
+        env=env,
+        input=stdin_data,
+    )
+    return proc.returncode, proc.stdout, proc.stderr
+
+
+def test_cmd_scripts_direct_claudecode():
+    """Test the CLAUDECODE TTY check when a *_cmd.py script runs directly."""
+    print("=== Testing direct *_cmd.py under CLAUDECODE ===")
+    failed = 0
+    block_message = "Refused: this command changes a FrugalFlow setting; run it yourself in a terminal."
+
+    with tempfile.TemporaryDirectory() as home:
+        setup_home(home, "active")
+
+        # Setting-changing direct calls must be blocked (exit 3, same message).
+        blocked_calls = [
+            ("config_cmd.py", ["off"]),
+            ("config_cmd.py", ["config", "set", "switch.mode", "observe"]),
+            ("init_cmd.py", ["--mode", "observe"]),
+            ("setup_cmd.py", ["--yes"]),
+            ("uninstall_cmd.py", []),
+            ("onboard_cmd.py", ["--yes"]),
+        ]
+        for script, args in blocked_calls:
+            code, stdout, stderr = run_cmd_script(
+                script, args, home=home, env_extra={"CLAUDECODE": "1"}, stdin_data="x"
+            )
+            if code == 3 and block_message in stdout:
+                print(f"  PASS (blocked): {script} {' '.join(args)} -> exit 3")
+            else:
+                print(f"  FAIL (should block): {script} {' '.join(args)} -> code={code}, stdout={stdout[:80]}, stderr={stderr[:80]}")
+                failed += 1
+
+        # Read-only direct calls must not be blocked.
+        allowed_calls = [
+            ("config_cmd.py", ["config"]),
+            ("config_cmd.py", ["--notice"]),
+            ("init_cmd.py", ["--notice"]),
+            ("setup_cmd.py", ["--notice"]),
+            ("uninstall_cmd.py", ["--notice"]),
+            ("onboard_cmd.py", ["--notice"]),
+        ]
+        for script, args in allowed_calls:
+            code, stdout, stderr = run_cmd_script(
+                script, args, home=home, env_extra={"CLAUDECODE": "1"}, stdin_data="x"
+            )
+            if block_message not in stdout:
+                print(f"  PASS (not blocked): {script} {' '.join(args)} -> exit {code}")
+            else:
+                print(f"  FAIL (should not block): {script} {' '.join(args)} -> code={code}, stdout={stdout[:80]}")
+                failed += 1
+
+        # Without CLAUDECODE, a direct setting change works (exit 0).
+        code, stdout, stderr = run_cmd_script("config_cmd.py", ["off"], home=home)
+        if code == 0:
+            print("  PASS (no CLAUDECODE): config_cmd.py off -> exit 0")
+        else:
+            print(f"  FAIL (no CLAUDECODE): config_cmd.py off -> code={code}, stdout={stdout[:80]}, stderr={stderr[:80]}")
+            failed += 1
+
+    return failed
+
+
 def test_claudecode_no_file_modification():
     """Test that blocked commands don't modify preference files."""
     print("=== Testing no file modification on blocked commands ===")
@@ -275,6 +378,7 @@ def main():
         total_failed += test_settings_cli_guard_refused()
         total_failed += test_settings_cli_guard_free()
         total_failed += test_claudecode_tty_check()
+        total_failed += test_cmd_scripts_direct_claudecode()
         total_failed += test_claudecode_no_file_modification()
     finally:
         # Delete the throwaway HOME at the end, even when a test fails.

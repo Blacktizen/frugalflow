@@ -7,6 +7,7 @@ import shutil
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import setup_manifest
 import init_cmd
+import claudecode_check
 
 USAGE = "usage: uninstall_cmd.py [--home DIR] [--claude-dir DIR] | --notice | --autotest"
 
@@ -45,6 +46,9 @@ def main(argv):
         return 0
     if len(argv) == 1 and argv[0] == "--autotest":
         return _autotest()
+
+    # uninstall changes a FrugalFlow setting: refused inside Claude Code without a terminal.
+    claudecode_check.check_claudecode_tty("uninstall", [])
 
     home = os.environ.get("FRUGALFLOW_HOME") or ""
     if not home:
@@ -108,6 +112,9 @@ def _make_env(tmp):
 
 def _autotest():
     import subprocess
+
+    # Unset CLAUDECODE for test subprocesses to avoid TTY check interference
+    os.environ.pop("CLAUDECODE", None)
 
     ORIGINAL = "# my notes\n"
     USER_LINE = "my own line\n"

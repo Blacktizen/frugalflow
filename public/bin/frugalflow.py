@@ -15,6 +15,7 @@ BIN = os.path.dirname(os.path.abspath(__file__))
 if BIN not in sys.path:
     sys.path.insert(0, BIN)
 import launcher
+import claudecode_check
 NAME_RULE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 COMMANDS = ("new-project", "nouveau-projet")   # lang-ok: French alias
 
@@ -445,31 +446,10 @@ def run_notes(args):
     return module.main([subcommand] + kept)
 
 
-def _is_setting_change_command(command, args):
-    """Check if the command/subcommand changes a FrugalFlow setting."""
-    if command in ("on", "off", "mode", "display", "init", "setup", "uninstall"):
-        return True
-    if command == "config" and args and args[0] == "set":
-        return True
-    if command == "memory" and args and args[0] == "decline":
-        return True
-    if command == "notes" and args and args[0] in ("add-pitfall", "merge", "measure"):
-        return True
-    if command == "run" and args and args[0] in ("model_notes", "model_notes.py"):
-        return True
-    return False
-
-
-def _check_claudecode_tty(command, args):
-    """Check CLAUDECODE env var and TTY status for setting-change commands."""
-    if not _is_setting_change_command(command, args):
-        return
-    if os.environ.get("CLAUDECODE") != "1":
-        return
-    if sys.stdin.isatty() and sys.stdout.isatty():
-        return
-    sys.stdout.write("Refused: this command changes a FrugalFlow setting; run it yourself in a terminal.\n")
-    sys.exit(3)
+# The CLAUDECODE + TTY check lives in claudecode_check, shared with the setting
+# tools (config_cmd, init_cmd, setup_cmd, uninstall_cmd, onboard_cmd).
+_is_setting_change_command = claudecode_check.is_setting_change_command
+_check_claudecode_tty = claudecode_check.check_claudecode_tty
 
 
 def main():

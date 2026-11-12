@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import layers
 import config_rules
 import env_detect
+import claudecode_check
 
 BIN = os.path.dirname(os.path.abspath(__file__))
 
@@ -188,6 +189,9 @@ def main(argv):
     if argv == ["--autotest"]:
         return _autotest()
 
+    # setup changes a FrugalFlow setting: refused inside Claude Code without a terminal.
+    claudecode_check.check_claudecode_tty("setup", [])
+
     home = None
     answers = []
     ollama_url = None
@@ -267,6 +271,8 @@ def main(argv):
 
 
 def _autotest():
+    # Unset CLAUDECODE for test subprocesses to avoid TTY check interference
+    os.environ.pop("CLAUDECODE", None)
     script = os.path.abspath(__file__)
     example_path = os.path.join(os.path.dirname(BIN), "config", "models.example.json")
     with open(example_path, "r", encoding="utf-8") as handle:
