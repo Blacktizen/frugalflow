@@ -48,12 +48,92 @@ NOTICE = (
 )
 
 
+def _autotest():
+    import subprocess
+
+    bin_dir = os.path.dirname(os.path.abspath(__file__))
+    base_env = dict(os.environ)
+    base_env.pop("CLAUDECODE", None)
+    probe = (
+        "import sys; sys.path.insert(0, r" + repr(bin_dir) + "); "
+        "import claudecode_check; claudecode_check.check_claudecode_tty('on', [])"
+    )
+
+    failures = 0
+
+    # Test 1: CLAUDECODE=1, stdin and stdout piped (not terminals) -> refusal, exit 3
+    env1 = dict(base_env)
+    env1["CLAUDECODE"] = "1"
+    proc1 = subprocess.run(
+        [sys.executable, "-c", probe],
+        env=env1,
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+    )
+    if proc1.returncode == 3 and proc1.stdout == MESSAGE:
+        print("PASS 1 refusal under CLAUDECODE: expected rc 3 + message, got rc "
+              + str(proc1.returncode) + " + " + repr(proc1.stdout))
+    else:
+        print("FAIL 1 refusal under CLAUDECODE: expected rc 3 + message, got rc "
+              + str(proc1.returncode) + " + " + repr(proc1.stdout))
+        failures += 1
+
+    # Test 2: no CLAUDECODE -> the check lets the command through
+    proc2 = subprocess.run(
+        [sys.executable, "-c", probe],
+        env=base_env,
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+    )
+    if proc2.returncode == 0 and proc2.stdout == "":
+        print("PASS 2 passthrough without CLAUDECODE: expected rc 0 + empty, got rc "
+              + str(proc2.returncode) + " + " + repr(proc2.stdout))
+    else:
+        print("FAIL 2 passthrough without CLAUDECODE: expected rc 0 + empty, got rc "
+              + str(proc2.returncode) + " + " + repr(proc2.stdout))
+        failures += 1
+
+    # Test 3: --notice exits 0 with the notice
+    proc3 = subprocess.run(
+        [sys.executable, __file__, "--notice"],
+        env=base_env,
+        capture_output=True,
+        text=True,
+    )
+    if proc3.returncode == 0 and proc3.stdout.startswith("NAME      claudecode_check.py"):
+        print("PASS 3 --notice: expected rc 0 + notice, got rc " + str(proc3.returncode))
+    else:
+        print("FAIL 3 --notice: expected rc 0 + notice, got rc "
+              + str(proc3.returncode) + " + " + repr(proc3.stdout))
+        failures += 1
+
+    # Test 4: no argument -> usage, exit 2
+    proc4 = subprocess.run(
+        [sys.executable, __file__],
+        env=base_env,
+        capture_output=True,
+        text=True,
+    )
+    if proc4.returncode == 2 and "usage: claudecode_check.py" in proc4.stdout:
+        print("PASS 4 usage without argument: expected rc 2 + usage, got rc " + str(proc4.returncode))
+    else:
+        print("FAIL 4 usage without argument: expected rc 2 + usage, got rc "
+              + str(proc4.returncode) + " + " + repr(proc4.stdout))
+        failures += 1
+
+    return 0 if failures == 0 else 1
+
+
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "--notice":
         sys.stdout.write(NOTICE)
         sys.exit(0)
+    elif len(sys.argv) > 1 and sys.argv[1] == "--autotest":
+        sys.exit(_autotest())
     else:
-        sys.stdout.write("usage: claudecode_check.py --notice\n")
+        sys.stdout.write("usage: claudecode_check.py --notice | --autotest\n")
         sys.exit(2)
 
 
