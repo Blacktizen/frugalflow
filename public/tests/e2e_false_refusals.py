@@ -77,6 +77,10 @@ def setup_home(home):
         json.dump(SETTINGS, f)
     with open(os.path.join(home, "delegations.jsonl"), "w", encoding="utf-8") as f:
         f.write("")
+    # 2026-11-12: the code-receipt rule lives in orchestrator mode; the shell
+    # extraction cases below expect it armed.
+    with open(os.path.join(home, "preferences.json"), "w", encoding="utf-8") as f:
+        f.write('{"schema_version": "1", "switch": {"enabled": true, "mode": "orchestrator"}}')
 
 
 def run_case(name, home, tool, inp, expected, cwd="/tmp"):

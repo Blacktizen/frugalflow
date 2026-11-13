@@ -21,7 +21,7 @@ COMMANDS = ("new-project", "nouveau-projet")   # lang-ok: French alias
 
 USAGE = (
     "usage: frugalflow COMMAND [ARGS] | --notice | --autotest\n"
-    "  init [--mode observe|active|silent] [options]   (installs FrugalFlow; --here mounts it in this repository; starts in observe mode)\n"
+    "  init [--mode observe|active|silent|orchestrator] [options]   (installs FrugalFlow; --here mounts it in this repository; starts in observe mode)\n"
     "  resume [--vault DIR] [--entries N]   (prints the handoff for a new session)\n"
     "  delegate --role ROLE --file BRIEF --out FILE [--verify CMD]   (sends a checked brief to a cheaper model)\n"
     "  close [--vault DIR] [--repo DIR]   (the closing pass: checks the vault and says if the handoff is ready)\n"
@@ -33,7 +33,7 @@ USAGE = (
 USAGE_ALL = (
     "usage: frugalflow.py COMMAND [ARGS] | --notice | --autotest\n"
     "  new-project NAME [--root DIR]   (creates DIR/NAME; DIR defaults to the current folder)\n"
-    "  init [--mode observe|active|silent] [--remove] [options]\n"
+    "  init [--mode observe|active|silent|orchestrator] [--remove] [options]\n"
     "  init --here   (mounts the memory in the existing git repository of the current folder; global settings untouched)\n"
     "  scan [PATH] [--staged] [--rules FILE] [--quiet]   (finds secrets and private data in a folder or repo; exit 12 on a leak; needs no model)\n"
     "  setup [--yes] [--home DIR] [--claude-dir DIR] [--engine ENGINE] [--endpoint URL]   (guided: detects your engines, backs up, writes, runs doctor)\n"

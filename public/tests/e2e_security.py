@@ -262,6 +262,9 @@ def test5_guard_example():
     shutil.copy2(os.path.join(CONFIG, "guard.example.json"), os.path.join(home, "guard.json"))
     with open(os.path.join(home, "delegations.jsonl"), "w"):
         pass
+    # 2026-11-12: the code-receipt rule lives in orchestrator mode.
+    with open(os.path.join(home, "preferences.json"), "w") as f:
+        f.write('{"schema_version": "1", "switch": {"enabled": true, "mode": "orchestrator"}}')
 
     env = os.environ.copy()
     env["FRUGALFLOW_HOME"] = home

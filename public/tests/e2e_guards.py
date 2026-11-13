@@ -110,6 +110,9 @@ def run_e2e():
             f.write(json.dumps(SETTINGS))
         with open(os.path.join(H, "delegations.jsonl"), "w", encoding="utf-8") as f:
             f.write("")
+        # 2026-11-12: the code-receipt rule lives in orchestrator mode.
+        with open(os.path.join(H, "preferences.json"), "w", encoding="utf-8") as f:
+            f.write('{"schema_version": "1", "switch": {"enabled": true, "mode": "orchestrator"}}')
         with open(os.path.join(H, "big.log"), "w", encoding="utf-8") as f:
             f.write(BIG)
         with open(os.path.join(H, "small.md"), "w", encoding="utf-8") as f:

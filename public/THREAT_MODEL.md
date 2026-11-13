@@ -18,7 +18,9 @@ This model covers what the guard protects:
 
 - **The project code.** Source files the operator works on. The guard refuses to write
   code that did not come from a recent, successful delegation. A receipt covers only its
-  exact file, and the content must match what was delegated.
+  exact file, and the content must match what was delegated. This receipt rule applies
+  only in orchestrator mode (`frugalflow mode orchestrator`); in the other armed modes a
+  bulky code write passes and the audit records it as `receipt_not_required`.
 - **The operator's secrets.** Environment variables and files outside the project. They
   are never sent to a model, and a verification check runs without sensitive variables.
 - **The guard's own logs.** The delegation log (`delegations.jsonl`, the receipts), the

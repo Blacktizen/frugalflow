@@ -35,6 +35,7 @@ NOTICE = (
     "          The reading gate now runs as a check of this hook: it refuses that write once, shows the bearing lines, and attests its own refusal, so the identical write right after is accepted.\n"
     "          2026-11-05 the journal layer now covers the user's Claude settings file and each vault's journal (log.md beside a SCHEMA.md or an overview.md); its refusal puts To fix: on its own line.\n"
     "          2026-11-05 audit is a guarantee: an unwritable audit log refuses writes in active mode.\n"
+    "          2026-11-12 the code-receipt rule moved out of the default and lives in orchestrator mode; silent mode now refuses like active when the audit cannot be written.\n"
 )
 
 TURN_PREFIX = "FrugalFlow \u00b7 observe: "
@@ -353,7 +354,7 @@ def run_hook(stdin_text):
             res = guard_rules.result("allow", None, [], "")
     else:
         try:
-            res = guard_rules.decide(tool, inp, settings, records, guard_checks.build(settings, records, payload.get("cwd"), mode=mode), audit_records=audit_records)
+            res = guard_rules.decide(tool, inp, settings, records, guard_checks.build(settings, records, payload.get("cwd"), mode=mode), audit_records=audit_records, require_receipt=(mode == "orchestrator"))
         except Exception as e:
             res = guard_rules.result(
                 "deny",
@@ -394,7 +395,7 @@ def run_hook(stdin_text):
     if res["decision"] == "allow" and is_write_op:
         writable, err = can_write_audit(home, settings)
         if not writable:
-            if mode == "active":
+            if mode in ("active", "silent", "orchestrator"):
                 # Refuse the write in active mode
                 audit_path = resolve(home, settings["audit_log"])
                 fix_hint = f"make the audit log directory writable, or correct \"audit_log\" in {os.path.join(home, 'guard.json')}"
@@ -432,7 +433,7 @@ def run_hook(stdin_text):
                 audit_res["lines"] = res["lines"]
             ok, err = write_audit(home, settings, tool, audit_res)
             audit_written = ok
-            if not ok and mode == "active":
+            if not ok and mode in ("active", "silent", "orchestrator"):
                 # This shouldn't happen since we checked can_write_audit, but fail closed
                 audit_path = resolve(home, settings["audit_log"])
                 fix_hint = f"make the audit log directory writable, or correct \"audit_log\" in {os.path.join(home, 'guard.json')}"
@@ -545,6 +546,7 @@ def _autotest():
     # --- Proof 1 ---
     with tempfile.TemporaryDirectory() as h:
         _SETUP(h, "")
+        _write_prefs(h, _PREFS(True, "orchestrator"))
         code, stdout = _RUN(h, CALL("Write", {"file_path": "/w/b.py", "content": BIG}))
         expected = "deny, To fix:, audit=no_receipt"
         got = "ok"
@@ -572,6 +574,7 @@ def _autotest():
     # --- Proof 2 ---
     with tempfile.TemporaryDirectory() as h:
         _SETUP(h, "")
+        _write_prefs(h, _PREFS(True, "orchestrator"))
         code, stdout = _RUN(h, CALL("Bash", {"command": "tee /w/b.py"}))
         expected = "deny, audit=shell_write; then allow, stdout='', audit unchanged"
         got = "ok"
@@ -609,6 +612,7 @@ def _autotest():
     # --- Proof 3 ---
     with tempfile.TemporaryDirectory() as h:
         _SETUP(h, json.dumps(RECEIPT()) + "\n")
+        _write_prefs(h, _PREFS(True, "orchestrator"))
         code, stdout = _RUN(h, CALL("Write", {"file_path": "/w/a.py", "content": BIG}))
         expected = "stdout='', audit=receipt_match; dir-as-log: deny, audit=log_unreadable"
         got = "ok"
@@ -626,6 +630,7 @@ def _autotest():
 
         with tempfile.TemporaryDirectory() as h2:
             _SETUP(h2, "")
+            _write_prefs(h2, _PREFS(True, "orchestrator"))
             os.remove(os.path.join(h2, "delegations.jsonl"))
             os.mkdir(os.path.join(h2, "delegations.jsonl"))
             code, stdout = _RUN(h2, CALL("Write", {"file_path": "/w/a.py", "content": BIG}))
@@ -806,11 +811,15 @@ def _autotest():
         results.append((7, ok, expected, got))
 
     # --- Proof 8: observe converts a deny into a counted allow and prints the turn line ---
+    # 2026-11-12: a code write without a receipt is no longer a refusal outside
+    # orchestrator mode, so the counted refusal here is a whole big-file read.
     with tempfile.TemporaryDirectory() as h:
         _SETUP(h, "")
         _write_prefs(h, _PREFS(True, "observe"))
-        code, stdout = _RUN(h, CALL("Write", {"file_path": "/w/b.py", "content": BIG}))
-        expected = "observe: one systemMessage turn line, audit=observed:no_receipt"
+        with open(os.path.join(h, "big.log"), "w", encoding="utf-8") as f:
+            f.write("x\n" * 500)
+        code, stdout = _RUN(h, CALL("Read", {"file_path": os.path.join(h, "big.log")}))
+        expected = "observe: one systemMessage turn line, audit=observed:refused:intake"
         got = "ok"
         ok = True
         if code != 0:
@@ -826,7 +835,7 @@ def _autotest():
                 ok = False
                 got = f"parse: {e}"
         audit = _AUDIT(h)
-        if not audit or audit[-1] != "observed:no_receipt":
+        if not audit or audit[-1] != "observed:refused:intake":
             ok = False
             got = f"audit={audit}"
         results.append((8, ok, expected, got))
@@ -855,10 +864,15 @@ def _autotest():
         results.append((9, ok, expected, got))
 
     # --- Proof 10: no preferences.json means the barrier stays active ---
+    # 2026-11-12: the default mode no longer refuses a code write for want of a
+    # receipt, so the barrier is proved with a refusal it still renders: a whole
+    # big-file read.
     with tempfile.TemporaryDirectory() as h:
         _SETUP(h, "")
-        code, stdout = _RUN(h, CALL("Write", {"file_path": "/w/b.py", "content": BIG}))
-        expected = "preferences absent: deny, audit=no_receipt"
+        with open(os.path.join(h, "big.log"), "w", encoding="utf-8") as f:
+            f.write("x\n" * 500)
+        code, stdout = _RUN(h, CALL("Read", {"file_path": os.path.join(h, "big.log")}))
+        expected = "preferences absent: deny, audit=refused:intake"
         got = "ok"
         ok = True
         if code != 0:
@@ -874,16 +888,18 @@ def _autotest():
                 ok = False
                 got = f"parse: {e}"
         audit = _AUDIT(h)
-        if not audit or audit[-1] != "no_receipt":
+        if not audit or audit[-1] != "refused:intake":
             ok = False
             got = f"audit={audit}"
         results.append((10, ok, expected, got))
 
-    # --- Proof 11: observe turns a 60-line code write into one systemMessage turn line ---
+    # --- Proof 11: observe turns a refused big-file read into one systemMessage turn line ---
     with tempfile.TemporaryDirectory() as h:
         _SETUP(h, "")
         _write_prefs(h, _PREFS(True, "observe"))
-        code, stdout = _RUN(h, CALL("Write", {"file_path": "/w/big.py", "content": CODE60}))
+        with open(os.path.join(h, "big.log"), "w", encoding="utf-8") as f:
+            f.write("x\n" * 500)
+        code, stdout = _RUN(h, CALL("Read", {"file_path": os.path.join(h, "big.log")}))
         expected = "observe: one systemMessage line starting with the observe prefix"
         got = "ok"
         ok = True
@@ -907,14 +923,16 @@ def _autotest():
                 got = f"parse: {e}"
         results.append((11, ok, expected, got))
 
-    # --- Proof 12: the same observed write stays silent when display.turn_line is off ---
+    # --- Proof 12: the same observed refusal stays silent when display.turn_line is off ---
     with tempfile.TemporaryDirectory() as h:
         _SETUP(h, "")
         prefs = _PREFS(True, "observe")
         prefs["display"] = {"statusline": True, "turn_line": False, "summary": True}
         _write_prefs(h, prefs)
-        code, stdout = _RUN(h, CALL("Write", {"file_path": "/w/big.py", "content": CODE60}))
-        expected = "turn_line off: stdout='', audit=observed:no_receipt"
+        with open(os.path.join(h, "big.log"), "w", encoding="utf-8") as f:
+            f.write("x\n" * 500)
+        code, stdout = _RUN(h, CALL("Read", {"file_path": os.path.join(h, "big.log")}))
+        expected = "turn_line off: stdout='', audit=observed:refused:intake"
         got = "ok"
         ok = True
         if code != 0:
@@ -924,7 +942,7 @@ def _autotest():
             ok = False
             got = f"stdout={stdout!r}"
         audit = _AUDIT(h)
-        if not audit or audit[-1] != "observed:no_receipt":
+        if not audit or audit[-1] != "observed:refused:intake":
             ok = False
             got = f"audit={audit}"
         results.append((12, ok, expected, got))

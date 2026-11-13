@@ -33,7 +33,7 @@ MEANING = {
     "splitting.max_brief_lines": "a longer brief is the sign of a task too big",
     "grouping.independent_calls_same_turn": "send independent tool calls together",
     "switch.enabled": "on (true) or off (false); off lets every call pass the economy barrier, security checks stay on",
-    "switch.mode": "observe: nothing is blocked, avoidable calls are counted; active: the barrier blocks; silent: active, one line at session start only",
+    "switch.mode": "observe: nothing is blocked, avoidable calls are counted; active: the memory guards block (reading gate, sealed journal, protected settings); silent: active, one line at session start only; orchestrator: active, plus no code write without a delegation receipt",
     "display.statusline": "show the FrugalFlow segment in the status line",
     "display.turn_line": "one short line when a call would have been avoided (observe mode)",
     "display.summary": "the session summary",

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Guard: the rule "no code write without a delegation receipt" moved out of
+  the default and lives in a new mode, `orchestrator`
+  (`frugalflow mode orchestrator`); in active, silent and observe a bulky
+  code write passes and the audit records it as `receipt_not_required`.
+- Guard: silent mode now refuses like active when the audit cannot be
+  written.
+
 ## 0.1.7
 
 - Guard: `eval` bodies, python subprocess calls and git alias bodies are

@@ -24,7 +24,8 @@ GUARD_BASE = {
     "fix_hint": "delegate it.",
 }
 
-PREFS = {"schema_version": "1", "switch": {"enabled": True, "mode": "active"}}
+# 2026-11-12: the code-receipt rule lives in orchestrator mode.
+PREFS = {"schema_version": "1", "switch": {"enabled": True, "mode": "orchestrator"}}
 
 BIG_PY = "\n".join("x%d = %d" % (i, i) for i in range(60)) + "\n"
 
