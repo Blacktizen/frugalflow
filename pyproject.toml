@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "frugalflow"
-version = "0.1.7"
+version = "0.2.0"
 description = "Project memory your coding agent can't skip: a vault, a reading gate and a sealed journal for Claude Code. Standard library only."
 readme = "docs/PYPI_README.md"
 requires-python = ">=3.11"

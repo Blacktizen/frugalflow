@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 — 2026-11-13
 
 - MCP server: `journal_add` and `resume` accepted any absolute vault, so the server —
   which runs outside the sandbox — could append a sealed entry to any folder on the
