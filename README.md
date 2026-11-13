@@ -109,6 +109,7 @@ Every change keeps the tests green and adds a bench case when a refusal was wron
 - [`docs/DELEGATION.md`](docs/DELEGATION.md): delegation, briefs, per-model notes
 - [`docs/PRIVACY.md`](docs/PRIVACY.md): anonymization and secret scanning
 - [`docs/REFUSAL_LOOP.md`](docs/REFUSAL_LOOP.md): the refusal log and its bench loop
+- [`docs/ORCA.md`](docs/ORCA.md): FrugalFlow alongside Orca workers (compatibility, not integration)
 - [`public/QUICKSTART.md`](public/QUICKSTART.md)
 - [`public/ARCHITECTURE.md`](public/ARCHITECTURE.md)
 - [`public/SCHEMA_JSON.md`](public/SCHEMA_JSON.md)
