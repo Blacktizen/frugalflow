@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""End-to-end test: the MCP server writes the sealed journal and the delegation receipt with the user's rights, outside the sandbox."""
+"""End-to-end test: the MCP server writes the sealed journal and the delegation receipt with the user's rights, outside the sandbox, and refuses the escape routes (verify, out outside the project)."""
 
 import http.server
 import json
@@ -23,11 +23,12 @@ USAGE = "usage: e2e_mcp_server.py | --notice\n"
 NOTICE = (
     "NAME      e2e_mcp_server.py - end-to-end test: drives the MCP server over stdio in a subprocess, with a disposable HOME and FRUGALFLOW_HOME and a fake local engine.\n"
     "READS     the tools in ../bin (mcp_server.py, vault_new.py, vault_check.py); everything else lives in temporary folders.\n"
-    "WRITES    only a temporary folder, always removed, even on failure: a vault, a models.json, brief rules, one out file, one delegation log. Exit 0 all seven steps pass, 1 a step failed, 2 usage.\n"
+    "WRITES    only a temporary folder, always removed, even on failure: a vault, a models.json, brief rules, one out file, one delegation log, one harden.json. Exit 0 all fourteen steps pass, 1 a step failed, 2 usage.\n"
     "EXAMPLE   python3 e2e_mcp_server.py\n"
     "PITFALLS  2026-11-13 the delegate tool takes no trust argument, so the route lands on trust private: the models.json must declare a local model, and the fake engine must answer the card probe (GET /api/v0/models) and the sampling call (POST /v1/chat/completions).\n"
     "          2026-11-13 the card probe POSTs 'Reply with 1.' before the delegation call: a queue that answers every POST in order hands the probe the queued answer and the delegation gets none.\n"
     "          2026-11-13 the receipt is proof: the delegation log line must exist in the disposable FRUGALFLOW_HOME after the tools/call, written by delegate.py itself, not by the server.\n"
+    "          2026-11-13 the server confines out to its working folder (its cwd), so the server runs with cwd=work and every refused out path is checked for absence: a refusal that wrote the file is not a refusal.\n"
 )
 
 RULES = {"limits": {}, "rules": [{"id": "N1", "title": "no nature",
@@ -90,7 +91,8 @@ class _Handler(e2e_delegation_server._FakeHandler):
 
 def make_env(tmp, ff, rules_path):
     env = {k: v for k, v in os.environ.items()
-           if k != "CLAUDECODE" and not k.startswith("GIT_") and not k.endswith("_API_KEY")}
+           if k != "CLAUDECODE" and k != "CLAUDE_PROJECT_DIR"
+           and not k.startswith("GIT_") and not k.endswith("_API_KEY")}
     env["HOME"] = os.path.join(tmp, "home")
     env["FRUGALFLOW_HOME"] = ff
     env["FRUGALFLOW_BRIEF_RULES"] = rules_path
@@ -106,7 +108,11 @@ def run_e2e():
 
     tmp = tempfile.mkdtemp()
     try:
-        ff = os.path.join(tmp, "ff")
+        # The server confines out to its working folder: run it with cwd=work,
+        # and keep the FrugalFlow home inside work so a home path is inside the
+        # project and only the home rule can refuse it.
+        work = os.path.join(tmp, "work")
+        ff = os.path.join(work, "ff")
         os.makedirs(ff, exist_ok=True)
         os.makedirs(os.path.join(tmp, "home"), exist_ok=True)
         with open(os.path.join(ff, "models.json"), "w", encoding="utf-8") as handle:
@@ -114,6 +120,9 @@ def run_e2e():
         rules_path = os.path.join(tmp, "rules.json")
         with open(rules_path, "w", encoding="utf-8") as handle:
             json.dump(RULES, handle)
+        protected_dir = os.path.join(work, "protected")
+        with open(os.path.join(ff, "harden.json"), "w", encoding="utf-8") as handle:
+            json.dump({"schema_version": 1, "denyWrite_added": [protected_dir]}, handle)
         env = make_env(tmp, ff, rules_path)
 
         def tool(name, *args):
@@ -124,7 +133,12 @@ def run_e2e():
         vault = os.path.join(tmp, "proj", "vault")
         log_path = os.path.join(vault, "log.md")
         size_before = os.path.getsize(log_path) if os.path.isfile(log_path) else 0
-        out_path = os.path.join(tmp, "answer.py")
+        out_path = os.path.join(work, "answer.py")
+        marker = os.path.join(tmp, "pwned")
+
+        def call(i, args):
+            return {"jsonrpc": "2.0", "id": i, "method": "tools/call",
+                    "params": {"name": "delegate", "arguments": args}}
 
         messages = [
             {"jsonrpc": "2.0", "id": 1, "method": "initialize",
@@ -142,15 +156,24 @@ def run_e2e():
              "arguments": {"vault": "relative/vault", "title": "x", "fields": {}}}},
             "not json at all",
             {"jsonrpc": "2.0", "id": 6, "method": "ping"},
-            {"jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": {"name": "delegate",
-             "arguments": {"role": "code", "brief": BRIEF, "out": out_path}}},
-            {"jsonrpc": "2.0", "id": 8, "method": "tools/call", "params": {"name": "delegate",
-             "arguments": {"role": "code", "brief": BRIEF, "out": "answer/relative.py"}}},
+            call(7, {"role": "code", "brief": BRIEF, "out": os.path.join(work, "a.txt"),
+                     "verify": "touch " + marker}),
+            call(8, {"role": "code", "brief": BRIEF, "out": os.path.join(ff, "receipts.jsonl")}),
+            call(9, {"role": "code", "brief": BRIEF,
+                     "out": os.path.join(work, ".githooks", "pre-commit")}),
+            call(10, {"role": "code", "brief": BRIEF,
+                      "out": os.path.join(work, ".claude", "settings.json")}),
+            call(11, {"role": "code", "brief": BRIEF, "out": os.path.join(work, "CLAUDE.md")}),
+            call(12, {"role": "code", "brief": BRIEF, "out": os.path.join(tmp, "outside.py")}),
+            call(13, {"role": "code", "brief": BRIEF,
+                      "out": os.path.join(protected_dir, "answer.py")}),
+            call(14, {"role": "code", "brief": BRIEF, "out": "answer/relative.py"}),
+            call(15, {"role": "code", "brief": BRIEF, "out": out_path}),
         ]
 
         proc = subprocess.Popen([sys.executable, "-I", SERVER],
                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE, text=True, env=env)
+                                stderr=subprocess.PIPE, text=True, env=env, cwd=work)
         for message in messages:
             proc.stdin.write((message if isinstance(message, str) else json.dumps(message)) + "\n")
         proc.stdin.close()
@@ -176,16 +199,31 @@ def run_e2e():
                 ok, got = False, "exception: " + str(error)
             results.append((num, ok, expected, got))
 
+        def refused(i, path):
+            """A refusal is only real when the file it guards does not exist."""
+            is_error = answers[i]["result"]["isError"]
+            text = answers[i]["result"]["content"][0]["text"]
+            ok = is_error is True and "out is not allowed" in text and not os.path.exists(path)
+            return ok, "isError=" + repr(is_error) + " text=" + repr(text[:80]) \
+                   + " file_exists=" + str(os.path.exists(path))
+
         def s1():
             info = answers[1]["result"]
             ok = (info["serverInfo"]["name"] == "frugalflow" and "tools" in info["capabilities"])
             return ok, "name=" + repr(info["serverInfo"]["name"]) + " capabilities=" + repr(sorted(info["capabilities"]))
 
         def s2():
-            names = sorted(t["name"] for t in answers[2]["result"]["tools"])
-            schemas = all(t.get("inputSchema", {}).get("type") == "object" for t in answers[2]["result"]["tools"])
-            return names == ["delegate", "journal_add", "lint_brief", "resume"] and schemas, \
-                   "names=" + repr(names) + " schemas=" + str(schemas)
+            tools = answers[2]["result"]["tools"]
+            names = sorted(t["name"] for t in tools)
+            schemas = all(t.get("inputSchema", {}).get("type") == "object" for t in tools)
+            delegate_props = {}
+            for t in tools:
+                if t.get("name") == "delegate":
+                    delegate_props = t.get("inputSchema", {}).get("properties", {})
+            ok = names == ["delegate", "journal_add", "lint_brief", "resume"] and schemas \
+                 and "verify" not in delegate_props
+            return ok, "names=" + repr(names) + " schemas=" + str(schemas) \
+                   + " delegate_props=" + repr(sorted(delegate_props))
 
         def s3():
             is_error = answers[3]["result"]["isError"]
@@ -202,9 +240,9 @@ def run_e2e():
 
         def s5():
             text_a = answers[5]["result"]["content"][0]["text"]
-            text_b = answers[8]["result"]["content"][0]["text"]
+            text_b = answers[14]["result"]["content"][0]["text"]
             ok = (answers[5]["result"]["isError"] is True and "path must be absolute" in text_a
-                  and answers[8]["result"]["isError"] is True and "path must be absolute" in text_b)
+                  and answers[14]["result"]["isError"] is True and "path must be absolute" in text_b)
             return ok, "journal=" + repr(text_a) + " delegate=" + repr(text_b)
 
         def s6():
@@ -215,6 +253,32 @@ def run_e2e():
 
         def s7():
             is_error = answers[7]["result"]["isError"]
+            text = answers[7]["result"]["content"][0]["text"]
+            ok = (is_error is True and "verify is not accepted" in text
+                  and not os.path.exists(marker))
+            return ok, "isError=" + repr(is_error) + " text=" + repr(text[:80]) \
+                   + " marker_exists=" + str(os.path.exists(marker))
+
+        def s8():
+            return refused(8, os.path.join(ff, "receipts.jsonl"))
+
+        def s9():
+            return refused(9, os.path.join(work, ".githooks", "pre-commit"))
+
+        def s10():
+            return refused(10, os.path.join(work, ".claude", "settings.json"))
+
+        def s11():
+            return refused(11, os.path.join(work, "CLAUDE.md"))
+
+        def s12():
+            return refused(12, os.path.join(tmp, "outside.py"))
+
+        def s13():
+            return refused(13, os.path.join(protected_dir, "answer.py"))
+
+        def s14():
+            is_error = answers[15]["result"]["isError"]
             with open(out_path, "r", encoding="utf-8") as handle:
                 written = handle.read()
             with open(os.path.join(ff, "delegations.jsonl"), "r", encoding="utf-8") as handle:
@@ -226,12 +290,19 @@ def run_e2e():
                         + " receipt_lines=" + str(len(lines)) + " status=" + repr(receipt.get("status")))
 
         step(1, "initialize: serverInfo frugalflow, capabilities tools", s1)
-        step(2, "tools/list: four tools with object schemas", s2)
+        step(2, "tools/list: four tools with object schemas, delegate schema has no verify", s2)
         step(3, "journal_add: isError False, log.md grows, vault_check exits 0, server exits 0", s3)
         step(4, "lint_brief: empty brief refused (isError True)", s4)
         step(5, "relative vault and relative out refused: isError True, 'path must be absolute'", s5)
         step(6, "non-JSON line: error -32700 with id null, then ping answers {}", s6)
-        step(7, "delegate: isError False, out file written, one receipt line status success in the delegation log", s7)
+        step(7, "delegate with verify refused: isError True, 'verify is not accepted', no marker file", s7)
+        step(8, "out under FRUGALFLOW_HOME refused: isError True, file absent", s8)
+        step(9, "out under .githooks refused: isError True, file absent", s9)
+        step(10, "out under .claude refused: isError True, file absent", s10)
+        step(11, "out named CLAUDE.md refused: isError True, file absent", s11)
+        step(12, "out outside the working folder refused: isError True, file absent", s12)
+        step(13, "out covered by a harden.json protected path refused: isError True, file absent", s13)
+        step(14, "delegate with out inside the working folder: isError False, out file written, one receipt line status success in the delegation log", s14)
 
         if stderr.strip():
             sys.stderr.write(stderr)

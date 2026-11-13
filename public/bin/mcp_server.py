@@ -19,11 +19,18 @@ NOTICE = (
     "WRITES    nothing by itself: a journal entry or a delegation receipt exists only through the tool that verifies it. JSON responses on stdout, one per line; debug on stderr. Exit 0 when stdin closes, 2 usage.\n"
     "EXAMPLE   python3 mcp_server.py   (the plugin registers it in .mcp.json; the client talks to it over stdio)\n"
     "PITFALLS  2026-11-13 inside the sandbox Bash can no longer write the journal or the receipts: this server runs with the user's rights outside the sandbox, so a receipt written through a tool cannot be forged by the assistant.\n"
-    "          2026-11-13 stdout carries JSON responses only: one stray print breaks the client's stream; debug lines go to stderr."
+    "          2026-11-13 stdout carries JSON responses only: one stray print breaks the client's stream; debug lines go to stderr.\n"
+    "          2026-11-13 delegate over MCP ran the verify command and wrote out anywhere outside the sandbox; verify is refused and out is confined to the project."
 )
 
 BIN = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_PROTOCOL = "2025-06-18"
+
+# The server runs outside the sandbox: the out path it hands to delegate.py must stay
+# inside the project, and no component of a request is ever run as a command.
+WORK_ROOT = os.path.realpath(os.getcwd())
+PROTECTED_COMPONENTS = {".git", ".githooks", ".claude", "vault"}
+PROTECTED_NAMES = {"CLAUDE.md", ".mcp.json", "settings.json", "settings.local.json"}
 
 
 def server_version():
@@ -89,14 +96,13 @@ TOOLS = [
     },
     {
         "name": "delegate",
-        "description": "Send a checked brief to a cheaper model and write the verified answer to the out file; the delegation receipt is written by the delegate tool itself, never by this server.",
+        "description": "Send a checked brief to a cheaper model and write the answer to the out file: the answer is written unverified, check it yourself in your shell; the delegation receipt is written by the delegate tool itself, never by this server.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "role": {"type": "string", "description": "the role named in models.json"},
                 "brief": {"type": "string", "description": "the brief text"},
-                "out": {"type": "string", "description": "absolute path of the file the verified answer lands in"},
-                "verify": {"type": "string", "description": "optional command that must succeed on the answer before it is kept"},
+                "out": {"type": "string", "description": "absolute path, inside the project folder, of the file the answer lands in"},
             },
             "required": ["role", "brief", "out"],
         },
@@ -170,17 +176,80 @@ def _tool_resume(args):
     return _run(cmd, 60)
 
 
+def _frugalflow_home():
+    """The FrugalFlow home, resolved: FRUGALFLOW_HOME, else ~/.frugalflow."""
+    home = os.environ.get("FRUGALFLOW_HOME") or os.path.join(os.path.expanduser("~"), ".frugalflow")
+    return os.path.realpath(home)
+
+
+def _collect_abs(node, found):
+    """Every absolute-path string inside a JSON value, resolved and added to found."""
+    if isinstance(node, str):
+        if os.path.isabs(node):
+            found.add(os.path.realpath(node))
+    elif isinstance(node, list):
+        for item in node:
+            _collect_abs(item, found)
+    elif isinstance(node, dict):
+        for value in node.values():
+            _collect_abs(value, found)
+
+
+def _harden_protected():
+    """The protected paths listed in <home>/harden.json, resolved; empty when absent or unreadable."""
+    path = os.path.join(_frugalflow_home(), "harden.json")
+    found = set()
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            _collect_abs(json.load(handle), found)
+    except (OSError, ValueError):
+        return set()
+    return found
+
+
+def _under(path, root):
+    """True when path is root itself or sits under it (both already resolved)."""
+    return path == root or path.startswith(root + os.sep)
+
+
+def _check_out(out):
+    """Why this out path is refused, or None when it is allowed. The server runs outside
+    the sandbox, so out may only be a plain file inside the project folder: never the
+    FrugalFlow home, never a git hook, a settings file, a vault path or a harden-protected path."""
+    real = os.path.realpath(out)
+    project_dir = os.environ.get("CLAUDE_PROJECT_DIR")
+    root = os.path.realpath(project_dir) if project_dir else WORK_ROOT
+    if not _under(real, root):
+        return "out is not allowed: not under the project folder " + root
+    home = _frugalflow_home()
+    if _under(real, home):
+        return "out is not allowed: under FRUGALFLOW_HOME " + home
+    for component in real.split(os.sep):
+        if component in PROTECTED_COMPONENTS:
+            return "out is not allowed: protected path component: " + component
+    name = os.path.basename(real)
+    if name in PROTECTED_NAMES:
+        return "out is not allowed: protected file name: " + name
+    for protected in sorted(_harden_protected()):
+        if _under(real, protected):
+            return "out is not allowed: covered by the protected path " + protected + " listed in harden.json"
+    return None
+
+
 def _tool_delegate(args):
     role = args.get("role")
     brief = args.get("brief")
     out = args.get("out")
-    verify = args.get("verify")
     if not isinstance(role, str) or not isinstance(brief, str) or not isinstance(out, str):
         return True, "bad arguments: role, brief and out (strings) are required"
+    if "verify" in args:
+        return True, ("verify is not accepted over MCP: run your check in your own shell, "
+                      "inside the sandbox, on the file delegate wrote")
     if not os.path.isabs(out):
         return True, "path must be absolute"
-    if verify is not None and not isinstance(verify, str):
-        return True, "bad arguments: verify must be a string"
+    reason = _check_out(out)
+    if reason is not None:
+        return True, reason
     tmp = tempfile.mkdtemp()
     try:
         path = os.path.join(tmp, "brief.md")
@@ -188,8 +257,6 @@ def _tool_delegate(args):
             handle.write(brief)
         cmd = [sys.executable, "-I", os.path.join(BIN, "delegate.py"),
                "--role", role, "--file", path, "--out", out]
-        if verify is not None:
-            cmd += ["--verify", verify]
         return _run(cmd, 1800)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

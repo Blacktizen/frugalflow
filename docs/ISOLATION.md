@@ -51,6 +51,8 @@ The plugin registers the server through the repository's `.mcp.json`:
 
 `frugalflow harden` also protects the delegation logs named by `<home>/guard.json` (resolved inside the home): a log kept outside the home folder gets its own `denyWrite` entry and `Edit` rule, so the assistant cannot append a receipt by hand either.
 
+Because the server itself runs outside the sandbox, it must never execute or write anything the agent chooses: over MCP the `delegate` tool accepts no `verify` command (the agent runs its own check in its sandboxed shell) and confines `out` to the project folder — never the FrugalFlow home, `.git`, `.githooks`, `.claude`, `vault`, `CLAUDE.md`, a settings file, or a path listed in `harden.json`.
+
 What this changes: in isolated mode the writing path is a tool call the assistant makes, not a shell command it runs. What remains to be proven: an adverse review (roadmap C3) must attack this path — a forged `tools/call`, a tampered models file, a receipt written through a different tool — before the claim "a receipt cannot be forged" is worth printing anywhere else.
 
 ## Taking it back

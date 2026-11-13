@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- MCP server: the `delegate` tool passed the caller's `verify` string to
+  `delegate.py --verify` (a shell command run outside the sandbox) and accepted
+  any absolute `out`; `verify` is now refused over MCP and `out` is confined to
+  the project folder — never the FrugalFlow home, `.git`, `.githooks`, `.claude`,
+  `vault`, `CLAUDE.md`, a settings file, or a path listed in `harden.json`.
 - Guard: the rule "no code write without a delegation receipt" moved out of
   the default and lives in a new mode, `orchestrator`
   (`frugalflow mode orchestrator`); in active, silent and observe a bulky
