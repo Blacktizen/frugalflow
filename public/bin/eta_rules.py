@@ -2,6 +2,8 @@ import os
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 BUCKETS = [2000, 5000, 10000, 20000, 50000]
 MINIMUM = 3
 

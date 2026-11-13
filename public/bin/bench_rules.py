@@ -2,6 +2,8 @@ import sys
 import os
 import subprocess
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 PROBES = [
     ("echo", "Reply with exactly the word PONG, nothing else.", "PONG"),
     ("calc", "What is 17 times 23? Reply with the number only.", "391"),

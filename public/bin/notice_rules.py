@@ -3,6 +3,8 @@ import os
 import re
 import subprocess
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 SECTIONS = ["NAME", "READS", "WRITES", "EXAMPLE", "PITFALLS"]
 
 NOTICE = (

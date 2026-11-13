@@ -6,6 +6,8 @@ import shlex
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 MAX_LINES = 50
 MAX_BYTES = 5000
 SHELL_NAMES = {"sh", "bash", "zsh", "dash", "ksh", "fish", "source", ".", "eval", "exec", "xargs", "parallel", "env", "sudo", "nohup", "time", "ssh"}

@@ -2,6 +2,8 @@ import sys
 import os
 import subprocess
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 BEGIN = "<!-- FRUGALFLOW begin -->"
 END = "<!-- FRUGALFLOW end -->"
 

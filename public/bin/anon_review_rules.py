@@ -4,6 +4,8 @@ import subprocess
 import sys
 import tempfile
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 KINDS = ("private_name", "disguised_name", "identifying_detail")
 
 HEAD = """You review ONE source file before it is published. A mechanical scanner has already removed home paths, e-mail addresses, IP addresses and secrets. Your job is what a pattern cannot see: a detail that tells who owns, uses or wrote this code.

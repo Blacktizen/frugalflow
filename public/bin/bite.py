@@ -1,5 +1,7 @@
 import sys, os, json, subprocess, tempfile, shutil, datetime
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 NOTICE = """NAME      bite.py - proves that an end-to-end suite bites, and writes the receipt the gate reads.
 READS     the suite and the target named on the command line; the target is broken once, then restored byte for byte.
 WRITES    suite<N>.json in --out, by default the bite folder next to the suite, only when the suite went green, red, then green.

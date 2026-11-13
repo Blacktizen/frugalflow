@@ -3,6 +3,8 @@ import os
 import re
 import subprocess
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 PATTERNS = [
     r"max_model_len\D*([\d,]{2,})",
     r"maximum context length is\s*([\d,]{2,})",

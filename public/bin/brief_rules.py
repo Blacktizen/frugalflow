@@ -5,6 +5,8 @@ import subprocess
 import sys
 import unicodedata
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 TYPES = {
     "code_block_min_lines": ["lines"],
     "regex_all": ["patterns"],

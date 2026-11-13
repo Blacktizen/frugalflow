@@ -1,6 +1,9 @@
 import sys
 import subprocess
 from datetime import datetime, timedelta
+import os
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
 def fmt(number):

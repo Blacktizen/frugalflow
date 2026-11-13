@@ -5,6 +5,8 @@ import os
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 
 def region_end(text, i, kind, level=0):
     """Return the index just after the character that closes the region.

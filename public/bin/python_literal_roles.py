@@ -5,6 +5,8 @@ import subprocess
 import sys
 import warnings
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 RUN_FUNCS = ("run", "call", "check_call", "check_output", "Popen")
 TEMP_FUNCS = ("NamedTemporaryFile", "TemporaryFile", "SpooledTemporaryFile", "mkstemp", "mkdtemp", "TemporaryDirectory")
 TEMP_FILE_FUNCS = ("NamedTemporaryFile", "TemporaryFile", "SpooledTemporaryFile")

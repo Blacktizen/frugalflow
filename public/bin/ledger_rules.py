@@ -2,6 +2,8 @@ import sys
 import os
 import subprocess
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 DOC = {"models": [
     {"id": "reader", "name": "alpha-7b", "location": "local", "paid": False},
     {"id": "coder", "name": "beta-pro", "location": "remote", "paid": True},

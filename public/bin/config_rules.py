@@ -5,6 +5,8 @@ import subprocess
 import ipaddress
 import urllib.parse
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 LOCATIONS = ["local", "remote", "in_session"]
 TRUST = ["private", "trusted_third_party", "untrusted_third_party"]
 

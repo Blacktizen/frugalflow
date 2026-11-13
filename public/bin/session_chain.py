@@ -3,6 +3,9 @@ import json
 import hashlib
 import sys
 import subprocess
+import os
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 GENESIS = "0" * 64
 

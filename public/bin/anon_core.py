@@ -3,6 +3,8 @@ import os
 import re
 import subprocess
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 MARKER = re.compile(r"__[A-Z]+_\d+__")
 
 

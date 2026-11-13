@@ -7,6 +7,8 @@ import sys
 import tempfile
 import shutil
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 
 def read(cwd):
     """Read preferences.json in the FRUGALFLOW_HOME folder and .frugalflow.json in the working directory.

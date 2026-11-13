@@ -10,6 +10,8 @@ import statistics
 import subprocess
 import tempfile
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 USAGE = (
     "usage: model_notes.py check FILE | add-pitfall --file F --model M --engine E "
     "--symptom S --remedy R --proof P [--date YYYY-MM-DD] | show --file F --model M | "

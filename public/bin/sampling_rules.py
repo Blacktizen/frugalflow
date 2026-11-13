@@ -3,6 +3,8 @@ import os
 import re
 import subprocess
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 KEYS = ["temperature", "top_p", "top_k", "min_p", "presence_penalty", "repetition_penalty"]
 
 NOTICE = """NAME      sampling_rules.py - reads a publisher's sampling settings and says which ones apply, or that none is known.

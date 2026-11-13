@@ -6,6 +6,8 @@ import shlex
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 AWK_NAMES = {"awk", "gawk", "mawk", "nawk"}
 
 

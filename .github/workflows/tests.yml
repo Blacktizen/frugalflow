@@ -23,3 +23,11 @@ jobs:
       # The runner exits non-zero as soon as one autotest or E2E fails (checked at the end of the run).
       - name: Autotests and end-to-end suites
         run: python3 public/tests/run_all.py
+      # The installed object, not the clone: a venv, pip install ., then the three
+      # launch criteria replayed against the installed package. A non-zero exit
+      # from e2e_installed.py fails this step.
+      - name: Installed package end-to-end
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv-install"
+          "$RUNNER_TEMP/venv-install/bin/pip" install .
+          "$RUNNER_TEMP/venv-install/bin/python" public/tests/e2e_installed.py "$GITHUB_WORKSPACE"

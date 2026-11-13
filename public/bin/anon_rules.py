@@ -6,6 +6,8 @@ import base64
 import subprocess
 import warnings
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 # Some Betterleaks patterns trip a Python FutureWarning; it says nothing about a leak.
 warnings.filterwarnings("ignore", "Possible nested set", FutureWarning)
 

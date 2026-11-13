@@ -6,6 +6,8 @@ import re
 import sys
 import subprocess
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 QUALIFIERS = ["gist", "sha256", "sha-256", "fingerprint", "empreinte", "checksum", "digest", "hash"]
 WINDOW = 60
 

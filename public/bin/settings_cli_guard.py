@@ -6,6 +6,7 @@ import re
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import shell_quotes
 import subshells
 from shell_split import split_command, split_segments

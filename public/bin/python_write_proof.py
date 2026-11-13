@@ -5,6 +5,8 @@ import sys
 import subprocess
 import warnings
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 
 FORBIDDEN_NAMES = {"remove", "unlink", "rename", "renames", "rmdir", "removedirs", "mkdir", "makedirs", "chmod", "lchmod", "chown", "lchown", "chflags", "lchflags", "symlink_to", "hardlink_to", "link_to", "utime", "exec", "eval", "compile", "__import__", "getattr", "setattr", "delattr", "globals", "locals", "vars", "breakpoint", "__builtins__", "builtins", "subprocess", "system", "popen", "Popen", "fork", "forkpty", "pty", "runpy", "importlib", "ctypes", "io", "codecs", "fileinput", "shutil", "fdopen", "write_text", "write_bytes", "pwrite", "writev", "sendfile", "truncate", "ftruncate", "link", "symlink", "mkfifo", "mknod", "touch", "startfile", "urlretrieve", "multiprocessing", "asyncio", "pickle", "marshal", "code", "codeop", "timeit", "pydoc", "pdb", "bdb", "cProfile", "profile", "trace", "doctest", "tkinter", "webbrowser", "methodcaller", "attrgetter", "FileType", "get_type_hints", "ForwardRef", "make_dataclass", "modules", "copy", "copy_into", "move", "move_into", "copyfile", "copytree", "setxattr", "removexattr"}
 

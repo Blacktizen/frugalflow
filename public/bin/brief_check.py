@@ -6,6 +6,8 @@ import subprocess
 import sys
 import tempfile
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 
 def default_rules():
     return os.environ.get("FRUGALFLOW_BRIEF_RULES") or os.path.join(

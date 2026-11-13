@@ -187,6 +187,21 @@ def git_gate_existing(project):
     return None
 
 
+def record_current_project(project):
+    """Record the mounted project in FRUGALFLOW_HOME/current_project.json so that
+    resume finds its vault from any folder (the README quickstart runs resume
+    right after new-project, without a cd)."""
+    home = os.environ.get("FRUGALFLOW_HOME") or os.path.expanduser("~/.frugalflow")
+    path = os.path.join(home, "current_project.json")
+    try:
+        os.makedirs(home, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump({"project": project, "vault": os.path.join(project, "vault")},
+                      handle)
+    except OSError:
+        pass
+
+
 def mount_project(project, name, existing):
     """Mount the FrugalFlow memory in a project folder: vault via vault_new.py, tools dir, bench, commit gate, Claude Code hooks, .gitignore.
 
@@ -201,6 +216,7 @@ def mount_project(project, name, existing):
                 "git repository; for a new folder use frugalflow run new-project NAME."
             ])
         if os.path.exists(vault):
+            record_current_project(project)
             return (0, ["ALREADY MOUNTED: " + vault + " (nothing written). Next: frugalflow resume"])
     result = subprocess.run(
         [sys.executable, os.path.join(BIN, "vault_new.py"), "--root", project, "--name", name],
@@ -238,6 +254,7 @@ def mount_project(project, name, existing):
     elif not os.path.exists(ignore):
         with open(ignore, "w", encoding="utf-8") as handle:
             handle.write(".claude/settings.json\n.githooks/\n")
+    record_current_project(project)
     lines = [
         ("PROJECT MOUNTED " if existing else "PROJECT READY ") + project,
         "  vault  " + vault,
@@ -267,6 +284,10 @@ def run_autotest():
     # Unset CLAUDECODE for test subprocesses to avoid TTY check interference
     test_env = dict(os.environ)
     test_env.pop("CLAUDECODE", None)
+    # Disposable home: the mount records the current project in FRUGALFLOW_HOME,
+    # so no test subprocess may ever see the real settings of the runner.
+    test_env["HOME"] = base
+    test_env["FRUGALFLOW_HOME"] = os.path.join(base, ".frugalflow")
     try:
         # Test 1: new-project creates vault and hooks
         proc = subprocess.run(

@@ -6,6 +6,8 @@ import subprocess
 import sys
 import warnings
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 
 def rewrite(code):
     """Rewrite importlib-based module loading into open() and file_imports calls."""

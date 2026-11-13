@@ -9,6 +9,8 @@ Code (CLAUDECODE=1) without a terminal, a setting change is refused with exit 3.
 import os
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 MESSAGE = "Refused: this command changes a FrugalFlow setting; run it yourself in a terminal.\n"
 
 

@@ -6,6 +6,8 @@ import shutil
 import subprocess
 import tempfile
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 BIN = os.path.dirname(os.path.abspath(__file__))
 CONFIG = os.path.join(os.path.dirname(BIN), "config")
 RULES = os.path.join(CONFIG, "brief_rules.json")

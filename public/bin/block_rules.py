@@ -5,6 +5,8 @@ import sys
 import subprocess
 import os
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 OUTCOMES = ("reproduced", "no_longer_reproduced", "not_replayable")
 
 

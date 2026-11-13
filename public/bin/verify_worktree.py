@@ -20,6 +20,8 @@ import subprocess
 import sys
 import tempfile
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 SENSITIVE = re.compile(r"(?i)(key|token|secret|passw|credential|auth|cookie|session|private)")
 SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv"}
 MAX_WATCH = 50000

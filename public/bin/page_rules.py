@@ -8,6 +8,8 @@ import re
 import hashlib
 import subprocess
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 MARKERS = ["⛔⛔", "⛔", "⭐⭐"]
 TAG = "REQUIRED-READING"
 DEFAULT_PAGES = ["overview.md", "todo.md"]

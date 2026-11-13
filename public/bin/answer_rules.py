@@ -3,6 +3,8 @@ import os
 import re
 import subprocess
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 GRAVES = chr(96) * 3
 
 RETRY_TRUNCATED = "Your previous answer looped and was cut. Redo the task above going straight to the final code: no reasoning comments, no draft, one version only."

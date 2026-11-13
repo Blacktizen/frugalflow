@@ -8,6 +8,8 @@ import shutil
 import subprocess
 import importlib.util
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 USAGE = "usage: engine_lock.py --status NAME --slots N [--dir DIR] | --notice | --autotest"
 
 NOTICE = """NAME      engine_lock.py - lets at most N delegations run at once on one engine, with kernel file locks freed when their holder dies.

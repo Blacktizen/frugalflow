@@ -1,5 +1,7 @@
 import sys, os, subprocess, tempfile, time, shutil
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 NOTICE = (
     "NAME      install_hooks.py - installs the repository pre-commit hook from its template, or checks that it is in place.\n"
     "READS     public/hooks/pre-commit in --repo (default: the repository holding this file), and .git/hooks/pre-commit.\n"

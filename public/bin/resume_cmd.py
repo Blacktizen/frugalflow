@@ -4,6 +4,7 @@ import datetime
 import subprocess
 import tempfile
 import shutil
+import json
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import chain_rules
@@ -12,13 +13,18 @@ NOTICE = (
     "NAME      resume_cmd.py - prints a text to paste into a new session: "
     "where the project stands, open todos, recent decisions, pages to reread.\n"
     "READS     the vault folder: overview.md, todo.md, log.md and the "
-    "REQUIRED-READING block of SCHEMA.md; --vault DIR, else ./vault.\n"
+    "REQUIRED-READING block of SCHEMA.md; --vault DIR, else ./vault, else the "
+    "vault of the last mounted project.\n"
     "WRITES    nothing: the text goes to the standard output. Exit 0 printed, "
     "2 usage, 3 no vault, 4 sealed log broken (text still printed).\n"
     "EXAMPLE   python3 resume_cmd.py --vault ~/projects/demo/vault --entries 5\n"
     "PITFALLS  2026-10-25 a new session started from memory of the last one "
     "and repeated a settled decision; the text is built from the sealed log, "
-    "never from recall."
+    "never from recall.\n"
+    "          2026-11-14 the README quickstart runs resume right after "
+    "new-project without a cd: when ./vault is absent, resume falls back to "
+    "the vault recorded by the last mount "
+    "(FRUGALFLOW_HOME/current_project.json)."
 )
 
 USAGE_MSG = (
@@ -187,6 +193,24 @@ def _build_resume_lines(vault_dir, entries_count):
     return lines, chain_ok
 
 
+def _last_mounted_vault():
+    """Vault recorded by the last mount (new-project or init --here) in
+    FRUGALFLOW_HOME/current_project.json; None when there is none."""
+    home = os.environ.get("FRUGALFLOW_HOME") or os.path.expanduser("~/.frugalflow")
+    path = os.path.join(home, "current_project.json")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            doc = json.load(f)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(doc, dict):
+        return None
+    vault = doc.get("vault")
+    if isinstance(vault, str) and vault:
+        return vault
+    return None
+
+
 def main(argv):
     vault_dir = None
     entries_count = 5
@@ -233,6 +257,11 @@ def main(argv):
 
     if vault_dir is None:
         vault_dir = os.path.join(os.getcwd(), "vault")
+        if not os.path.isdir(vault_dir):
+            recorded = _last_mounted_vault()
+            if recorded is not None and os.path.isdir(recorded):
+                print("VAULT (last mounted project): " + recorded)
+                vault_dir = recorded
 
     if not os.path.isdir(vault_dir):
         print("NO VAULT: " + vault_dir)

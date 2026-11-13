@@ -3,6 +3,8 @@ import os
 import json
 import subprocess
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 FIELDS = ["time", "role", "model_asked", "model_answered", "target", "sha256", "tokens_in", "tokens_out", "status", "reason", "subject", "seconds", "chars", "waiver", "models_path", "models_sha256"]
 STATUSES = ["success", "failure", "refused"]
 

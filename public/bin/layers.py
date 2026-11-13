@@ -2,6 +2,8 @@ import sys
 import os
 import subprocess
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 TRUST = ["private", "trusted_third_party", "untrusted_third_party"]
 
 GOOD = {"models": [{"id": "a", "trust": "private"}, {"id": "r", "trust": "untrusted_third_party"}],

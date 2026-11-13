@@ -27,6 +27,7 @@ NOTICE = (
     "PITFALLS  2026-10-03 an engine that does not answer is a WARN, never a FAIL: a missing local model must not block a doctor run for something else.\n"
     "          2026-11-12 a hook command without -I let a planted .pth file run before the guard; the doctor fails when a FrugalFlow hook command lost -I.\n"
     "          2026-11-13 the isolation line is INFO, never a FAIL: the isolated mode (frugalflow harden) is optional; doctor reports it without demanding it.\n"
+    "          2026-11-14 a home that holds no FrugalFlow setting yet was failed on five checks init had never been run for: a home with no init artifact is not initialized (INFO lines); once one artifact exists, a missing one is a FAIL again.\n"
 )
 
 
@@ -219,15 +220,26 @@ def _doctor(home, claude_dir, ollama_url, lmstudio_url):
         fails += 1
         print("FAIL home " + home + " is missing (" + fix + ")")
 
+    # A home that holds no FrugalFlow setting at all is not initialized yet:
+    # its missing init artifacts are INFO lines, never FAIL. Once one artifact
+    # exists, FrugalFlow is installed here and every missing one is a FAIL.
+    initialized = any(
+        os.path.isfile(os.path.join(home, name))
+        for name in ("models.json", "preferences.json", "guard.json", "anonymization.json")
+    )
+
     # 2 settings files
-    proc = subprocess.run([sys.executable, os.path.join(BIN, "config_check.py"), "--home", home],
-                          capture_output=True, text=True)
-    if proc.returncode == 0:
-        print("OK settings files valid (models.json, preferences.json)")
+    if not initialized:
+        print("INFO settings files: not initialized yet in " + home + " (" + fix + ")")
     else:
-        first = (proc.stdout.splitlines() or [""])[0]
-        fails += 1
-        print("FAIL settings files invalid: " + first + " (" + fix + ")")
+        proc = subprocess.run([sys.executable, os.path.join(BIN, "config_check.py"), "--home", home],
+                              capture_output=True, text=True)
+        if proc.returncode == 0:
+            print("OK settings files valid (models.json, preferences.json)")
+        else:
+            first = (proc.stdout.splitlines() or [""])[0]
+            fails += 1
+            print("FAIL settings files invalid: " + first + " (" + fix + ")")
 
     # 3 guard.json
     if _guard_ok(home):
@@ -248,6 +260,8 @@ def _doctor(home, claude_dir, ollama_url, lmstudio_url):
         except (OSError, ValueError):
             fails += 1
             print("FAIL guard.json cannot be read (" + fix + ")")
+    elif not initialized:
+        print("INFO guard.json: not initialized yet (" + fix + ")")
     else:
         fails += 1
         print("FAIL guard.json is missing or incomplete (" + fix + ")")
@@ -255,6 +269,8 @@ def _doctor(home, claude_dir, ollama_url, lmstudio_url):
     # 4 anonymization.json
     if _read_json_object(os.path.join(home, "anonymization.json")):
         print("OK anonymization.json")
+    elif not initialized:
+        print("INFO anonymization.json: not initialized yet (" + fix + ")")
     else:
         fails += 1
         print("FAIL anonymization.json is missing or not a JSON object (" + fix + ")")
@@ -262,6 +278,8 @@ def _doctor(home, claude_dir, ollama_url, lmstudio_url):
     # 5 CLAUDE.md
     if _claude_block_ok(claude_dir):
         print("OK CLAUDE.md has the FrugalFlow block")
+    elif not initialized:
+        print("INFO CLAUDE.md: FrugalFlow not initialized yet (" + fix + ")")
     else:
         fails += 1
         print("FAIL CLAUDE.md has no intact FrugalFlow block (" + fix + ")")
@@ -269,6 +287,8 @@ def _doctor(home, claude_dir, ollama_url, lmstudio_url):
     # 6 settings.json
     if _hook_ok(claude_dir):
         print("OK settings.json has the FrugalFlow hook")
+    elif not initialized:
+        print("INFO settings.json: FrugalFlow not initialized yet (" + fix + ")")
     else:
         fails += 1
         print("FAIL settings.json has no FrugalFlow hook (" + fix + ")")

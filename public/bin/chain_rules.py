@@ -7,6 +7,8 @@ import re
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 GENESIS = "0" * 64
 SEAL = re.compile(r"^<!-- chain prev=([0-9a-f]{64}) hash=([0-9a-f]{64}) -->$")
 

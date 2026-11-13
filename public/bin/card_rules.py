@@ -2,6 +2,8 @@ import sys
 import os
 import subprocess
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 P_LMS = {"data": [{"id": "alpha-7b", "loaded_context_length": 65536}]}
 P_VLLM = {"data": [{"id": "alpha-7b", "max_model_len": 32768}, "junk"]}
 P_TWO = {"data": [{"id": "alpha-7b", "loaded_context_length": 65536}, {"id": "beta-3b", "loaded_context_length": 8192}]}
