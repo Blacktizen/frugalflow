@@ -23,13 +23,14 @@ USAGE = "usage: e2e_mcp_server.py | --notice\n"
 NOTICE = (
     "NAME      e2e_mcp_server.py - end-to-end test: drives the MCP server over stdio in a subprocess, with a disposable HOME and FRUGALFLOW_HOME and a fake local engine.\n"
     "READS     the tools in ../bin (mcp_server.py, vault_new.py, vault_check.py); everything else lives in temporary folders.\n"
-    "WRITES    only a temporary folder, always removed, even on failure: a vault, a models.json, brief rules, one out file, one delegation log, one harden.json. Exit 0 all fifteen steps pass, 1 a step failed, 2 usage.\n"
+    "WRITES    only a temporary folder, always removed, even on failure: two vaults, a models.json, brief rules, one out file, one delegation log, one harden.json. Exit 0 all sixteen steps pass, 1 a step failed, 2 usage.\n"
     "EXAMPLE   python3 e2e_mcp_server.py\n"
     "PITFALLS  2026-11-13 the delegate tool takes no trust argument, so the route lands on trust private: the models.json must declare a local model, and the fake engine must answer the card probe (GET /api/v0/models) and the sampling call (POST /v1/chat/completions).\n"
     "          2026-11-13 the card probe POSTs 'Reply with 1.' before the delegation call: a queue that answers every POST in order hands the probe the queued answer and the delegation gets none.\n"
     "          2026-11-13 the receipt is proof: the delegation log line must exist in the disposable FRUGALFLOW_HOME after the tools/call, written by delegate.py itself, not by the server.\n"
     "          2026-11-13 the server confines out to its working folder (its cwd), so the server runs with cwd=work and every refused out path is checked for absence: a refusal that wrote the file is not a refusal.\n"
     "          2026-11-13 out is refused by base name at any depth: CLAUDE.local.md in a subfolder is refused like CLAUDE.md at the root — Claude Code loads both as instructions.\n"
+    "          2026-11-13 journal_add and resume confine the vault to the server's project folder (its cwd): the test vault lives under work, and an outside vault is refused with its log.md checked for absence of change.\n"
 )
 
 RULES = {"limits": {}, "rules": [{"id": "N1", "title": "no nature",
@@ -109,9 +110,10 @@ def run_e2e():
 
     tmp = tempfile.mkdtemp()
     try:
-        # The server confines out to its working folder: run it with cwd=work,
-        # and keep the FrugalFlow home inside work so a home path is inside the
-        # project and only the home rule can refuse it.
+        # The server confines out and the journal vault to its working folder: run it
+        # with cwd=work, keep the test vault under work, and keep the FrugalFlow home
+        # inside work so a home path is inside the project and only the home rule can
+        # refuse it.
         work = os.path.join(tmp, "work")
         ff = os.path.join(work, "ff")
         os.makedirs(ff, exist_ok=True)
@@ -130,10 +132,15 @@ def run_e2e():
             return subprocess.run([sys.executable, "-I", os.path.join(BIN, name)] + list(args),
                                   capture_output=True, text=True, input="", env=env, timeout=60)
 
-        created = tool("vault_new.py", "--root", os.path.join(tmp, "proj"), "--name", "demo")
-        vault = os.path.join(tmp, "proj", "vault")
+        created = tool("vault_new.py", "--root", work, "--name", "demo")
+        vault = os.path.join(work, "vault")
         log_path = os.path.join(vault, "log.md")
         size_before = os.path.getsize(log_path) if os.path.isfile(log_path) else 0
+        outside_root = os.path.join(tmp, "outside")
+        tool("vault_new.py", "--root", outside_root, "--name", "demo")
+        outside_vault = os.path.join(outside_root, "vault")
+        outside_log = os.path.join(outside_vault, "log.md")
+        outside_size_before = os.path.getsize(outside_log) if os.path.isfile(outside_log) else 0
         out_path = os.path.join(work, "answer.py")
         marker = os.path.join(tmp, "pwned")
 
@@ -173,6 +180,12 @@ def run_e2e():
             call(16, {"role": "code", "brief": BRIEF, "out": os.path.join(work, "CLAUDE.local.md")}),
             call(17, {"role": "code", "brief": BRIEF,
                       "out": os.path.join(work, "sub", "CLAUDE.local.md")}),
+            {"jsonrpc": "2.0", "id": 18, "method": "tools/call", "params": {"name": "journal_add",
+             "arguments": {"vault": outside_vault, "title": "Outside entry",
+                           "fields": {"Decision": "should be refused",
+                                      "Why": "the vault is not under work"}}}},
+            {"jsonrpc": "2.0", "id": 19, "method": "tools/call",
+             "params": {"name": "resume", "arguments": {"vault": outside_vault}}},
         ]
 
         proc = subprocess.Popen([sys.executable, "-I", SERVER],
@@ -314,6 +327,22 @@ def run_e2e():
             return ok_a and ok_b, "root=" + got_a + " nested=" + got_b
 
         step(15, "out named CLAUDE.local.md refused at the root and in a subfolder: isError True, file absent", s15)
+
+        def s16():
+            def refused_vault(i):
+                is_error = answers[i]["result"]["isError"]
+                text = answers[i]["result"]["content"][0]["text"]
+                return is_error is True and "vault is outside the project" in text, repr(text[:80])
+
+            ok_a, got_a = refused_vault(18)
+            ok_b, got_b = refused_vault(19)
+            outside_size_after = os.path.getsize(outside_log) if os.path.isfile(outside_log) else 0
+            ok = ok_a and ok_b and outside_size_after == outside_size_before
+            return ok, ("journal=" + got_a + " resume=" + got_b
+                        + " outside_log_size_before=" + str(outside_size_before)
+                        + " after=" + str(outside_size_after))
+
+        step(16, "journal_add and resume with a vault outside the project refused: isError True, 'vault is outside the project', outside log.md unchanged", s16)
 
         if stderr.strip():
             sys.stderr.write(stderr)

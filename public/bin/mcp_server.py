@@ -21,14 +21,16 @@ NOTICE = (
     "PITFALLS  2026-11-13 inside the sandbox Bash can no longer write the journal or the receipts: this server runs with the user's rights outside the sandbox, so a receipt written through a tool cannot be forged by the assistant.\n"
     "          2026-11-13 stdout carries JSON responses only: one stray print breaks the client's stream; debug lines go to stderr.\n"
     "          2026-11-13 delegate over MCP ran the verify command and wrote out anywhere outside the sandbox; verify is refused and out is confined to the project.\n"
+    "          2026-11-13 journal_add and resume over MCP accepted any absolute vault; the vault is now confined to the project root.\n"
     "          2026-11-13 Claude Code loads CLAUDE.md and CLAUDE.local.md as instructions at any depth: an out whose base name is either one is refused."
 )
 
 BIN = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_PROTOCOL = "2025-06-18"
 
-# The server runs outside the sandbox: the out path it hands to delegate.py must stay
-# inside the project, and no component of a request is ever run as a command.
+# The server runs outside the sandbox: the out path it hands to delegate.py and the
+# vault path it hands to journal_add.py and resume_cmd.py must stay inside the project,
+# and no component of a request is ever run as a command.
 WORK_ROOT = os.path.realpath(os.getcwd())
 PROTECTED_COMPONENTS = {".git", ".githooks", ".claude", "vault"}
 PROTECTED_NAMES = {"CLAUDE.md", "CLAUDE.local.md", ".mcp.json", "settings.json", "settings.local.json"}
@@ -133,6 +135,9 @@ def _tool_journal_add(args):
         return True, "bad arguments: vault and title (strings) and fields (object of strings) are required"
     if not os.path.isabs(vault):
         return True, "path must be absolute"
+    reason = _check_vault(vault)
+    if reason is not None:
+        return True, reason
     cmd = [sys.executable, "-I", os.path.join(BIN, "journal_add.py"), "--vault", vault, "--title", title]
     for key in sorted(fields):
         value = fields[key]
@@ -169,6 +174,9 @@ def _tool_resume(args):
         return True, "bad arguments: vault (string) is required"
     if not os.path.isabs(vault):
         return True, "path must be absolute"
+    reason = _check_vault(vault)
+    if reason is not None:
+        return True, reason
     if entries is not None and (isinstance(entries, bool) or not isinstance(entries, int)):
         return True, "bad arguments: entries must be an integer"
     cmd = [sys.executable, "-I", os.path.join(BIN, "resume_cmd.py"), "--vault", vault]
@@ -213,13 +221,30 @@ def _under(path, root):
     return path == root or path.startswith(root + os.sep)
 
 
+def _project_root():
+    """The project root the server confines paths to: CLAUDE_PROJECT_DIR when set,
+    else the server's working folder at startup; resolved either way."""
+    project_dir = os.environ.get("CLAUDE_PROJECT_DIR")
+    return os.path.realpath(project_dir) if project_dir else WORK_ROOT
+
+
+def _check_vault(vault):
+    """Why this vault path is refused, or None when it is allowed. journal_add and resume
+    run outside the sandbox, so the vault they append to may only sit inside the project
+    folder: an absolute vault anywhere else on the machine is refused."""
+    real = os.path.realpath(vault)
+    root = _project_root()
+    if not _under(real, root):
+        return "vault is outside the project: " + root
+    return None
+
+
 def _check_out(out):
     """Why this out path is refused, or None when it is allowed. The server runs outside
     the sandbox, so out may only be a plain file inside the project folder: never the
     FrugalFlow home, never a git hook, a settings file, a vault path or a harden-protected path."""
     real = os.path.realpath(out)
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR")
-    root = os.path.realpath(project_dir) if project_dir else WORK_ROOT
+    root = _project_root()
     if not _under(real, root):
         return "out is not allowed: not under the project folder " + root
     home = _frugalflow_home()
@@ -355,7 +380,8 @@ def run_autotest():
         ff = os.path.join(tmp, "ff")
         os.makedirs(home, exist_ok=True)
         os.makedirs(ff, exist_ok=True)
-        env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE" and not k.startswith("GIT_")}
+        env = {k: v for k, v in os.environ.items()
+               if k != "CLAUDECODE" and k != "CLAUDE_PROJECT_DIR" and not k.startswith("GIT_")}
         env["HOME"] = home
         env["FRUGALFLOW_HOME"] = ff
 
@@ -363,10 +389,18 @@ def run_autotest():
             return subprocess.run([sys.executable, "-I", os.path.join(BIN, name)] + list(args),
                                   capture_output=True, text=True, input="", env=env, timeout=60)
 
-        created = tool("vault_new.py", "--root", os.path.join(tmp, "proj"), "--name", "demo")
-        vault = os.path.join(tmp, "proj", "vault")
+        # The server confines the vault to its project root: run it with cwd=proj,
+        # keep the test vault under proj, and keep a second vault outside proj.
+        proj = os.path.join(tmp, "proj")
+        created = tool("vault_new.py", "--root", proj, "--name", "demo")
+        vault = os.path.join(proj, "vault")
         log_path = os.path.join(vault, "log.md")
         size_before = os.path.getsize(log_path) if os.path.isfile(log_path) else 0
+        outside_root = os.path.join(tmp, "outside")
+        tool("vault_new.py", "--root", outside_root, "--name", "demo")
+        outside_vault = os.path.join(outside_root, "vault")
+        outside_log = os.path.join(outside_vault, "log.md")
+        outside_size_before = os.path.getsize(outside_log) if os.path.isfile(outside_log) else 0
 
         messages = [
             {"jsonrpc": "2.0", "id": 1, "method": "initialize",
@@ -379,13 +413,16 @@ def run_autotest():
                            "fields": {"Decision": "keep the chain", "Why": "the server must write it"}}}},
             {"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "lint_brief",
              "arguments": {"brief": ""}}},
+            {"jsonrpc": "2.0", "id": 6, "method": "tools/call", "params": {"name": "journal_add",
+             "arguments": {"vault": outside_vault, "title": "Outside entry",
+                           "fields": {"Decision": "should be refused", "Why": "the vault is not under proj"}}}},
             "not json at all",
             {"jsonrpc": "2.0", "id": 5, "method": "ping"},
         ]
 
         proc = subprocess.Popen([sys.executable, "-I", os.path.abspath(__file__)],
                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE, text=True, env=env)
+                                stderr=subprocess.PIPE, text=True, env=env, cwd=proj)
         for message in messages:
             proc.stdin.write((message if isinstance(message, str) else json.dumps(message)) + "\n")
         proc.stdin.close()
@@ -457,6 +494,20 @@ def run_autotest():
         except Exception as error:
             ok, got = False, "no parse answer or no ping answer: " + str(error)
         results.append((5, ok, "error -32700 with id null, then ping answers {}", got))
+
+        # 6: a vault outside the project root is refused, its log.md untouched
+        try:
+            is_error = answers[6]["result"]["isError"]
+            text = answers[6]["result"]["content"][0]["text"]
+            outside_size_after = os.path.getsize(outside_log) if os.path.isfile(outside_log) else 0
+            ok = (is_error is True and "vault is outside the project" in text
+                  and outside_size_after == outside_size_before)
+            got = "isError=" + repr(is_error) + " text=" + repr(text[:80]) \
+                  + " outside_log_size_before=" + str(outside_size_before) \
+                  + " after=" + str(outside_size_after)
+        except Exception as error:
+            ok, got = False, "no outside-vault answer: " + str(error)
+        results.append((6, ok, "vault outside the project: isError True, 'vault is outside the project', log.md unchanged", got))
 
         if stderr.strip():
             sys.stderr.write(stderr)

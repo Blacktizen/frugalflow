@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- MCP server: `journal_add` and `resume` accepted any absolute vault, so the server —
+  which runs outside the sandbox — could append a sealed entry to any folder on the
+  machine; the vault is now confined to the project root, the same root that confines
+  `delegate`'s `out`.
 - Workshop tools moved to dev/bin; the installed package keeps core and delegation only.
 - Harden and MCP server: an adversarial review found the nested instructions —
   Claude Code also loads `CLAUDE.local.md` at the project root and the
