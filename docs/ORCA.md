@@ -6,7 +6,7 @@ A compatibility page: what FrugalFlow's guards do — and do not do — when Orc
 
 Orca ([github.com/stablyai/orca](https://github.com/stablyai/orca), MIT) is a desktop application with an
 `orca` command line. It runs a fleet of command-line code agents — Claude Code, Codex, OpenCode,
-Qwen Code and others — each in its own git worktree, with a diff view. Its orchestration feature
+and others — each in its own git worktree, with a diff view. Its orchestration feature
 ([orca.dev/docs/cli/orchestration](https://orca.dev/docs/cli/orchestration)) has a coordinating agent
 create a run and tasks with dependencies, launch supervised workers, wait for their messages and
 answer their questions. The feature is marked experimental, and its documentation describes no guard,
@@ -26,7 +26,7 @@ resume` work as they do in a single-session repository.
 
 ## What does not
 
-Codex, OpenCode, Qwen Code and the other agents Orca can launch do not run Claude Code hooks. They
+Codex, OpenCode and the other agents Orca can launch do not run Claude Code hooks. They
 are **not under guard**: no reading gate, no sealed journal entry required, no refusal at the moment
 of the gesture.
 
