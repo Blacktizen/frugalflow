@@ -5,6 +5,10 @@ import subprocess
 import sys
 import tempfile
 
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(HERE)), "public", "bin"))
+
 ACCENTED = "àâäçéèêëîïôöùûüÿœæ"  # lang-ok
 MARK = "lang-ok"
 SKIP_DIRS = {"__pycache__", "data"}
@@ -68,7 +72,7 @@ def main(argv):
         print("NAME      lang_check.py - says whether French words remain in a tree that must be in English.")
         print('READS     every file under --root except the data and __pycache__ folders and the files listed under "skip"; the JSON word list given by --words.')
         print("WRITES    nothing; prints one line per French word found, then LANG OK or LANG FAIL. Exit 0 clean, 1 words found, 2 usage.")
-        print("EXAMPLE   python3 public/bin/lang_check.py --root public --words public/config/lang_words.json")
+        print("EXAMPLE   python3 dev/bin/lang_check.py --root public --words public/config/lang_words.json")
         print("PITFALLS  2026-09-26 French words were found by an AI review, one file at a time, and nothing kept them out afterwards.")
         print("          A line that must keep a French word (a pattern that reads French text) carries the marker lang-ok.")
         return 0

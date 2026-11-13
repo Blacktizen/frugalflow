@@ -9,6 +9,10 @@ import tempfile
 import subprocess
 import warnings
 
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(HERE)), "public", "bin"))
+
 from anon_rules import go_to_py
 
 USAGE = "usage: import_betterleaks.py --notice | --autotest | --toml FILE --out FILE"

@@ -184,7 +184,7 @@ def _autotest():
 
     # Proof 2: --notice follows the contract, an unknown argument is usage 2
     rc_notice = run(["--notice"]).returncode
-    rc_check = subprocess.run([sys.executable, os.path.join(BIN, "notice_check.py"), script],
+    rc_check = subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.dirname(BIN)), "dev", "bin", "notice_check.py"), script],
                               capture_output=True, text=True).returncode
     r2 = run(["--nimporte"])
     usage_ok = r2.returncode == 2 and r2.stdout == USAGE

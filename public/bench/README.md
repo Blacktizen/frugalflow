@@ -23,8 +23,8 @@ Each run gets a fresh configuration folder: no hook, setting or memory of the op
 ## Run it yourself
 
 ```bash
-python3 public/bin/bench_run.py run-all --tasks public/bench/tasks.json --conditions <your conditions.json> --out results.jsonl --reps 3
-python3 public/bin/bench_report.py results.jsonl --out report.md
+python3 dev/bin/bench_run.py run-all --tasks public/bench/tasks.json --conditions <your conditions.json> --out results.jsonl --reps 3
+python3 dev/bin/bench_report.py results.jsonl --out report.md
 ```
 
 A conditions file names, per condition, the command that runs your orchestrator (any command printing a Claude Code

@@ -11,6 +11,10 @@ import datetime
 import subprocess
 import signal
 
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(HERE)), "public", "bin"))
+
 USAGE = (
     "usage: bench_run.py run --tasks TASKS_JSON --conditions COND_JSON --task ID --condition NAME "
     "--out RESULTS_JSONL [--rep N] [--timeout S] [--keep DIR] | run-all --tasks TASKS_JSON "

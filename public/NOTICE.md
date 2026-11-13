@@ -12,7 +12,7 @@ PITFALLS  what already went wrong, each line dated YYYY-MM-DD.
           A line that starts with a space continues the section above.
 ```
 
-## What `bin/notice_check.py` refuses
+## What `dev/bin/notice_check.py` refuses
 
 It runs `python3 <tool> --notice` in an **empty temporary directory**, with `HOME` pointed
 there, and refuses the tool when:
@@ -32,11 +32,11 @@ The rules themselves live in `bin/notice_rules.py`, a pure module with its own s
 ## Where it is enforced
 
 The pre-commit hook (`hooks/pre-commit`, installed by `bin/install_hooks.py`) runs
-`notice_check.py` on every `bin/*.py` staged for commit. A tool without a conforming notice
-cannot be committed.
+`dev/bin/notice_check.py` on every `public/bin/*.py` or `dev/bin/*.py` staged for commit.
+A tool without a conforming notice cannot be committed.
 
 ## Known limits
 
 - A `--notice` that writes **outside** its working directory, other than under `HOME`,
   is not detected.
-- Every tool of `bin/` meets the contract; `release_check.py` verifies it on the whole tree.
+- Every tool of `public/bin/` and `dev/bin/` meets the contract; `dev/bin/release_check.py` verifies it on the whole tree.

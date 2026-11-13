@@ -47,7 +47,7 @@ To check a tree before sharing it, use a clean copy with no `.git` and no cache 
 
 ```
 git clone . ../ff-check && rm -rf ../ff-check/.git
-python3 public/bin/release_check.py check --tree ../ff-check --skip-e2e
+python3 dev/bin/release_check.py check --tree ../ff-check --skip-e2e
 ```
 
 The last line is `RELEASE READY` when every check passes.

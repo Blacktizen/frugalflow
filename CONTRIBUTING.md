@@ -14,7 +14,7 @@ how to fix it. A proposed rule must show what it catches and what it must not ca
 2. `frugalflow.py lint --explain RULE_ID` shows how the neighbouring rules read; the new rule
    must not contradict them.
 3. Add the rule to `public/config/brief_rules.json` with its examples, and make
-   `public/bin/brief_bench.py` show the rule biting: red before the fix, green after.
+   `dev/bin/brief_bench.py` show the rule biting: red before the fix, green after.
 
 Start from `public/examples/brief_template.md`: it passes every rule, and its Rules section is
 what the checker reads.
@@ -53,19 +53,19 @@ pass. Do not work around a refusal; report it.
 - Before a suite is trusted, the code it covers is deliberately broken and the suite must go red.
   `public/bin/bite.py` runs that proof and alone writes the receipt in `public/tests/bite/`.
 - The bench (`public/bench/README.md`) is the test of the whole promise: run it on your own
-  machine with `public/bin/bench_run.py` and `public/bin/bench_report.py`, and publish the
+  machine with `dev/bin/bench_run.py` and `dev/bin/bench_report.py`, and publish the
   run, disappointing or not.
 
 ## Rules for every change
 
-- English only. `public/bin/lang_check.py` refuses French leftovers and stray accented words.
+- English only. `dev/bin/lang_check.py` refuses French leftovers and stray accented words.
 - No personal data anywhere in the repository. `public/bin/anon_check.py` run with `--scan`
   checks the tree; private names live only in the operator's own `anonymization.json`, never
   in code.
 - No secret in any config file: keys are environment variables named by `key_env`
   (`public/SCHEMA_JSON.md`), and `public/bin/config_check.py` refuses a file that breaks this.
-- Every tool in `bin/` answers `--notice` with its five sections; `public/bin/notice_check.py`
-  enforces the contract at commit time, through the hook installed by
+- Every tool in `public/bin/` and `dev/bin/` answers `--notice` with its five sections;
+  `dev/bin/notice_check.py` enforces the contract at commit time, through the hook installed by
   `public/bin/install_hooks.py`.
 - Fail closed: a change that makes a check guess instead of refuse is refused, even when it
   removes friction. A default that guesses manufactures a false red.

@@ -8,6 +8,11 @@ import shutil
 import subprocess
 import tempfile
 
+HERE = os.path.dirname(os.path.abspath(__file__))
+PUBLIC_BIN = os.path.join(os.path.dirname(os.path.dirname(HERE)), "public", "bin")
+sys.path.insert(0, HERE)
+sys.path.insert(0, PUBLIC_BIN)
+
 USAGE = (
     "usage: release_check.py stage --repo REPO --out DIR | check --tree DIR [--skip-e2e] | "
     "--notice | --autotest"
@@ -15,7 +20,7 @@ USAGE = (
 
 NOTICE = (
     "NAME      release_check.py - stages the publish tree from the source repo and runs the last checks before a public push.\n"
-    "READS     stage: the git-tracked files under public/ of the repo given by --repo; check: every file of the tree given by --tree and the check tools that tree holds.\n"
+    "READS     stage: the git-tracked files under public/ and dev/ of the repo given by --repo; check: every file of the tree given by --tree and the check tools that tree holds (anon_check under public/bin, lang_check and notice_check under dev/bin).\n"
     "WRITES    stage only: the absent or empty folder given by --out, where the tracked files are copied; check writes nothing in the tree given by --tree: the e2e suites run in a temporary copy of the tree that is deleted afterwards, and every subprocess it runs gets a fresh PYTHONPYCACHEPREFIX.\n"
     "EXAMPLE   python3 release_check.py check --tree out --skip-e2e\n"
     "PITFALLS  2026-10-09 a tracked symlink copied into the tree would point back into the source repo: it is refused, never copied.\n"
@@ -79,8 +84,8 @@ def _is_git_repo(repo):
 
 
 def _tracked_public(repo):
-    """Return the sorted git-tracked paths under public/ in the repo."""
-    result = subprocess.run(["git", "-C", repo, "ls-files", "-z", "public"],
+    """Return the sorted git-tracked paths under public/ or dev/ in the repo."""
+    result = subprocess.run(["git", "-C", repo, "ls-files", "-z", "public", "dev"],
                             capture_output=True)
     names = []
     for raw in result.stdout.split(b"\0"):
@@ -114,6 +119,14 @@ def _bin_py(tree):
     return sorted(os.path.join(bin_dir, name) for name in os.listdir(bin_dir) if name.endswith(".py"))
 
 
+def _dev_bin_py(tree):
+    """Return the sorted dev/bin/*.py files of the tree."""
+    bin_dir = os.path.join(tree, "dev", "bin")
+    if not os.path.isdir(bin_dir):
+        return []
+    return sorted(os.path.join(bin_dir, name) for name in os.listdir(bin_dir) if name.endswith(".py"))
+
+
 def _cmd_stage(args):
     keys = _parse(args, {"repo", "out"}, {"repo", "out"})
     if keys is None:
@@ -131,7 +144,7 @@ def _cmd_stage(args):
     tracked = _tracked_public(repo)
     for rel in tracked:
         if os.path.islink(os.path.join(repo, rel)):
-            sys.stdout.write("REFUSED symlink in public: " + rel + "\n")
+            sys.stdout.write("REFUSED symlink in " + rel.split("/", 1)[0] + ": " + rel + "\n")
             return 1
     os.makedirs(out, exist_ok=True)
     for rel in tracked:
@@ -205,7 +218,7 @@ def _check_anon(tree, files):
 
 
 def _check_lang(tree):
-    tool = os.path.join(tree, "public", "bin", "lang_check.py")
+    tool = os.path.join(tree, "dev", "bin", "lang_check.py")
     words = os.path.join(tree, "public", "config", "lang_words.json")
     # The skip list in lang_words.json is written against the public subtree, so the root passed is that subtree.
     rc, out = _run([sys.executable, tool, "--root", os.path.join(tree, "public"), "--words", words])
@@ -215,15 +228,15 @@ def _check_lang(tree):
 
 
 def _check_notice(tree):
-    tool = os.path.join(tree, "public", "bin", "notice_check.py")
+    tool = os.path.join(tree, "dev", "bin", "notice_check.py")
     refused = []
-    for path in _bin_py(tree):
+    for path in _bin_py(tree) + _dev_bin_py(tree):
         rc, _ = _run([sys.executable, tool, path])
         if rc != 0:
             refused.append(os.path.basename(path))
     if refused:
         return False, "refused: " + ", ".join(refused)
-    return True, str(len(_bin_py(tree))) + " tools ok"
+    return True, str(len(_bin_py(tree)) + len(_dev_bin_py(tree))) + " tools ok"
 
 
 def _check_e2e(tree, skip_e2e):
@@ -308,34 +321,43 @@ GOOD_BASE = {
 CHECK_TOOLS = ("anon_check.py", "lang_check.py", "notice_check.py")
 
 
-def _tool_closure(bin_dir):
-    """The three check tools plus every module they import from the same folder, transitively."""
-    available = set(name for name in os.listdir(bin_dir) if name.endswith(".py"))
+def _tool_closure():
+    """The three check tools plus every module they import from dev/bin or public/bin, transitively."""
+    def locate(name):
+        for folder in (HERE, PUBLIC_BIN):
+            if os.path.isfile(os.path.join(folder, name)):
+                return folder
+        return None
+
     seen = set()
     pending = list(CHECK_TOOLS)
     while pending:
         name = pending.pop()
         if name in seen:
             continue
+        folder = locate(name)
+        if folder is None:
+            continue
         seen.add(name)
-        with open(os.path.join(bin_dir, name), "r", encoding="utf-8") as f:
+        with open(os.path.join(folder, name), "r", encoding="utf-8") as f:
             text = f.read()
         for match in re.finditer(r"^\s*(?:from|import)\s+([A-Za-z_][A-Za-z0-9_]*)", text, re.M):
             dep = match.group(1) + ".py"
-            if dep in available and dep not in seen:
+            if locate(dep) is not None and dep not in seen:
                 pending.append(dep)
     return sorted(seen)
 
 
-def _good_files(bin_dir):
-    """Files of a complete publish tree: the release head plus copies of the check tools and their modules."""
+def _good_files():
+    """Files of a complete publish tree: the release head plus copies of the check tools and their modules, each at its real place."""
     files = dict(GOOD_BASE)
-    names = _tool_closure(bin_dir)
-    for name in names:
-        with open(os.path.join(bin_dir, name), "r", encoding="utf-8") as f:
-            files["public/bin/" + name] = f.read()
+    for name in _tool_closure():
+        folder = HERE if os.path.isfile(os.path.join(HERE, name)) else PUBLIC_BIN
+        rel = ("dev/bin/" if folder == HERE else "public/bin/") + name
+        with open(os.path.join(folder, name), "r", encoding="utf-8") as f:
+            files[rel] = f.read()
     # anon_rules.py opens the betterleaks rules from the data folder next to bin at import time.
-    with open(os.path.join(os.path.dirname(bin_dir), "data", "betterleaks_rules.json"), "r", encoding="utf-8") as f:
+    with open(os.path.join(os.path.dirname(PUBLIC_BIN), "data", "betterleaks_rules.json"), "r", encoding="utf-8") as f:
         files["public/data/betterleaks_rules.json"] = f.read()
     return files
 
@@ -469,7 +491,7 @@ def _autotest():
 
         # Test 7: a fixture tree holding a leak file fails anon only, rc 1
         repo_a = os.path.join(tmp, "repo_a")
-        leak_files = dict(_good_files(os.path.dirname(self_path)))
+        leak_files = dict(_good_files())
         leak_files["public/docs/leak.md"] = "zzleakword\n"
         _make_repo(repo_a, leak_files)
         t3 = os.path.join(tmp, "tree_leak")
@@ -484,7 +506,7 @@ def _autotest():
 
         # Test 8: a complete clean tree gives RELEASE READY, rc 0
         repo_g = os.path.join(tmp, "repo_g")
-        _make_repo(repo_g, _good_files(os.path.dirname(self_path)))
+        _make_repo(repo_g, _good_files())
         t4 = os.path.join(tmp, "tree_good")
         run(["stage", "--repo", repo_g, "--out", t4])
         r = run(["check", "--tree", t4, "--skip-e2e"])

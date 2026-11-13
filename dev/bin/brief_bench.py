@@ -5,14 +5,16 @@ import sys
 import subprocess
 import tempfile
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(HERE)), "public", "bin"))
 import brief_rules
 
 NOTICE = (
     "NAME      brief_bench.py - replays a bench of delegation briefs through the brief rules and counts holes and false refusals separately, with the false refusals of each rule.\n"
     'READS     --cases FILE: {"cases": [{"id", "brief", "expected": "pass"|"refuse", "trust"?, "rules"?}]}; the rules from --rules, else FRUGALFLOW_BRIEF_RULES, else config/brief_rules.json.\n'
     "WRITES    one line per case that is not ok, one RATE line per rule, then the summary line; exit 0 with no hole and no false refusal, 1 otherwise, 2 on usage or unreadable file.\n"
-    "EXAMPLE   python3 brief_bench.py --cases ../data/brief_cases.json\n"
+    "EXAMPLE   python3 brief_bench.py --cases public/data/brief_cases.json\n"
     "PITFALLS  2026-09-25 a false refusal is a defect like a hole: users stop reading a guard that refuses honest briefs. Both are counted, never merged into one score."
 )
 
@@ -243,7 +245,7 @@ def main():
         if rules_path is None:
             rules_path = os.environ.get("FRUGALFLOW_BRIEF_RULES")
         if rules_path is None:
-            rules_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config", "brief_rules.json")
+            rules_path = os.path.join(os.path.dirname(os.path.dirname(HERE)), "public", "config", "brief_rules.json")
 
         try:
             with open(rules_path, "r", encoding="utf-8") as f:

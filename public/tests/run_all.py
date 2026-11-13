@@ -64,6 +64,13 @@ def collect_elements(root):
                 full = os.path.join(bin_dir, name)
                 if os.path.isfile(full):
                     elements.append(("autotest", name, full))
+    dev_bin_dir = os.path.join(os.path.dirname(os.path.abspath(root)), "dev", "bin")
+    if os.path.isdir(dev_bin_dir):
+        for name in sorted(os.listdir(dev_bin_dir)):
+            if name.endswith(".py"):
+                full = os.path.join(dev_bin_dir, name)
+                if os.path.isfile(full):
+                    elements.append(("autotest", name, full))
     tests_dir = os.path.join(root, "tests")
     if os.path.isdir(tests_dir):
         for name in sorted(os.listdir(tests_dir)):
@@ -287,7 +294,7 @@ def autotest_run(runner_path):
 
 def notice():
     print("NAME: run_all.py - runs every autotest and E2E and exits non-zero on the first failure or at the end.")
-    print("READS: ROOT/bin/*.py, ROOT/tests/e2e_*.py, environment variables (GIT_* excluded), FRUGALFLOW_HOME/anonymization.json")
+    print("READS: ROOT/bin/*.py, the sibling ../dev/bin/*.py, ROOT/tests/e2e_*.py, environment variables (GIT_* excluded), FRUGALFLOW_HOME/anonymization.json")
     print("WRITES: FRUGALFLOW_HOME temp dir with anonymization.json (deleted at end), stdout for report lines")
     print("EXAMPLE: python3 run_all.py --root /path/to/project --fail-fast")
     print("PITFALLS: exit code is the sole verdict source; PASS/FAIL text printed by the element itself is ignored; timeout of 600s yields rc=124")

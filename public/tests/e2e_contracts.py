@@ -6,6 +6,7 @@ import tempfile
 import shutil
 
 BIN = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "bin")
+DEV_BIN = os.path.join(os.path.dirname(os.path.dirname(BIN)), "dev", "bin")
 
 TOOLS = [
     "notice_rules.py",
@@ -18,10 +19,16 @@ TOOLS = [
     "install_hooks.py",
 ]
 
+MOVED = {"notice_check.py"}
+
+
+def tool_path(tool):
+    return os.path.join(DEV_BIN, tool) if tool in MOVED else os.path.join(BIN, tool)
+
 
 def run(tool, args, D):
     return subprocess.run(
-        [sys.executable, os.path.join(BIN, tool)] + args,
+        [sys.executable, tool_path(tool)] + args,
         capture_output=True,
         text=True,
         cwd=D,
@@ -123,7 +130,7 @@ def main():
 
         # --- Test 1 ---
         e1_expected = "code=0+NOTICES OK 8 / code=7+NO silent.py: empty notice"
-        r = run("notice_check.py", [os.path.join(BIN, t) for t in TOOLS], D)
+        r = run("notice_check.py", [tool_path(t) for t in TOOLS], D)
         ok, detail = check(r, 0, "NOTICES OK 8")
         if not ok:
             e1_got = detail

@@ -11,12 +11,12 @@ import tempfile
 import subprocess
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-BIN = os.path.normpath(os.path.join(HERE, "..", "bin"))
+DEV_BIN = os.path.normpath(os.path.join(HERE, "..", "..", "dev", "bin"))
 BENCH = os.path.normpath(os.path.join(HERE, "..", "bench"))
 BENCH_TASKS = os.path.join(BENCH, "tasks")
 BENCH_TASKS_JSON = os.path.join(BENCH, "tasks.json")
-BENCH_RUN = os.path.join(BIN, "bench_run.py")
-BENCH_REPORT = os.path.join(BIN, "bench_report.py")
+BENCH_RUN = os.path.join(DEV_BIN, "bench_run.py")
+BENCH_REPORT = os.path.join(DEV_BIN, "bench_report.py")
 
 USAGE = "usage: e2e_bench.py | --notice\n"
 
@@ -24,7 +24,7 @@ NOTICE = (
     "NAME      e2e_bench.py - end-to-end test: runs bench_run.py on a planted mini bench, "
     "resumes it, sums it with bench_report.py, then runs the real public/bench catalog under a "
     "reference condition that copies each task's own solution.\n"
-    "READS     the tools in ../bin, bench_run.py and bench_report.py, and the catalog in ../bench.\n"
+    "READS     bench_run.py and bench_report.py in ../../dev/bin, and the catalog in ../bench.\n"
     "WRITES    only a temporary folder, always removed, even on failure: the mini tasks, the "
     "conditions files, the reference script and the two results files. Exit 0 all four steps pass, "
     "1 a step failed, 2 usage.\n"

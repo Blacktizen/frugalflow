@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Workshop tools moved to dev/bin; the installed package keeps core and delegation only.
+- Harden and MCP server: an adversarial review found the nested instructions —
+  Claude Code also loads `CLAUDE.local.md` at the project root and the
+  `CLAUDE.md` and `CLAUDE.local.md` of subfolders, and harden protected only
+  `CLAUDE.md`. harden now protects `CLAUDE.local.md` at the root, every
+  instruction file already present under each `--project`, and writes the
+  pattern rules `Edit(//DIR/**/CLAUDE.md)` and `Edit(//DIR/**/CLAUDE.local.md)`;
+  the MCP server refuses an `out` named `CLAUDE.local.md`. A `CLAUDE.md`
+  created later in a brand-new subfolder by a shell command stays uncovered:
+  the sandbox matches paths, not patterns; the file tools are covered by
+  pattern.
 - MCP server: the `delegate` tool passed the caller's `verify` string to
   `delegate.py --verify` (a shell command run outside the sandbox) and accepted
   any absolute `out`; `verify` is now refused over MCP and `out` is confined to
