@@ -64,6 +64,7 @@ They are not a security boundary against a hostile agent. The hooks run as the s
 
 ## Optional modules
 
+- [The method as ten skills](docs/METHOD.md)
 - [Delegation](docs/DELEGATION.md): bulky work handed to cheaper models, with briefs that get better with every mistake.
 - [Privacy and anonymization](docs/PRIVACY.md): your private data stays out of third-party models.
 - [Refusal loop](docs/REFUSAL_LOOP.md): a refusal log per tool that feeds the benches.
