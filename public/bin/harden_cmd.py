@@ -13,18 +13,19 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import claudecode_check
 
 USAGE = (
-    "usage: harden_cmd.py [--claude-dir DIR] [--home DIR] [--project DIR]... [--remove] "
-    "| --notice | --autotest"
+    "usage: harden_cmd.py [--claude-dir DIR] [--home DIR] [--project DIR]... "
+    "[--allow-instructions] [--remove] | --notice | --autotest"
 )
 
 NOTICE = (
     "NAME      harden_cmd.py - the frugalflow harden subcommand: turn on the isolated mode on the native Claude Code sandbox; the FrugalFlow settings and journals become read-only to the assistant.\n"
     "READS     settings.json in --claude-dir, else ~/.claude; the record harden.json in --home, else FRUGALFLOW_HOME, else ~/.frugalflow.\n"
-    "WRITES    settings.json (the three sandbox booleans, denyWrite entries, Edit deny rules) and harden.json (what was added, so --remove takes it back); a dated copy of settings.json before the first write. --remove writes settings.json back to what it was and deletes harden.json. Exit 0 done, already hardened or nothing to remove, 2 usage, 3 refused under Claude Code without a terminal, 4 native Windows, 5 settings.json cannot be read.\n"
+    "WRITES    settings.json (the three sandbox booleans, denyWrite entries, Edit deny rules) and harden.json (what was added, so --remove takes it back, plus the paths of the settings copies); a dated copy of settings.json in <home>/harden-backups/ before the first write. --remove writes settings.json back to what it was and deletes harden.json. Exit 0 done, already hardened or nothing to remove, 2 usage, 3 refused under Claude Code without a terminal, 4 native Windows, 5 settings.json cannot be read.\n"
     "EXAMPLE   python3 harden_cmd.py --claude-dir ~/.claude --home ~/.frugalflow --project ./my-project\n"
     "PITFALLS  2026-11-13 the sandbox covers Bash only: Read, Edit and Write follow the permission rules, hence the Edit(//...) deny rules written here.\n"
     "          2026-11-13 hooks and local MCP servers run outside the sandbox with the user's rights: harden protects the files, not the hooks.\n"
     "          2026-11-13 nothing is removed that harden.json did not record: settings that existed before stay untouched, and a rerun that adds nothing writes zero bytes.\n"
+    "          2026-11-13 an adversarial review planted a git pre-commit hook that the user would run later outside the sandbox, and skills through the Write tool; harden now locks .githooks, .git/hooks, .git/config, .claude and CLAUDE.md of each project.\n"
 )
 
 # The three sandbox booleans harden sets, and the values it sets them to.
@@ -65,20 +66,38 @@ def _delegation_logs(home):
     return out
 
 
-def _protected_paths(home, claude_dir, projects):
-    """Every path the isolated mode keeps read-only to the assistant, in order, no duplicate."""
-    paths = [home,
-             os.path.join(claude_dir, "settings.json"),
-             os.path.join(claude_dir, "settings.local.json")]
-    paths += _delegation_logs(home)
+def _protected_paths(home, claude_dir, projects, allow_instructions):
+    """Every path the isolated mode keeps read-only to the assistant, as
+    (path, is_dir), in order, no duplicate path. A folder gets the Edit(//.../**)
+    rule, a file the plain Edit(//...) rule. --allow-instructions leaves the two
+    CLAUDE.md files out: the assistant may keep its own notes there."""
+    paths = [(home, True),
+             (os.path.join(claude_dir, "settings.json"), False),
+             (os.path.join(claude_dir, "settings.local.json"), False),
+             (os.path.join(claude_dir, "hooks"), True),
+             (os.path.join(claude_dir, "skills"), True),
+             (os.path.join(claude_dir, "commands"), True),
+             (os.path.join(claude_dir, "agents"), True)]
+    if not allow_instructions:
+        paths.append((os.path.join(claude_dir, "CLAUDE.md"), False))
+    paths += [(path, False) for path in _delegation_logs(home)]
     for project in projects:
-        paths += [os.path.join(project, "vault", "log.md"),
-                  os.path.join(project, ".claude", "settings.json"),
-                  os.path.join(project, ".claude", "settings.local.json")]
+        paths += [(os.path.join(project, "vault", "log.md"), False),
+                  (os.path.join(project, ".claude"), True),
+                  (os.path.join(project, ".claude", "settings.json"), False),
+                  (os.path.join(project, ".claude", "settings.local.json"), False),
+                  (os.path.join(project, ".githooks"), True),
+                  (os.path.join(project, ".git", "hooks"), True),
+                  (os.path.join(project, ".git", "config"), False),
+                  (os.path.join(project, ".mcp.json"), False)]
+        if not allow_instructions:
+            paths.append((os.path.join(project, "CLAUDE.md"), False))
     out = []
-    for path in paths:
-        if path not in out:
-            out.append(path)
+    seen = set()
+    for path, is_dir in paths:
+        if path not in seen:
+            seen.add(path)
+            out.append((path, is_dir))
     return out
 
 
@@ -89,16 +108,24 @@ def _edit_rule(path, is_dir):
     return "Edit(//" + path.lstrip("/") + ("/**)" if is_dir else ")")
 
 
-def _backup(path, raw):
+def _backup(home, settings_path, raw):
+    """Copy settings.json to <home>/harden-backups/ before writing it, and return
+    the path written. The copy used to sit next to settings.json — an adversarial
+    review showed it was itself a writable target; the home is protected, so the
+    copies are too."""
     stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    candidate = path + ".before-frugalflow-" + stamp
+    name = os.path.basename(settings_path) + ".before-frugalflow-" + stamp
+    folder = os.path.join(home, "harden-backups")
+    os.makedirs(folder, exist_ok=True)
+    base = os.path.join(folder, name)
+    final = base
     n = 2
-    final = candidate
     while os.path.exists(final):
-        final = candidate + "-" + str(n)
+        final = base + "-" + str(n)
         n += 1
     with open(final, "w", encoding="utf-8", newline="") as f:
         f.write(raw)
+    return final
 
 
 def _load_settings(path):
@@ -125,10 +152,11 @@ def _write_json(path, doc):
         f.write(json.dumps(doc, indent=2, ensure_ascii=False) + "\n")
 
 
-def _plan(doc, protected, home):
+def _plan(doc, protected):
     """Return (new_doc, added): new_doc is a copy of doc (or {} when absent) with
     the harden keys merged in; added records exactly what was added, so --remove
-    can take it back. No other key is touched, moved or removed."""
+    can take it back. No other key is touched, moved or removed. protected is a
+    list of (path, is_dir)."""
     new_doc = json.loads(json.dumps(doc if doc is not None else {}))
     added = {
         "sandbox_created": False,
@@ -166,7 +194,7 @@ def _plan(doc, protected, home):
         deny_write = []
         filesystem["denyWrite"] = deny_write
         added["denyWrite_created"] = True
-    for path in protected:
+    for path, _is_dir in protected:
         if path not in deny_write:
             deny_write.append(path)
             added["denyWrite_added"].append(path)
@@ -181,8 +209,8 @@ def _plan(doc, protected, home):
         deny = []
         permissions["deny"] = deny
         added["deny_created"] = True
-    for path in protected:
-        rule = _edit_rule(path, path == home)
+    for path, is_dir in protected:
+        rule = _edit_rule(path, is_dir)
         if rule not in deny:
             deny.append(rule)
             added["permissions_deny_added"].append(rule)
@@ -199,9 +227,10 @@ def _union(old, new):
     return out
 
 
-def _merge_record(old, added, settings_path, created_settings):
+def _merge_record(old, added, settings_path, created_settings, backup_paths):
     """Fold one harden run into the harden.json record, so --remove undoes every
-    run since the last --remove. The earliest previous value of a flag wins."""
+    run since the last --remove. The earliest previous value of a flag wins.
+    The record also keeps the list of settings copies written to harden-backups."""
     rec = dict(old) if isinstance(old, dict) else {}
     rec["schema_version"] = 1
     rec["settings_path"] = settings_path
@@ -217,6 +246,7 @@ def _merge_record(old, added, settings_path, created_settings):
     rec["flags_previous"] = previous
     rec["denyWrite_added"] = _union(rec.get("denyWrite_added"), added["denyWrite_added"])
     rec["permissions_deny_added"] = _union(rec.get("permissions_deny_added"), added["permissions_deny_added"])
+    rec["backups"] = _union(rec.get("backups"), backup_paths)
     return rec
 
 
@@ -232,7 +262,7 @@ def _load_record(path):
     return doc, None
 
 
-def _harden(home, claude_dir, projects):
+def _harden(home, claude_dir, projects, allow_instructions):
     settings_path = os.path.join(claude_dir, "settings.json")
     record_path = os.path.join(home, "harden.json")
 
@@ -242,8 +272,10 @@ def _harden(home, claude_dir, projects):
         print("REFUSED: " + settings_path + " cannot be read as settings. Nothing was written.")
         return 5
 
-    protected = _protected_paths(home, claude_dir, projects)
-    new_doc, added = _plan(doc, protected, home)
+    protected = _protected_paths(home, claude_dir, projects, allow_instructions)
+    new_doc, added = _plan(doc, protected)
+    if allow_instructions:
+        print("NOTE: CLAUDE.md stays writable (--allow-instructions)")
     if doc is not None and new_doc == doc:
         # Everything is already in place: not one byte is written.
         print("ALREADY HARDENED")
@@ -256,17 +288,20 @@ def _harden(home, claude_dir, projects):
             print(refusal)
             return 5
 
+    backup_paths = []
     if raw is not None:
-        _backup(settings_path, raw)
+        backup_paths.append(_backup(home, settings_path, raw))
     os.makedirs(claude_dir, exist_ok=True)
     _write_json(settings_path, new_doc)
     os.makedirs(home, exist_ok=True)
-    _write_json(record_path, _merge_record(old_record, added, settings_path, raw is None))
+    _write_json(record_path, _merge_record(old_record, added, settings_path, raw is None, backup_paths))
 
-    for path in protected:
+    for path, _is_dir in protected:
         print("PROTECT " + path)
     print("Isolated mode: Bash runs in the Claude Code sandbox, FrugalFlow settings "
           "and journals are read-only to the assistant. Restart Claude Code to apply.")
+    print("Git hooks, project instructions and Claude Code extensions of each "
+          "--project are read-only to the assistant too.")
     return 0
 
 
@@ -331,11 +366,11 @@ def _remove(home, claude_dir):
         restored = _apply_removal(doc, rec)
         if rec.get("created_settings") and not restored:
             # settings.json did not exist before harden: taking it back means removing it.
-            _backup(settings_path, raw)
+            _backup(home, settings_path, raw)
             os.remove(settings_path)
             changed = True
         elif restored != before:
-            _backup(settings_path, raw)
+            _backup(home, settings_path, raw)
             _write_json(settings_path, restored)
             changed = True
 
@@ -359,6 +394,7 @@ def main(argv):
     home = None
     projects = []
     remove = False
+    allow_instructions = False
     i = 0
     while i < len(argv):
         a = argv[i]
@@ -380,6 +416,9 @@ def main(argv):
                 return 2
             projects.append(argv[i + 1])
             i += 2
+        elif a == "--allow-instructions":
+            allow_instructions = True
+            i += 1
         elif a == "--remove":
             remove = True
             i += 1
@@ -399,7 +438,7 @@ def main(argv):
 
     if remove:
         return _remove(home, claude_dir)
-    return _harden(home, claude_dir, projects)
+    return _harden(home, claude_dir, projects, allow_instructions)
 
 
 def _autotest():
@@ -440,6 +479,8 @@ def _autotest():
         doc = settings_of(settings_path)
         sandbox = doc.get("sandbox", {})
         deny = doc.get("permissions", {}).get("deny", [])
+        record = settings_of(os.path.join(home, "harden.json"))
+        copies = sorted(glob.glob(os.path.join(home, "harden-backups", "settings.json.before-frugalflow-*")))
         ok = (r.returncode == 0
               and doc.get("model") == "x" and "Bash(rm:*)" in deny
               and sandbox.get("enabled") is True
@@ -449,9 +490,13 @@ def _autotest():
               and _edit_rule(home, True) in deny
               and _edit_rule(settings_path, False) in deny
               and "Isolated mode:" in r.stdout
+              and "read-only to the assistant too." in r.stdout
               and os.path.isfile(os.path.join(home, "harden.json"))
-              and glob.glob(settings_path + ".before-frugalflow-*") != [])
-        results.append(("1 harden writes the sandbox keys and keeps the existing settings", ok,
+              and glob.glob(settings_path + ".before-frugalflow-*") == []
+              and len(copies) == 1
+              and record.get("backups") == copies)
+        results.append(("1 harden writes the sandbox keys, keeps the existing settings, "
+                        "copies settings.json into home/harden-backups and lists the copy", ok,
                         "rc=%d" % r.returncode))
 
     # Test 2: a rerun with nothing to add writes zero bytes and says ALREADY HARDENED.
@@ -465,11 +510,11 @@ def _autotest():
             json.dump(ORIG, f, indent=2)
         run(env, tmp, "--home", home, "--claude-dir", claude)
         before = bytes_of(settings_path)
-        backups_before = len(glob.glob(settings_path + ".before-frugalflow-*"))
+        backups_before = len(glob.glob(os.path.join(home, "harden-backups", "settings.json.before-frugalflow-*")))
         r = run(env, tmp, "--home", home, "--claude-dir", claude)
         ok = (r.returncode == 0 and "ALREADY HARDENED" in r.stdout
               and bytes_of(settings_path) == before
-              and len(glob.glob(settings_path + ".before-frugalflow-*")) == backups_before)
+              and len(glob.glob(os.path.join(home, "harden-backups", "settings.json.before-frugalflow-*"))) == backups_before)
         results.append(("2 a rerun that adds nothing writes zero bytes", ok, "rc=%d" % r.returncode))
 
     # Test 3: --remove restores the original JSON object and deletes the record.
@@ -516,7 +561,8 @@ def _autotest():
         ok = (r.returncode == 5 and "cannot be read as settings. Nothing was written." in r.stdout
               and bytes_of(settings_path) == before
               and not os.path.isfile(os.path.join(home, "harden.json"))
-              and glob.glob(settings_path + ".before-frugalflow-*") == [])
+              and glob.glob(settings_path + ".before-frugalflow-*") == []
+              and not os.path.isdir(os.path.join(home, "harden-backups")))
         results.append(("5 unreadable settings.json: refusal 5, file intact, nothing written", ok,
                         "rc=%d" % r.returncode))
 
@@ -575,6 +621,65 @@ def _autotest():
         ok = (created and r2.returncode == 0 and not os.path.isfile(settings_path)
               and not os.path.isfile(os.path.join(home, "harden.json")))
         results.append(("8 settings.json absent: harden creates it, --remove takes it back", ok,
+                        "rc=%d rc2=%d" % (r.returncode, r2.returncode)))
+
+    # Test 10: --project adds the git hooks, .git/config, the whole .claude folder,
+    # CLAUDE.md and .mcp.json; the claude dir adds hooks, skills, commands, agents
+    # and CLAUDE.md. Folders get the /** rule, files the plain rule. --remove is exact.
+    with tempfile.TemporaryDirectory() as tmp:
+        env = dict(base_env, HOME=tmp, PYTHONPYCACHEPREFIX=os.path.join(tmp, "pycache"))
+        home, claude, project = (os.path.join(tmp, "home"), os.path.join(tmp, "claude"),
+                                 os.path.join(tmp, "proj"))
+        os.makedirs(home, exist_ok=True)
+        os.makedirs(claude, exist_ok=True)
+        settings_path = os.path.join(claude, "settings.json")
+        with open(settings_path, "w", encoding="utf-8") as f:
+            json.dump(ORIG, f, indent=2)
+        r = run(env, tmp, "--home", home, "--claude-dir", claude, "--project", project)
+        doc = settings_of(settings_path)
+        deny_write = doc.get("sandbox", {}).get("filesystem", {}).get("denyWrite", [])
+        deny = doc.get("permissions", {}).get("deny", [])
+        want_dir = [os.path.join(project, ".githooks"), os.path.join(project, ".git", "hooks"),
+                    os.path.join(project, ".claude"), os.path.join(claude, "hooks"),
+                    os.path.join(claude, "skills"), os.path.join(claude, "commands"),
+                    os.path.join(claude, "agents")]
+        want_file = [os.path.join(project, ".git", "config"), os.path.join(project, "CLAUDE.md"),
+                     os.path.join(project, ".mcp.json"), os.path.join(claude, "CLAUDE.md")]
+        ok = (r.returncode == 0
+              and all(p in deny_write and _edit_rule(p, True) in deny for p in want_dir)
+              and all(p in deny_write and _edit_rule(p, False) in deny for p in want_file))
+        r2 = run(env, tmp, "--home", home, "--claude-dir", claude, "--remove")
+        ok = ok and r2.returncode == 0 and settings_of(settings_path) == ORIG
+        results.append(("10 git hooks, .git/config, .claude, CLAUDE.md and .mcp.json are protected, "
+                        "--remove is exact", ok, "rc=%d rc2=%d" % (r.returncode, r2.returncode)))
+
+    # Test 11: --allow-instructions leaves the two CLAUDE.md files out and says so;
+    # everything else is protected as usual.
+    with tempfile.TemporaryDirectory() as tmp:
+        env = dict(base_env, HOME=tmp, PYTHONPYCACHEPREFIX=os.path.join(tmp, "pycache"))
+        home, claude, project = (os.path.join(tmp, "home"), os.path.join(tmp, "claude"),
+                                 os.path.join(tmp, "proj"))
+        os.makedirs(home, exist_ok=True)
+        os.makedirs(claude, exist_ok=True)
+        settings_path = os.path.join(claude, "settings.json")
+        with open(settings_path, "w", encoding="utf-8") as f:
+            json.dump(ORIG, f, indent=2)
+        r = run(env, tmp, "--home", home, "--claude-dir", claude, "--project", project,
+                "--allow-instructions")
+        doc = settings_of(settings_path)
+        deny_write = doc.get("sandbox", {}).get("filesystem", {}).get("denyWrite", [])
+        deny = doc.get("permissions", {}).get("deny", [])
+        md_paths = [os.path.join(project, "CLAUDE.md"), os.path.join(claude, "CLAUDE.md")]
+        ok = (r.returncode == 0
+              and "NOTE: CLAUDE.md stays writable (--allow-instructions)" in r.stdout
+              and all(p not in deny_write for p in md_paths)
+              and all(_edit_rule(p, False) not in deny for p in md_paths)
+              and os.path.join(project, ".githooks") in deny_write
+              and _edit_rule(os.path.join(project, ".githooks"), True) in deny
+              and os.path.join(claude, "hooks") in deny_write)
+        r2 = run(env, tmp, "--home", home, "--claude-dir", claude, "--remove")
+        ok = ok and r2.returncode == 0 and settings_of(settings_path) == ORIG
+        results.append(("11 --allow-instructions: CLAUDE.md stays writable, the rest is protected", ok,
                         "rc=%d rc2=%d" % (r.returncode, r2.returncode)))
 
     # Test 9: --notice prints the notice.

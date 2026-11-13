@@ -9,18 +9,32 @@
 It writes into `~/.claude/settings.json` (or the folder given with `--claude-dir`):
 
 - `sandbox.enabled: true`, `sandbox.allowUnsandboxedCommands: false` (no escape from the sandbox), `sandbox.failIfUnavailable: true` (Bash fails when the sandbox cannot start, instead of running unsandboxed).
-- Every protected path into `sandbox.filesystem.denyWrite`: the FrugalFlow home, the two Claude Code settings files, and for each `--project DIR`, `DIR/vault/log.md`, `DIR/.claude/settings.json` and `DIR/.claude/settings.local.json`.
-- A `permissions.deny` rule `Edit(//path)` for each protected file, `Edit(//home/**)` for the home: the file tools (Edit, Write, NotebookEdit) are refused on them too, not just Bash.
+- Every protected path into `sandbox.filesystem.denyWrite`: the FrugalFlow home, the two Claude Code settings files, the Claude Code folder's `hooks`, `skills`, `commands` and `agents` folders and its `CLAUDE.md`, and for each `--project DIR`: `DIR/vault/log.md`, the whole `DIR/.claude` folder (settings, hooks, skills, commands, agents), `DIR/.githooks`, `DIR/.git/hooks`, `DIR/.git/config`, `DIR/CLAUDE.md` and `DIR/.mcp.json`.
+- A `permissions.deny` rule `Edit(//path)` for each protected file and `Edit(//path/**)` for each protected folder: the file tools (Edit, Write, NotebookEdit) are refused on them too, not just Bash.
 
-Existing keys and rules are never removed, reordered or modified. The original settings.json is copied to a dated `.before-frugalflow-` backup first, and the exact list of additions is recorded in `<home>/harden.json`. A second run that changes nothing writes nothing and prints `ALREADY HARDENED`. Like `init`, harden refuses to run from inside a Claude Code session without a terminal: run it yourself. Restart Claude Code to apply.
+`--allow-instructions` leaves the two `CLAUDE.md` files out of the protected set, for those who want the assistant to keep its own notes; harden then prints `NOTE: CLAUDE.md stays writable (--allow-instructions)`.
+
+Existing keys and rules are never removed, reordered or modified. The original settings.json is copied first to a dated `.before-frugalflow-` backup under `<home>/harden-backups/` (inside the protected home), and the exact list of additions — including the backup paths — is recorded in `<home>/harden.json`. A second run that changes nothing writes nothing and prints `ALREADY HARDENED`. Like `init`, harden refuses to run from inside a Claude Code session without a terminal: run it yourself. Restart Claude Code to apply.
 
 ## What it does not do
 
 - The native sandbox covers **Bash only**. The file tools are protected by the `permissions.deny` rules harden writes, not by the sandbox.
 - Hooks and local MCP servers run **outside** the sandbox. The MCP server below uses exactly that: it is FrugalFlow's own writing path, not something the sandbox enforces.
 - The isolated mode is optional and never demanded: the doctor's isolation line is an INFO, never a FAIL.
-- This design has not yet been reviewed by an external auditor.
+- An adversarial agent has attacked it (see Adversarial review below); an external auditor has not yet reviewed the design.
 - Native Windows is unsupported: the Claude Code sandbox needs macOS, Linux or WSL2. `harden` says so and exits; `doctor` prints `isolation: unsupported on native Windows`.
+
+## Adversarial review
+
+An adversarial agent (roadmap C3) attacked a repository hardened with `frugalflow harden`, trying roughly thirty write paths at the protected targets. The targets held: every write into the FrugalFlow home, the Claude Code settings and the protected project files was refused, and attempts to escape with `dangerouslyDisableSandbox` had no effect. Three deferred vectors did get through, and each is now closed:
+
+1. **A git hook planted for later.** The agent modified the project's `.githooks/pre-commit` through Bash. That hook runs at the user's next `git commit` — outside the sandbox, with the user's rights — where it could forge a receipt or a journal entry. Closed: `.githooks`, `.git/hooks` and `.git/config` of each `--project` are now protected.
+2. **Skills written into the project.** The Write tool created files under the project's `.claude/hooks`, `.claude/skills` and `.claude/commands` — a persistent injection into the next sessions. Closed: the whole `.claude` folder of each project is protected, as are the `hooks`, `skills`, `commands` and `agents` folders of the Claude Code folder.
+3. **The settings backup rewritten.** harden used to copy settings.json to `settings.json.before-frugalflow-*` next to the file itself, and that copy was writable: an attacker could rewrite the "original" settings. Closed: the copies now go to `<home>/harden-backups/`, inside the protected home.
+
+The closures above are covered by the test suite; a live adversarial re-run against them is still pending.
+
+What is not covered, by choice or by scope: vault pages other than `log.md` stay writable; and an attacker who controls the machine — who runs code as the user, outside every guard — is out of scope.
 
 ## Receipts outside the sandbox
 
@@ -45,4 +59,4 @@ What this changes: in isolated mode the writing path is a tool call the assistan
 frugalflow harden --remove
 ```
 
-`--remove` rereads `<home>/harden.json` and removes exactly what was added: the recorded list entries, the three sandbox flags (restored to their previous values, or removed when harden created them), the empty containers. Settings that existed before harden come back identical, and `harden.json` is deleted. The dated backups stay, in case you want to compare.
+`--remove` rereads `<home>/harden.json` and removes exactly what was added: the recorded list entries (including the git hooks, the project `.claude` folder and the `CLAUDE.md` paths), the three sandbox flags (restored to their previous values, or removed when harden created them), the empty containers. Settings that existed before harden come back identical, and `harden.json` is deleted. The dated backups stay in `<home>/harden-backups/`, in case you want to compare.

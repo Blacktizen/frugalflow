@@ -19,12 +19,13 @@ USAGE = "usage: e2e_harden.py | --notice\n"
 NOTICE = (
     "NAME      e2e_harden.py - end-to-end test: runs frugalflow.py harden and frugalflow.py doctor against a disposable claude dir and home, in subprocesses.\n"
     "READS     the tools in ../bin, frugalflow.py, harden_cmd.py, doctor_cmd.py.\n"
-    "WRITES    only a temporary folder, always removed, even on failure: a disposable HOME, a claude dir holding one settings.json, a FrugalFlow home, one project folder. Exit 0 all nine steps pass, 1 a step failed, 2 usage.\n"
+    "WRITES    only a temporary folder, always removed, even on failure: a disposable HOME, a claude dir holding one settings.json, a FrugalFlow home, one project folder. Exit 0 all twelve steps pass, 1 a step failed, 2 usage.\n"
     "EXAMPLE   python3 e2e_harden.py\n"
     "PITFALLS  2026-11-13 the subprocesses get CLAUDECODE dropped: harden refuses without a terminal, and this test must run inside a Claude Code session too.\n"
     "          2026-11-13 doctor may exit 1 here (the home holds no models.json): the isolation line is INFO, so the steps check the line, never the exit code.\n"
     "          2026-11-13 --remove must give back the original JSON object, not a rewritten one: the step compares objects, and a leftover key fails step 5.\n"
     "          2026-11-13 guard.json can name a delegation log outside the home: harden protects it too (step 9), and a log inside the home adds no extra entry — the home rule already covers it.\n"
+    "          2026-11-13 the settings copies go to <home>/harden-backups/, never next to settings.json: the copy beside the settings was itself a writable target (adversarial review); step 12 checks the location and the harden.json list.\n"
 )
 
 ORIG = {"model": "x", "permissions": {"deny": ["Bash(rm:*)"]}}
@@ -56,15 +57,25 @@ def read_bytes(path):
         return handle.read()
 
 
-def backup_count(settings_path):
-    return len(glob.glob(settings_path + ".before-frugalflow-*"))
+def backup_count(home):
+    return len(glob.glob(os.path.join(home, "harden-backups", "settings.json.before-frugalflow-*")))
+
+
+def covered(deny_write, deny, path, is_dir):
+    """True when path is in denyWrite and carries its Edit rule (/** for a folder)."""
+    if path not in deny_write:
+        return False
+    pl = path.lstrip("/")
+    rule = "Edit(//" + pl + ("/**)" if is_dir else ")")
+    return rule in deny
 
 
 def _step1(env, tmp, home, claude, settings_path):
     proc = run_frugalflow(env, tmp, "harden", "--claude-dir", claude, "--home", home)
     expected = ("harden exits 0; settings.json keeps model x and deny Bash(rm:*); sandbox.enabled true, "
                 "allowUnsandboxedCommands false, failIfUnavailable true; denyWrite holds the home; "
-                "permissions.deny holds an Edit rule for the home; home/harden.json and one backup exist")
+                "permissions.deny holds an Edit rule for the home; home/harden.json exists and one "
+                "backup sits in home/harden-backups")
     got = "code=" + str(proc.returncode)
     if proc.returncode != 0:
         got += " out=" + repr(proc.stdout.splitlines()[:2])
@@ -82,14 +93,14 @@ def _step1(env, tmp, home, claude, settings_path):
           and home in deny_write
           and any(d.startswith("Edit(") and home.lstrip("/") in d for d in deny)
           and os.path.isfile(os.path.join(home, "harden.json"))
-          and backup_count(settings_path) == 1)
+          and backup_count(home) == 1)
     got = ("code=0 model=" + repr(doc.get("model")) + " enabled=" + repr(sandbox.get("enabled"))
            + " no_escape=" + repr(sandbox.get("allowUnsandboxedCommands"))
            + " fail_if_unavailable=" + repr(sandbox.get("failIfUnavailable"))
            + " denyWrite_home=" + str(home in deny_write)
            + " deny_Edit_home=" + str(any(d.startswith("Edit(") and home.lstrip("/") in d for d in deny))
            + " record=" + str(os.path.isfile(os.path.join(home, "harden.json")))
-           + " backups=" + str(backup_count(settings_path)))
+           + " backups=" + str(backup_count(home)))
     return ok, expected, got
 
 
@@ -100,9 +111,9 @@ def _step2(env, tmp, home, claude, settings_path):
     expected = ("a second harden exits 0, prints ALREADY HARDENED, leaves settings.json byte for byte "
                 "as it was and writes no new backup")
     ok = (proc.returncode == 0 and "ALREADY HARDENED" in proc.stdout
-          and after == before and backup_count(settings_path) == 1)
+          and after == before and backup_count(home) == 1)
     got = ("code=" + str(proc.returncode) + " already_hardened=" + str("ALREADY HARDENED" in proc.stdout)
-           + " bytes_identical=" + str(after == before) + " backups=" + str(backup_count(settings_path)))
+           + " bytes_identical=" + str(after == before) + " backups=" + str(backup_count(home)))
     return ok, expected, got
 
 
@@ -174,7 +185,7 @@ def _step7(env, tmp, home, claude, settings_path):
 
 def _step8(env, tmp, home, claude, settings_path):
     broken = "{ not settings\n"
-    backups_before = backup_count(settings_path)
+    backups_before = backup_count(home)
     with open(settings_path, "w", encoding="utf-8") as handle:
         handle.write(broken)
     proc = run_frugalflow(env, tmp, "harden", "--claude-dir", claude, "--home", home)
@@ -182,12 +193,12 @@ def _step8(env, tmp, home, claude, settings_path):
     expected = ("with an unreadable settings.json harden exits 5, prints a REFUSED line ending "
                 "'Nothing was written.', leaves the file byte for byte as it was, writes no backup and no record")
     ok = (proc.returncode == 5 and "REFUSED" in proc.stdout and "Nothing was written." in proc.stdout
-          and after == broken.encode("utf-8") and backup_count(settings_path) == backups_before
+          and after == broken.encode("utf-8") and backup_count(home) == backups_before
           and not os.path.exists(os.path.join(home, "harden.json")))
     got = ("code=" + str(proc.returncode) + " refused_line=" + str("REFUSED" in proc.stdout)
            + " nothing_written=" + str("Nothing was written." in proc.stdout)
            + " file_intact=" + str(after == broken.encode("utf-8"))
-           + " backups=" + str(backup_count(settings_path)) + "/" + str(backups_before)
+           + " backups=" + str(backup_count(home)) + "/" + str(backups_before)
            + " record=" + str(os.path.exists(os.path.join(home, "harden.json"))))
     return ok, expected, got
 
@@ -227,6 +238,104 @@ def _step9(env, tmp, home, claude, settings_path, proj):
     return ok, expected, got
 
 
+def _step10(env, tmp, home, claude, settings_path, proj):
+    with open(settings_path, "w", encoding="utf-8") as handle:
+        json.dump(ORIG, handle, indent=2)
+    proc = run_frugalflow(env, tmp, "harden", "--claude-dir", claude, "--home", home, "--project", proj)
+    expected = ("harden --project PROJ protects PROJ/.githooks, PROJ/.git/hooks, PROJ/.git/config, "
+                "the whole PROJ/.claude folder, PROJ/CLAUDE.md and PROJ/.mcp.json, and the claude "
+                "dir's hooks, skills, commands, agents and CLAUDE.md (denyWrite plus the Edit rule, "
+                "/** for folders); --remove gives back the original settings.json")
+    got = "code=" + str(proc.returncode)
+    if proc.returncode != 0:
+        got += " out=" + repr(proc.stdout.splitlines()[:2])
+        return False, expected, got
+    doc = read_settings(settings_path)
+    deny_write = doc.get("sandbox", {}).get("filesystem", {}).get("denyWrite", [])
+    deny = doc.get("permissions", {}).get("deny", [])
+    want = [(os.path.join(proj, ".githooks"), True),
+            (os.path.join(proj, ".git", "hooks"), True),
+            (os.path.join(proj, ".git", "config"), False),
+            (os.path.join(proj, ".claude"), True),
+            (os.path.join(proj, "CLAUDE.md"), False),
+            (os.path.join(proj, ".mcp.json"), False),
+            (os.path.join(claude, "hooks"), True),
+            (os.path.join(claude, "skills"), True),
+            (os.path.join(claude, "commands"), True),
+            (os.path.join(claude, "agents"), True),
+            (os.path.join(claude, "CLAUDE.md"), False)]
+    missing = [p for p, is_dir in want if not covered(deny_write, deny, p, is_dir)]
+    proc2 = run_frugalflow(env, tmp, "harden", "--claude-dir", claude, "--home", home, "--remove")
+    doc2 = read_settings(settings_path)
+    ok = (not missing) and proc2.returncode == 0 and doc2 == ORIG
+    got = ("code=0 missing=" + repr(missing)
+           + " remove_code=" + str(proc2.returncode) + " settings_back=" + str(doc2 == ORIG))
+    return ok, expected, got
+
+
+def _step11(env, tmp, home, claude, settings_path, proj):
+    with open(settings_path, "w", encoding="utf-8") as handle:
+        json.dump(ORIG, handle, indent=2)
+    proc = run_frugalflow(env, tmp, "harden", "--claude-dir", claude, "--home", home,
+                          "--project", proj, "--allow-instructions")
+    expected = ("harden --allow-instructions exits 0 and prints 'NOTE: CLAUDE.md stays writable "
+                "(--allow-instructions)'; PROJ/CLAUDE.md and the claude dir's CLAUDE.md are absent "
+                "from denyWrite and from the Edit rules, while PROJ/.githooks, the PROJ/.claude "
+                "folder and the claude dir's hooks stay protected; --remove is exact")
+    got = "code=" + str(proc.returncode)
+    if proc.returncode != 0:
+        got += " out=" + repr(proc.stdout.splitlines()[:2])
+        return False, expected, got
+    doc = read_settings(settings_path)
+    deny_write = doc.get("sandbox", {}).get("filesystem", {}).get("denyWrite", [])
+    deny = doc.get("permissions", {}).get("deny", [])
+    md_free = (os.path.join(proj, "CLAUDE.md") not in deny_write
+               and os.path.join(claude, "CLAUDE.md") not in deny_write
+               and not any(d.startswith("Edit(//") and "CLAUDE.md" in d for d in deny))
+    holds = (md_free
+             and covered(deny_write, deny, os.path.join(proj, ".githooks"), True)
+             and covered(deny_write, deny, os.path.join(proj, ".claude"), True)
+             and covered(deny_write, deny, os.path.join(claude, "hooks"), True)
+             and "NOTE: CLAUDE.md stays writable (--allow-instructions)" in proc.stdout)
+    proc2 = run_frugalflow(env, tmp, "harden", "--claude-dir", claude, "--home", home, "--remove")
+    doc2 = read_settings(settings_path)
+    ok = holds and proc2.returncode == 0 and doc2 == ORIG
+    got = ("code=0 claude_md_free=" + str(md_free)
+           + " githooks=" + str(covered(deny_write, deny, os.path.join(proj, ".githooks"), True))
+           + " note=" + str("NOTE: CLAUDE.md stays writable (--allow-instructions)" in proc.stdout)
+           + " remove_code=" + str(proc2.returncode) + " settings_back=" + str(doc2 == ORIG))
+    return ok, expected, got
+
+
+def _step12(env, tmp, home, claude, settings_path):
+    with open(settings_path, "w", encoding="utf-8") as handle:
+        json.dump(ORIG, handle, indent=2)
+    if os.path.isfile(os.path.join(home, "harden.json")):
+        os.remove(os.path.join(home, "harden.json"))
+    shutil.rmtree(os.path.join(home, "harden-backups"), ignore_errors=True)
+    proc = run_frugalflow(env, tmp, "harden", "--claude-dir", claude, "--home", home)
+    expected = ("harden writes no copy next to settings.json; the dated copy sits in "
+                "home/harden-backups/ and harden.json lists its path; --remove gives back "
+                "the original settings.json")
+    got = "code=" + str(proc.returncode)
+    if proc.returncode != 0:
+        got += " out=" + repr(proc.stdout.splitlines()[:2])
+        return False, expected, got
+    side_copies = glob.glob(settings_path + ".before-frugalflow-*")
+    copies = sorted(glob.glob(os.path.join(home, "harden-backups", "settings.json.before-frugalflow-*")))
+    with open(os.path.join(home, "harden.json"), "r", encoding="utf-8") as handle:
+        rec = json.load(handle)
+    listed = rec.get("backups")
+    proc2 = run_frugalflow(env, tmp, "harden", "--claude-dir", claude, "--home", home, "--remove")
+    doc2 = read_settings(settings_path)
+    ok = (side_copies == [] and len(copies) == 1 and listed == copies
+          and proc2.returncode == 0 and doc2 == ORIG)
+    got = ("code=0 side_copies=" + str(len(side_copies)) + " backups=" + str(len(copies))
+           + " listed=" + str(listed == copies)
+           + " remove_code=" + str(proc2.returncode) + " settings_back=" + str(doc2 == ORIG))
+    return ok, expected, got
+
+
 def main_run():
     tmp = tempfile.mkdtemp()
     try:
@@ -250,6 +359,9 @@ def main_run():
             lambda: _step7(env, tmp, home, claude, settings_path),
             lambda: _step8(env, tmp, home, claude, settings_path),
             lambda: _step9(env, tmp, home, claude, settings_path, proj),
+            lambda: _step10(env, tmp, home, claude, settings_path, proj),
+            lambda: _step11(env, tmp, home, claude, settings_path, proj),
+            lambda: _step12(env, tmp, home, claude, settings_path),
         ]
         results = []
         for num, fn in enumerate(fns, start=1):

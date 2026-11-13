@@ -8,6 +8,15 @@
   code write passes and the audit records it as `receipt_not_required`.
 - Guard: silent mode now refuses like active when the audit cannot be
   written.
+- Harden: an adversarial review of the isolated mode planted a git
+  pre-commit hook the user would run later outside the sandbox, wrote
+  skills into the project's `.claude` folder through the Write tool, and
+  reached the settings backups. harden now keeps `.githooks`, `.git/hooks`,
+  `.git/config`, the whole `.claude` folder, `CLAUDE.md` and `.mcp.json` of
+  each `--project` read-only to the assistant, plus `hooks`, `skills`,
+  `commands`, `agents` and `CLAUDE.md` of the Claude Code folder;
+  `--allow-instructions` keeps `CLAUDE.md` writable; the settings copies
+  move to `<home>/harden-backups/`, inside the protected home.
 
 ## 0.1.7
 
