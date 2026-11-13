@@ -18,7 +18,7 @@ REASON_TEXT = (
     "To fix: ask the user to run this command in their own terminal."
 )
 
-FREE_ARGS = frozenset({"on", "off", "mode", "display", "init", "setup", "uninstall"})
+FREE_ARGS = frozenset({"on", "off", "mode", "display", "init", "setup", "uninstall", "harden"})
 HEREDOC_HEADS = frozenset({"bash", "sh", "zsh", "dash", "ksh", "fish"})
 # 2026-11-12: "frugalflow" is the installed console script the hooks launch with -I.
 SCRIPT_RUN_HEADS = frozenset({"frugalflow.py", "frugalflow", "config_cmd.py", "memory_cmd.py"})
@@ -42,7 +42,7 @@ PYTHON_ARG_OPTS = frozenset({"-X", "-W", "--check-hash-based-pycs"})
 # Matches frugalflow or frugalflow.py followed by setting-changing subcommand
 # Tolerates quotes and commas: 'frugalflow','off' or "frugalflow","off"
 SETTING_SUBCOMMANDS = (
-    r"(?:on|off|mode|display|init|setup|uninstall|config\s+set|memory\s+decline|"
+    r"(?:on|off|mode|display|init|setup|uninstall|harden|config\s+set|memory\s+decline|"
     r"notes\s+(?:add-pitfall|merge|measure)|run\s+model_notes)"
 )
 FRUGALFLOW_SETTING_RE = re.compile(
@@ -698,6 +698,7 @@ FIXTURE_DIRECT = [
     "frugalflow init --mode active",
     "frugalflow setup --yes",
     "frugalflow uninstall",
+    "frugalflow harden",
     "frugalflow memory decline /tmp/p",
     "frugalflow notes add-pitfall x",
 ]

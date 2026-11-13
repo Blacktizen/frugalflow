@@ -1,0 +1,597 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""harden_cmd.py - the frugalflow harden subcommand: turn on the isolated mode,
+the native Claude Code sandbox, with the FrugalFlow settings and journals kept
+read-only to the assistant. --remove takes back exactly what was added."""
+
+import os
+import sys
+import json
+import datetime
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import claudecode_check
+
+USAGE = (
+    "usage: harden_cmd.py [--claude-dir DIR] [--home DIR] [--project DIR]... [--remove] "
+    "| --notice | --autotest"
+)
+
+NOTICE = (
+    "NAME      harden_cmd.py - the frugalflow harden subcommand: turn on the isolated mode on the native Claude Code sandbox; the FrugalFlow settings and journals become read-only to the assistant.\n"
+    "READS     settings.json in --claude-dir, else ~/.claude; the record harden.json in --home, else FRUGALFLOW_HOME, else ~/.frugalflow.\n"
+    "WRITES    settings.json (the three sandbox booleans, denyWrite entries, Edit deny rules) and harden.json (what was added, so --remove takes it back); a dated copy of settings.json before the first write. --remove writes settings.json back to what it was and deletes harden.json. Exit 0 done, already hardened or nothing to remove, 2 usage, 3 refused under Claude Code without a terminal, 4 native Windows, 5 settings.json cannot be read.\n"
+    "EXAMPLE   python3 harden_cmd.py --claude-dir ~/.claude --home ~/.frugalflow --project ./my-project\n"
+    "PITFALLS  2026-11-13 the sandbox covers Bash only: Read, Edit and Write follow the permission rules, hence the Edit(//...) deny rules written here.\n"
+    "          2026-11-13 hooks and local MCP servers run outside the sandbox with the user's rights: harden protects the files, not the hooks.\n"
+    "          2026-11-13 nothing is removed that harden.json did not record: settings that existed before stay untouched, and a rerun that adds nothing writes zero bytes.\n"
+)
+
+# The three sandbox booleans harden sets, and the values it sets them to.
+SANDBOX_FLAGS = ("enabled", "allowUnsandboxedCommands", "failIfUnavailable")
+SANDBOX_VALUES = {"enabled": True, "allowUnsandboxedCommands": False, "failIfUnavailable": True}
+
+
+class SettingsRefused(Exception):
+    """settings.json exists but cannot be read as settings."""
+
+
+def _abs(path):
+    return os.path.abspath(os.path.expanduser(path))
+
+
+def _delegation_logs(home):
+    """The delegation logs named by home/guard.json, resolved inside the home.
+    A log already under the home is covered by the home rule and adds nothing.
+    An absent or unreadable guard.json adds nothing."""
+    try:
+        with open(os.path.join(home, "guard.json"), "r", encoding="utf-8") as handle:
+            settings = json.load(handle)
+    except (OSError, ValueError):
+        return []
+    if not isinstance(settings, dict):
+        return []
+    logs = settings.get("delegation_logs")
+    if not isinstance(logs, list):
+        return []
+    out = []
+    for entry in logs:
+        if not isinstance(entry, str) or not entry:
+            continue
+        path = os.path.normpath(os.path.join(home, os.path.expanduser(entry)))
+        if path == home or path.startswith(home + os.sep):
+            continue
+        out.append(path)
+    return out
+
+
+def _protected_paths(home, claude_dir, projects):
+    """Every path the isolated mode keeps read-only to the assistant, in order, no duplicate."""
+    paths = [home,
+             os.path.join(claude_dir, "settings.json"),
+             os.path.join(claude_dir, "settings.local.json")]
+    paths += _delegation_logs(home)
+    for project in projects:
+        paths += [os.path.join(project, "vault", "log.md"),
+                  os.path.join(project, ".claude", "settings.json"),
+                  os.path.join(project, ".claude", "settings.local.json")]
+    out = []
+    for path in paths:
+        if path not in out:
+            out.append(path)
+    return out
+
+
+def _edit_rule(path, is_dir):
+    """The Claude Code permission rule that refuses the file tools on a path:
+    Edit(//abs/path) — two slashes, then the absolute path without its leading
+    slash; /** covers a whole folder."""
+    return "Edit(//" + path.lstrip("/") + ("/**)" if is_dir else ")")
+
+
+def _backup(path, raw):
+    stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    candidate = path + ".before-frugalflow-" + stamp
+    n = 2
+    final = candidate
+    while os.path.exists(final):
+        final = candidate + "-" + str(n)
+        n += 1
+    with open(final, "w", encoding="utf-8", newline="") as f:
+        f.write(raw)
+
+
+def _load_settings(path):
+    """Return (raw, doc): (None, None) when the file does not exist. Raise
+    SettingsRefused when it exists but is not a readable JSON object."""
+    if not os.path.exists(path):
+        return None, None
+    try:
+        with open(path, "r", encoding="utf-8", newline="") as f:
+            raw = f.read()
+    except OSError as error:
+        raise SettingsRefused(str(error))
+    try:
+        doc = json.loads(raw)
+    except ValueError as error:
+        raise SettingsRefused(str(error))
+    if not isinstance(doc, dict):
+        raise SettingsRefused("not a JSON object")
+    return raw, doc
+
+
+def _write_json(path, doc):
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        f.write(json.dumps(doc, indent=2, ensure_ascii=False) + "\n")
+
+
+def _plan(doc, protected, home):
+    """Return (new_doc, added): new_doc is a copy of doc (or {} when absent) with
+    the harden keys merged in; added records exactly what was added, so --remove
+    can take it back. No other key is touched, moved or removed."""
+    new_doc = json.loads(json.dumps(doc if doc is not None else {}))
+    added = {
+        "sandbox_created": False,
+        "filesystem_created": False,
+        "denyWrite_created": False,
+        "permissions_created": False,
+        "deny_created": False,
+        "flags_added": [],
+        "flags_previous": {},
+        "denyWrite_added": [],
+        "permissions_deny_added": [],
+    }
+
+    sandbox = new_doc.get("sandbox")
+    if not isinstance(sandbox, dict):
+        sandbox = {}
+        new_doc["sandbox"] = sandbox
+        added["sandbox_created"] = True
+    for flag in SANDBOX_FLAGS:
+        want = SANDBOX_VALUES[flag]
+        if flag not in sandbox:
+            sandbox[flag] = want
+            added["flags_added"].append(flag)
+        elif sandbox[flag] != want:
+            added["flags_previous"][flag] = sandbox[flag]
+            sandbox[flag] = want
+
+    filesystem = sandbox.get("filesystem")
+    if not isinstance(filesystem, dict):
+        filesystem = {}
+        sandbox["filesystem"] = filesystem
+        added["filesystem_created"] = True
+    deny_write = filesystem.get("denyWrite")
+    if not isinstance(deny_write, list):
+        deny_write = []
+        filesystem["denyWrite"] = deny_write
+        added["denyWrite_created"] = True
+    for path in protected:
+        if path not in deny_write:
+            deny_write.append(path)
+            added["denyWrite_added"].append(path)
+
+    permissions = new_doc.get("permissions")
+    if not isinstance(permissions, dict):
+        permissions = {}
+        new_doc["permissions"] = permissions
+        added["permissions_created"] = True
+    deny = permissions.get("deny")
+    if not isinstance(deny, list):
+        deny = []
+        permissions["deny"] = deny
+        added["deny_created"] = True
+    for path in protected:
+        rule = _edit_rule(path, path == home)
+        if rule not in deny:
+            deny.append(rule)
+            added["permissions_deny_added"].append(rule)
+
+    return new_doc, added
+
+
+def _union(old, new):
+    """old + new, keeping the order and no duplicate."""
+    out = list(old) if isinstance(old, list) else []
+    for item in new:
+        if item not in out:
+            out.append(item)
+    return out
+
+
+def _merge_record(old, added, settings_path, created_settings):
+    """Fold one harden run into the harden.json record, so --remove undoes every
+    run since the last --remove. The earliest previous value of a flag wins."""
+    rec = dict(old) if isinstance(old, dict) else {}
+    rec["schema_version"] = 1
+    rec["settings_path"] = settings_path
+    rec["created_settings"] = bool(rec.get("created_settings")) or created_settings
+    for key in ("sandbox_created", "filesystem_created", "denyWrite_created",
+                "permissions_created", "deny_created"):
+        rec[key] = bool(rec.get(key)) or added[key]
+    rec["flags_added"] = _union(rec.get("flags_added"), added["flags_added"])
+    previous = dict(rec.get("flags_previous") or {})
+    for flag, value in added["flags_previous"].items():
+        if flag not in previous:
+            previous[flag] = value
+    rec["flags_previous"] = previous
+    rec["denyWrite_added"] = _union(rec.get("denyWrite_added"), added["denyWrite_added"])
+    rec["permissions_deny_added"] = _union(rec.get("permissions_deny_added"), added["permissions_deny_added"])
+    return rec
+
+
+def _load_record(path):
+    """Return (doc, None) or (None, refusal_line) when the record exists but cannot be read."""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            doc = json.load(f)
+    except (OSError, ValueError):
+        return None, "REFUSED: " + path + " cannot be read as a harden record. Nothing was written."
+    if not isinstance(doc, dict):
+        return None, "REFUSED: " + path + " cannot be read as a harden record. Nothing was written."
+    return doc, None
+
+
+def _harden(home, claude_dir, projects):
+    settings_path = os.path.join(claude_dir, "settings.json")
+    record_path = os.path.join(home, "harden.json")
+
+    try:
+        raw, doc = _load_settings(settings_path)
+    except SettingsRefused:
+        print("REFUSED: " + settings_path + " cannot be read as settings. Nothing was written.")
+        return 5
+
+    protected = _protected_paths(home, claude_dir, projects)
+    new_doc, added = _plan(doc, protected, home)
+    if doc is not None and new_doc == doc:
+        # Everything is already in place: not one byte is written.
+        print("ALREADY HARDENED")
+        return 0
+
+    old_record = None
+    if os.path.isfile(record_path):
+        old_record, refusal = _load_record(record_path)
+        if refusal is not None:
+            print(refusal)
+            return 5
+
+    if raw is not None:
+        _backup(settings_path, raw)
+    os.makedirs(claude_dir, exist_ok=True)
+    _write_json(settings_path, new_doc)
+    os.makedirs(home, exist_ok=True)
+    _write_json(record_path, _merge_record(old_record, added, settings_path, raw is None))
+
+    for path in protected:
+        print("PROTECT " + path)
+    print("Isolated mode: Bash runs in the Claude Code sandbox, FrugalFlow settings "
+          "and journals are read-only to the assistant. Restart Claude Code to apply.")
+    return 0
+
+
+def _apply_removal(doc, rec):
+    """Take back exactly what the record says was added: recorded list entries go,
+    recorded flags return to their previous value or disappear, a dictionary or a
+    list harden created and left empty is removed. Anything else stays."""
+    sandbox = doc.get("sandbox")
+    if isinstance(sandbox, dict):
+        for flag in rec.get("flags_added") or []:
+            sandbox.pop(flag, None)
+        for flag, value in (rec.get("flags_previous") or {}).items():
+            sandbox[flag] = value
+        filesystem = sandbox.get("filesystem")
+        if isinstance(filesystem, dict):
+            deny_write = filesystem.get("denyWrite")
+            if isinstance(deny_write, list):
+                removed = rec.get("denyWrite_added") or []
+                filesystem["denyWrite"] = [d for d in deny_write if d not in removed]
+                if not filesystem["denyWrite"] and rec.get("denyWrite_created"):
+                    filesystem.pop("denyWrite")
+            if not filesystem and rec.get("filesystem_created"):
+                sandbox.pop("filesystem")
+        if not sandbox and rec.get("sandbox_created"):
+            doc.pop("sandbox")
+
+    permissions = doc.get("permissions")
+    if isinstance(permissions, dict):
+        deny = permissions.get("deny")
+        if isinstance(deny, list):
+            removed = rec.get("permissions_deny_added") or []
+            permissions["deny"] = [d for d in deny if d not in removed]
+            if not permissions["deny"] and rec.get("deny_created"):
+                permissions.pop("deny")
+        if not permissions and rec.get("permissions_created"):
+            doc.pop("permissions")
+    return doc
+
+
+def _remove(home, claude_dir):
+    settings_path = os.path.join(claude_dir, "settings.json")
+    record_path = os.path.join(home, "harden.json")
+
+    if not os.path.isfile(record_path):
+        print("NOTHING TO REMOVE")
+        return 0
+
+    rec, refusal = _load_record(record_path)
+    if refusal is not None:
+        print(refusal)
+        return 5
+
+    try:
+        raw, doc = _load_settings(settings_path)
+    except SettingsRefused:
+        print("REFUSED: " + settings_path + " cannot be read as settings. Nothing was written.")
+        return 5
+
+    changed = False
+    if doc is not None:
+        before = json.loads(json.dumps(doc))
+        restored = _apply_removal(doc, rec)
+        if rec.get("created_settings") and not restored:
+            # settings.json did not exist before harden: taking it back means removing it.
+            _backup(settings_path, raw)
+            os.remove(settings_path)
+            changed = True
+        elif restored != before:
+            _backup(settings_path, raw)
+            _write_json(settings_path, restored)
+            changed = True
+
+    os.remove(record_path)
+    print("REMOVED " + settings_path if changed else "NOTHING TO REMOVE")
+    return 0
+
+
+def main(argv):
+    if argv == ["--notice"]:
+        sys.stdout.write(NOTICE)
+        return 0
+    if argv == ["--autotest"]:
+        return _autotest()
+
+    if os.name == "nt":
+        print("UNSUPPORTED: the native sandbox needs macOS, Linux or WSL2.")
+        return 4
+
+    claude_dir = None
+    home = None
+    projects = []
+    remove = False
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--claude-dir":
+            if i + 1 >= len(argv):
+                print(USAGE)
+                return 2
+            claude_dir = argv[i + 1]
+            i += 2
+        elif a == "--home":
+            if i + 1 >= len(argv):
+                print(USAGE)
+                return 2
+            home = argv[i + 1]
+            i += 2
+        elif a == "--project":
+            if i + 1 >= len(argv):
+                print(USAGE)
+                return 2
+            projects.append(argv[i + 1])
+            i += 2
+        elif a == "--remove":
+            remove = True
+            i += 1
+        else:
+            print(USAGE)
+            return 2
+
+    home = _abs(home or os.environ.get("FRUGALFLOW_HOME") or os.path.expanduser("~/.frugalflow"))
+    claude_dir = _abs(claude_dir or os.path.expanduser("~/.claude"))
+    projects = [_abs(p) for p in projects]
+
+    # harden changes Claude Code settings: inside Claude Code without a terminal
+    # it is refused, like every setting change (the same check as init).
+    if os.environ.get("CLAUDECODE") == "1" and not (sys.stdin.isatty() and sys.stdout.isatty()):
+        sys.stdout.write(claudecode_check.MESSAGE)
+        return 3
+
+    if remove:
+        return _remove(home, claude_dir)
+    return _harden(home, claude_dir, projects)
+
+
+def _autotest():
+    import glob
+    import subprocess
+    import tempfile
+
+    script = os.path.abspath(__file__)
+    results = []
+
+    base_env = dict(os.environ)
+    base_env.pop("CLAUDECODE", None)
+
+    def run(env, cwd, *args):
+        return subprocess.run([sys.executable, script] + list(args),
+                              capture_output=True, text=True, input="", env=env, cwd=cwd)
+
+    def settings_of(path):
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    def bytes_of(path):
+        with open(path, "rb") as f:
+            return f.read()
+
+    ORIG = {"model": "x", "permissions": {"deny": ["Bash(rm:*)"]}}
+
+    # Test 1: harden writes the sandbox keys, keeps what existed, records what it added.
+    with tempfile.TemporaryDirectory() as tmp:
+        env = dict(base_env, HOME=tmp, PYTHONPYCACHEPREFIX=os.path.join(tmp, "pycache"))
+        home, claude = os.path.join(tmp, "home"), os.path.join(tmp, "claude")
+        os.makedirs(home, exist_ok=True)
+        os.makedirs(claude, exist_ok=True)
+        settings_path = os.path.join(claude, "settings.json")
+        with open(settings_path, "w", encoding="utf-8") as f:
+            json.dump(ORIG, f, indent=2)
+        r = run(env, tmp, "--home", home, "--claude-dir", claude)
+        doc = settings_of(settings_path)
+        sandbox = doc.get("sandbox", {})
+        deny = doc.get("permissions", {}).get("deny", [])
+        ok = (r.returncode == 0
+              and doc.get("model") == "x" and "Bash(rm:*)" in deny
+              and sandbox.get("enabled") is True
+              and sandbox.get("allowUnsandboxedCommands") is False
+              and sandbox.get("failIfUnavailable") is True
+              and home in sandbox.get("filesystem", {}).get("denyWrite", [])
+              and _edit_rule(home, True) in deny
+              and _edit_rule(settings_path, False) in deny
+              and "Isolated mode:" in r.stdout
+              and os.path.isfile(os.path.join(home, "harden.json"))
+              and glob.glob(settings_path + ".before-frugalflow-*") != [])
+        results.append(("1 harden writes the sandbox keys and keeps the existing settings", ok,
+                        "rc=%d" % r.returncode))
+
+    # Test 2: a rerun with nothing to add writes zero bytes and says ALREADY HARDENED.
+    with tempfile.TemporaryDirectory() as tmp:
+        env = dict(base_env, HOME=tmp, PYTHONPYCACHEPREFIX=os.path.join(tmp, "pycache"))
+        home, claude = os.path.join(tmp, "home"), os.path.join(tmp, "claude")
+        os.makedirs(home, exist_ok=True)
+        os.makedirs(claude, exist_ok=True)
+        settings_path = os.path.join(claude, "settings.json")
+        with open(settings_path, "w", encoding="utf-8") as f:
+            json.dump(ORIG, f, indent=2)
+        run(env, tmp, "--home", home, "--claude-dir", claude)
+        before = bytes_of(settings_path)
+        backups_before = len(glob.glob(settings_path + ".before-frugalflow-*"))
+        r = run(env, tmp, "--home", home, "--claude-dir", claude)
+        ok = (r.returncode == 0 and "ALREADY HARDENED" in r.stdout
+              and bytes_of(settings_path) == before
+              and len(glob.glob(settings_path + ".before-frugalflow-*")) == backups_before)
+        results.append(("2 a rerun that adds nothing writes zero bytes", ok, "rc=%d" % r.returncode))
+
+    # Test 3: --remove restores the original JSON object and deletes the record.
+    with tempfile.TemporaryDirectory() as tmp:
+        env = dict(base_env, HOME=tmp, PYTHONPYCACHEPREFIX=os.path.join(tmp, "pycache"))
+        home, claude = os.path.join(tmp, "home"), os.path.join(tmp, "claude")
+        os.makedirs(home, exist_ok=True)
+        os.makedirs(claude, exist_ok=True)
+        settings_path = os.path.join(claude, "settings.json")
+        with open(settings_path, "w", encoding="utf-8") as f:
+            json.dump(ORIG, f, indent=2)
+        run(env, tmp, "--home", home, "--claude-dir", claude)
+        r = run(env, tmp, "--home", home, "--claude-dir", claude, "--remove")
+        ok = (r.returncode == 0 and settings_of(settings_path) == ORIG
+              and not os.path.isfile(os.path.join(home, "harden.json")))
+        results.append(("3 --remove restores the settings that existed before", ok, "rc=%d" % r.returncode))
+
+    # Test 4: --remove without a record says NOTHING TO REMOVE and changes nothing.
+    with tempfile.TemporaryDirectory() as tmp:
+        env = dict(base_env, HOME=tmp, PYTHONPYCACHEPREFIX=os.path.join(tmp, "pycache"))
+        home, claude = os.path.join(tmp, "home"), os.path.join(tmp, "claude")
+        os.makedirs(home, exist_ok=True)
+        os.makedirs(claude, exist_ok=True)
+        settings_path = os.path.join(claude, "settings.json")
+        with open(settings_path, "w", encoding="utf-8") as f:
+            json.dump(ORIG, f, indent=2)
+        before = bytes_of(settings_path)
+        r = run(env, tmp, "--home", home, "--claude-dir", claude, "--remove")
+        ok = (r.returncode == 0 and "NOTHING TO REMOVE" in r.stdout
+              and bytes_of(settings_path) == before)
+        results.append(("4 --remove without a record changes nothing", ok, "rc=%d" % r.returncode))
+
+    # Test 5: settings.json that cannot be read as settings: refusal 5, file intact, nothing written.
+    with tempfile.TemporaryDirectory() as tmp:
+        env = dict(base_env, HOME=tmp, PYTHONPYCACHEPREFIX=os.path.join(tmp, "pycache"))
+        home, claude = os.path.join(tmp, "home"), os.path.join(tmp, "claude")
+        os.makedirs(home, exist_ok=True)
+        os.makedirs(claude, exist_ok=True)
+        settings_path = os.path.join(claude, "settings.json")
+        with open(settings_path, "w", encoding="utf-8") as f:
+            f.write("{ not json ]")
+        before = bytes_of(settings_path)
+        r = run(env, tmp, "--home", home, "--claude-dir", claude)
+        ok = (r.returncode == 5 and "cannot be read as settings. Nothing was written." in r.stdout
+              and bytes_of(settings_path) == before
+              and not os.path.isfile(os.path.join(home, "harden.json"))
+              and glob.glob(settings_path + ".before-frugalflow-*") == [])
+        results.append(("5 unreadable settings.json: refusal 5, file intact, nothing written", ok,
+                        "rc=%d" % r.returncode))
+
+    # Test 6: --project adds the vault log and the project settings paths.
+    with tempfile.TemporaryDirectory() as tmp:
+        env = dict(base_env, HOME=tmp, PYTHONPYCACHEPREFIX=os.path.join(tmp, "pycache"))
+        home, claude, project = (os.path.join(tmp, "home"), os.path.join(tmp, "claude"),
+                                 os.path.join(tmp, "proj"))
+        os.makedirs(home, exist_ok=True)
+        os.makedirs(claude, exist_ok=True)
+        settings_path = os.path.join(claude, "settings.json")
+        with open(settings_path, "w", encoding="utf-8") as f:
+            json.dump(ORIG, f, indent=2)
+        r = run(env, tmp, "--home", home, "--claude-dir", claude, "--project", project)
+        doc = settings_of(settings_path)
+        deny_write = doc.get("sandbox", {}).get("filesystem", {}).get("denyWrite", [])
+        deny = doc.get("permissions", {}).get("deny", [])
+        vault_log = os.path.join(project, "vault", "log.md")
+        project_settings = os.path.join(project, ".claude", "settings.json")
+        ok = (r.returncode == 0
+              and vault_log in deny_write and project_settings in deny_write
+              and _edit_rule(vault_log, False) in deny
+              and _edit_rule(project_settings, False) in deny)
+        # --remove takes the project paths back too.
+        r2 = run(env, tmp, "--home", home, "--claude-dir", claude, "--remove")
+        ok = ok and r2.returncode == 0 and settings_of(settings_path) == ORIG
+        results.append(("6 --project protects the vault log and the project settings, --remove takes them back", ok,
+                        "rc=%d rc2=%d" % (r.returncode, r2.returncode)))
+
+    # Test 7: under Claude Code without a terminal: refusal 3, settings untouched.
+    with tempfile.TemporaryDirectory() as tmp:
+        env = dict(base_env, HOME=tmp, PYTHONPYCACHEPREFIX=os.path.join(tmp, "pycache"))
+        env["CLAUDECODE"] = "1"
+        home, claude = os.path.join(tmp, "home"), os.path.join(tmp, "claude")
+        os.makedirs(home, exist_ok=True)
+        os.makedirs(claude, exist_ok=True)
+        settings_path = os.path.join(claude, "settings.json")
+        with open(settings_path, "w", encoding="utf-8") as f:
+            json.dump(ORIG, f, indent=2)
+        before = bytes_of(settings_path)
+        r = run(env, tmp, "--home", home, "--claude-dir", claude)
+        ok = (r.returncode == 3 and bytes_of(settings_path) == before
+              and not os.path.isfile(os.path.join(home, "harden.json")))
+        results.append(("7 refused under Claude Code without a terminal", ok, "rc=%d" % r.returncode))
+
+    # Test 8: settings.json absent: harden creates it, --remove takes it back.
+    with tempfile.TemporaryDirectory() as tmp:
+        env = dict(base_env, HOME=tmp, PYTHONPYCACHEPREFIX=os.path.join(tmp, "pycache"))
+        home, claude = os.path.join(tmp, "home"), os.path.join(tmp, "claude")
+        os.makedirs(home, exist_ok=True)
+        os.makedirs(claude, exist_ok=True)
+        settings_path = os.path.join(claude, "settings.json")
+        r = run(env, tmp, "--home", home, "--claude-dir", claude)
+        created = r.returncode == 0 and os.path.isfile(settings_path)
+        r2 = run(env, tmp, "--home", home, "--claude-dir", claude, "--remove")
+        ok = (created and r2.returncode == 0 and not os.path.isfile(settings_path)
+              and not os.path.isfile(os.path.join(home, "harden.json")))
+        results.append(("8 settings.json absent: harden creates it, --remove takes it back", ok,
+                        "rc=%d rc2=%d" % (r.returncode, r2.returncode)))
+
+    # Test 9: --notice prints the notice.
+    rn = subprocess.run([sys.executable, script, "--notice"], capture_output=True, text=True)
+    ok = rn.returncode == 0 and rn.stdout.startswith("NAME      harden_cmd.py")
+    results.append(("9 --notice prints the notice", ok, "rc=%d" % rn.returncode))
+
+    all_pass = True
+    for desc, passed, detail in results:
+        if passed:
+            print("PASS " + desc)
+        else:
+            print("FAIL " + desc + (" | " + detail if detail else ""))
+            all_pass = False
+    return 0 if all_pass else 1
+
+
+if __name__ == "__main__":
+    import exit_log
+    exit_log.run(main, "harden_cmd", sys.argv[1:])

@@ -77,7 +77,7 @@ More than 100 small tools, each with `--notice` (its contract and pitfalls) and 
 
 ## Roadmap
 
-- Isolated mode on the native Claude Code sandbox, with receipts written outside the sandbox.
+- Isolated mode on the native Claude Code sandbox ([docs/ISOLATION.md](docs/ISOLATION.md)), with receipts written outside the sandbox.
 - Claude Code plugin install (`/plugin install frugalflow`).
 - PyPI package (`pipx install frugalflow`).
 - Five visible commands: `init`, `resume`, `delegate`, `close`, `doctor`.

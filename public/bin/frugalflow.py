@@ -35,6 +35,7 @@ USAGE_ALL = (
     "  new-project NAME [--root DIR]   (creates DIR/NAME; DIR defaults to the current folder)\n"
     "  init [--mode observe|active|silent|orchestrator] [--remove] [options]\n"
     "  init --here   (mounts the memory in the existing git repository of the current folder; global settings untouched)\n"
+    "  harden [--claude-dir DIR] [--home DIR] [--project DIR]... [--remove]   (the isolated mode: Bash runs in the native Claude Code sandbox, FrugalFlow settings and journals are read-only to the assistant; --remove takes it back)\n"
     "  scan [PATH] [--staged] [--rules FILE] [--quiet]   (finds secrets and private data in a folder or repo; exit 12 on a leak; needs no model)\n"
     "  setup [--yes] [--home DIR] [--claude-dir DIR] [--engine ENGINE] [--endpoint URL]   (guided: detects your engines, backs up, writes, runs doctor)\n"
     "  uninstall [--home DIR] [--claude-dir DIR] [--project-dir DIR]   (restores the backups made by setup)\n"
@@ -42,6 +43,7 @@ USAGE_ALL = (
     "  delegate --role ROLE --file BRIEF --out FILE [--verify CMD]   (sends a checked brief to a cheaper model)\n"
     "  close [--vault DIR] [--repo DIR]   (the closing pass: checks the vault and says if the handoff is ready)\n"
     "  run TOOL [ARGS]   (runs one tool of the installed package; the hooks call this, so they survive a move or a pipx install)\n"
+    "  run mcp_server   (the MCP server: journal_add, lint_brief, resume, delegate; it writes receipts and the journal outside the sandbox)\n"
     "  setup --layers [--home DIR] [--answer ROLE=MODEL_ID]...[--ollama-url URL] [--lmstudio-url URL]   (walks the layers, proposes the detected models first)\n"
     "  notes add-pitfall|show|check|merge|measure [--home DIR] [...]   (pitfalls and measures per model, each with its proof)\n"
     "  doctor [options]\n"
@@ -62,7 +64,7 @@ DELEGATE_USAGE = (
 )
 
 # Commands that change a FrugalFlow setting: they never pass through run.
-SETTINGS_COMMANDS = ("init", "setup", "uninstall", "config", "on", "off", "mode", "display", "memory")
+SETTINGS_COMMANDS = ("init", "setup", "uninstall", "config", "on", "off", "mode", "display", "memory", "harden")
 # Commands that keep their full behavior behind run.
 DISPATCH_COMMANDS = COMMANDS + ("scan", "report", "lint", "notes", "resume", "doctor", "delegate", "close")
 
@@ -569,7 +571,12 @@ def main():
     command = args[0]
 
     # Check CLAUDECODE + TTY for setting-change commands (but allow --notice, --help, status, doctor)
-    _check_claudecode_tty(command, args[1:])
+    if command == "harden":
+        # harden changes Claude Code settings: the same refusal as init. claudecode_check
+        # lists the FrugalFlow setting commands; harden joins the check here.
+        _check_claudecode_tty("init", [])
+    else:
+        _check_claudecode_tty(command, args[1:])
 
     if command == "run":
         tool = args[1] if len(args) > 1 else ""
@@ -626,7 +633,7 @@ def main():
             print(line)
         sys.exit(code)
 
-    if command in ("init", "doctor", "report", "lint", "setup", "scan", "uninstall", "resume", "close"):
+    if command in ("init", "doctor", "report", "lint", "setup", "scan", "uninstall", "resume", "close", "harden"):
         rest = args[1:]
         if command == "setup" and "--layers" not in rest and "--answer" not in rest:
             command = "onboard"

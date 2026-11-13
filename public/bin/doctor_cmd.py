@@ -26,6 +26,7 @@ NOTICE = (
     "EXAMPLE   python3 doctor_cmd.py --home ~/.frugalflow --claude-dir ~/.claude\n"
     "PITFALLS  2026-10-03 an engine that does not answer is a WARN, never a FAIL: a missing local model must not block a doctor run for something else.\n"
     "          2026-11-12 a hook command without -I let a planted .pth file run before the guard; the doctor fails when a FrugalFlow hook command lost -I.\n"
+    "          2026-11-13 the isolation line is INFO, never a FAIL: the isolated mode (frugalflow harden) is optional; doctor reports it without demanding it.\n"
 )
 
 
@@ -168,6 +169,43 @@ def _engines(home):
             print("OK engine " + mid + " answers")
         else:
             print("WARN engine " + mid + " does not answer at " + endpoint)
+
+
+def _isolation_line(home, claude_dir):
+    """7b isolation: is the isolated mode on — the native Claude Code sandbox,
+    with the FrugalFlow home denied to Bash writes and to the file tools?
+    An INFO line: the isolated mode is optional, this check never makes doctor fail."""
+    if os.name == "nt":
+        print("INFO isolation: unsupported on native Windows")
+        return
+    settings_path = os.path.join(claude_dir, "settings.json")
+    try:
+        with open(settings_path, encoding="utf-8") as f:
+            doc = json.load(f)
+    except (OSError, ValueError):
+        doc = None
+    home_key = os.path.abspath(os.path.expanduser(home)).rstrip("/")
+    isolated = False
+    if isinstance(doc, dict):
+        sandbox = doc.get("sandbox")
+        if isinstance(sandbox, dict) and sandbox.get("enabled") is True \
+                and sandbox.get("allowUnsandboxedCommands") is False:
+            filesystem = sandbox.get("filesystem")
+            deny_write = filesystem.get("denyWrite") if isinstance(filesystem, dict) else None
+            write_denied = isinstance(deny_write, list) and any(
+                isinstance(d, str) and os.path.abspath(os.path.expanduser(d)).rstrip("/") == home_key
+                for d in deny_write)
+            permissions = doc.get("permissions")
+            deny = permissions.get("deny") if isinstance(permissions, dict) else None
+            edit_denied = isinstance(deny, list) and any(
+                isinstance(d, str) and d.startswith("Edit(") and home_key.lstrip("/") in d
+                for d in deny)
+            isolated = write_denied and edit_denied
+    if isolated:
+        print("INFO isolation: isolated (native sandbox on, no escape, FrugalFlow settings read-only)")
+    else:
+        print("INFO isolation: cooperative (the guards trust the assistant; "
+              "frugalflow harden turns on the isolated mode)")
 
 
 def _doctor(home, claude_dir, ollama_url, lmstudio_url):
@@ -327,6 +365,9 @@ def _doctor(home, claude_dir, ollama_url, lmstudio_url):
     else:
         print("WARN switch: FrugalFlow off, mode " + mode + " (turn it on: python3 " + os.path.join(BIN, "frugalflow.py") + " on)")
 
+    # 7b isolation
+    _isolation_line(home, claude_dir)
+
     # 8 engines
     for line in env_detect.describe(env_detect.detect(ollama_url, lmstudio_url, os.environ)):
         print("INFO " + line)
@@ -393,21 +434,25 @@ def _autotest():
     init_script = os.path.join(BIN, "init_cmd.py")
     results = []
 
-    def init(tmp, home, claude):
+    # The autotest runs init and doctor in subprocesses with a disposable HOME.
+    # CLAUDECODE is dropped: the autotest must run inside a Claude Code session too.
+    def base_env(tmp):
         env = dict(os.environ)
+        env.pop("CLAUDECODE", None)
         env["HOME"] = tmp
+        return env
+
+    def init(tmp, home, claude):
         return subprocess.run(
             [sys.executable, init_script, "--home", home, "--claude-dir", claude,
              "--ollama-url", "http://127.0.0.1:1", "--lmstudio-url", "http://127.0.0.1:1"],
-            capture_output=True, text=True, env=env, cwd=tmp)
+            capture_output=True, text=True, env=base_env(tmp), cwd=tmp)
 
     def run(tmp, home, claude):
-        env = dict(os.environ)
-        env["HOME"] = tmp
         return subprocess.run(
             [sys.executable, script, "--home", home, "--claude-dir", claude,
              "--ollama-url", "http://127.0.0.1:1", "--lmstudio-url", "http://127.0.0.1:1"],
-            capture_output=True, text=True, env=env, cwd=tmp)
+            capture_output=True, text=True, env=base_env(tmp), cwd=tmp)
 
     # Test 1: doctor exits 0 after a clean init.
     with tempfile.TemporaryDirectory() as tmp:
@@ -516,6 +561,28 @@ def _autotest():
         ok = ok and stripped > 0 and d.returncode == 1 and "without -I" in d.stdout
         results.append(("8 doctor fails when a hook command lost -I", ok,
                         "stripped=%d rc=%d" % (stripped, d.returncode)))
+
+    # Test 9: the isolation line follows the sandbox settings; harden turns it on, --remove off.
+    with tempfile.TemporaryDirectory() as tmp:
+        home, claude = os.path.join(tmp, "home"), os.path.join(tmp, "claude")
+        harden_script = os.path.join(BIN, "harden_cmd.py")
+        ok = init(tmp, home, claude).returncode == 0
+        d1 = run(tmp, home, claude)
+        ok = ok and "INFO isolation: cooperative" in d1.stdout
+        h = subprocess.run(
+            [sys.executable, harden_script, "--home", home, "--claude-dir", claude],
+            capture_output=True, text=True, env=base_env(tmp), cwd=tmp)
+        ok = ok and h.returncode == 0
+        d2 = run(tmp, home, claude)
+        ok = ok and d2.returncode == 0 and "INFO isolation: isolated" in d2.stdout
+        hr = subprocess.run(
+            [sys.executable, harden_script, "--home", home, "--claude-dir", claude, "--remove"],
+            capture_output=True, text=True, env=base_env(tmp), cwd=tmp)
+        ok = ok and hr.returncode == 0
+        d3 = run(tmp, home, claude)
+        ok = ok and d3.returncode == 0 and "INFO isolation: cooperative" in d3.stdout
+        results.append(("9 doctor reports the isolation line: cooperative, isolated after harden, cooperative after --remove", ok,
+                        "harden_rc=%d remove_rc=%d" % (h.returncode, hr.returncode)))
 
     all_pass = True
     for desc, passed, detail in results:
