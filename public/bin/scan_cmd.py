@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -10,13 +11,17 @@ import anon_rules
 import anon_core
 import scan_files
 
+PUBLIC_FILE = ".frugalflow-public"
+_MIN_PUBLIC_LEN = 8
+
 NOTICE = (
     "NAME      scan_cmd.py - the frugalflow scan subcommand: looks for secrets and private data in a folder or a git repo, with no model.\n"
-    "READS     the folder or file given; the rules file given by --rules, else FRUGALFLOW_HOME/anonymization.json, else ~/.frugalflow/anonymization.json, else the built-in rules; with --staged, the git index.\n"
+    "READS     the folder or file given; the rules file given by --rules, else FRUGALFLOW_HOME/anonymization.json, else ~/.frugalflow/anonymization.json, else the built-in rules; " + PUBLIC_FILE + " at the scanned folder root (the git root with --staged); with --staged, the git index.\n"
     "WRITES    nothing: one line per leak with file, line, type and label, never the text found. Exit 0 clean, 12 leak found, 2 bad usage or path, 13 bad rules.\n"
     "EXAMPLE   python3 scan_cmd.py ./my-project\n"
     "PITFALLS  2026-10-25 printing the text found would copy the leak into CI logs; only its place, type and label are printed.\n"
-    "          2026-10-25 a scan that finds no file used to print CLEAN; a path with nothing to read still says 0 files, so an empty scan is visible."
+    "          2026-10-25 a scan that finds no file used to print CLEAN; a path with nothing to read still says 0 files, so an empty scan is visible.\n"
+    "          2026-11-13 the repository URL contains the owner handle, which users list as private; a literal public value now sets aside only its own occurrences."
 )
 
 USAGE = "usage: scan_cmd.py [PATH] [--staged] [--quiet] [--rules FILE] | --notice | --autotest"
@@ -38,6 +43,111 @@ def _load_rules_file(path):
         print("NO RULES " + path + ": not valid JSON")
         return None, 13
     return doc, 0
+
+
+def _git_root(path):
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    try:
+        proc = subprocess.run(
+            ["git", "-C", path, "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            env=env,
+            timeout=60,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode != 0:
+        return None
+    root = proc.stdout.strip().decode("utf-8", errors="surrogateescape")
+    return root or None
+
+
+def _load_public_values(root):
+    # One literal value per line; blank lines and lines starting with # are comments.
+    # Returns (values, path): the path is set even when every value was too short.
+    if not root:
+        return [], None
+    p = os.path.join(root, PUBLIC_FILE)
+    if not os.path.isfile(p):
+        return [], None
+    try:
+        with open(p, encoding="utf-8", errors="replace") as fh:
+            text = fh.read()
+    except OSError:
+        return [], None
+    values = []
+    for raw in text.splitlines():
+        v = raw.strip()
+        if not v or v.startswith("#"):
+            continue
+        if len(v) < _MIN_PUBLIC_LEN:
+            print("public value too short, ignored: " + v, file=sys.stderr)
+            continue
+        values.append(v)
+    return values, os.path.abspath(p)
+
+
+def _match_spans(text, anonymizable, irreducible):
+    # Same iteration and order as anon_core.find, but keeping each match's span,
+    # so the two lists can be paired one to one.
+    spans = []
+    for i, (pattern, _label, _tag) in enumerate(anonymizable):
+        for m in re.finditer(pattern, text, re.M):
+            if m.end() == m.start() or anon_core.DOC_VALUES.search(m.group()):
+                continue
+            spans.append((m.start(), 0, i, m.start(), m.end()))
+    for i, (pattern, _label) in enumerate(irreducible):
+        for m in re.finditer(pattern, text, re.M):
+            if m.end() == m.start() or anon_core.DOC_VALUES.search(m.group()):
+                continue
+            spans.append((m.start(), 1, i, m.start(), m.end()))
+    spans.sort(key=lambda x: (x[0], x[1], x[2]))
+    return [(s, e) for (_k, _i, _j, s, e) in spans]
+
+
+def _line_starts(text):
+    starts = [0]
+    idx = text.find("\n")
+    while idx != -1:
+        starts.append(idx + 1)
+        idx = text.find("\n", idx + 1)
+    return starts
+
+
+def _public_occurrences(line, public_values):
+    occ = []
+    for v in public_values:
+        start = 0
+        while True:
+            i = line.find(v, start)
+            if i < 0:
+                break
+            occ.append((i, i + len(v)))
+            start = i + 1
+    return occ
+
+
+def _set_aside_public(text, hits, anonymizable, irreducible, public_values):
+    # A hit is set aside only when its whole span sits inside one occurrence of a
+    # public value on the same line; the same word elsewhere on the line stays a leak.
+    spans = _match_spans(text, anonymizable, irreducible)
+    if len(spans) != len(hits):
+        return hits, 0
+    starts = _line_starts(text)
+    occ_cache = {}
+    kept = []
+    aside = 0
+    for hit, (ms, me) in zip(hits, spans):
+        line_no = hit[0]
+        line_start = starts[line_no - 1]
+        if line_no not in occ_cache:
+            line_end = starts[line_no] if line_no < len(starts) else len(text)
+            occ_cache[line_no] = _public_occurrences(text[line_start:line_end], public_values)
+        if any(os_ <= ms - line_start and me - line_start <= oe for os_, oe in occ_cache[line_no]):
+            aside += 1
+        else:
+            kept.append(hit)
+    return kept, aside
 
 
 def main(argv):
@@ -109,11 +219,24 @@ def main(argv):
         print("NO PATH " + str(exc))
         return 2
 
+    # 2b. Declared public values: .frugalflow-public at the scanned folder root,
+    # the git root with --staged. The declaration file itself is not scanned.
+    if staged:
+        public_root = _git_root(os.path.abspath(path))
+    elif os.path.isdir(path):
+        public_root = os.path.abspath(path)
+    else:
+        public_root = os.path.dirname(os.path.abspath(path))
+    public_values, public_file = _load_public_values(public_root)
+    if public_file is not None:
+        files = [f for f in files if os.path.abspath(f) != public_file]
+
     # 3. Analysis
     is_dir = os.path.isdir(path)
     n_files = len(files)
     all_findings = []
     file_with_leak = 0
+    aside = 0
     for fpath in files:
         try:
             with open(fpath, encoding="utf-8", errors="replace") as fh:
@@ -121,6 +244,9 @@ def main(argv):
         except OSError:
             continue
         hits = anon_core.find(text, anonymizable, irreducible)
+        if hits and public_values:
+            hits, n_aside = _set_aside_public(text, hits, anonymizable, irreducible, public_values)
+            aside += n_aside
         if hits:
             file_with_leak += 1
         for line, kind, label, _excerpt in hits:
@@ -128,6 +254,9 @@ def main(argv):
 
     # 4. Report
     h = len(all_findings)
+    aside_note = ""
+    if aside > 0:
+        aside_note = " (" + str(aside) + " public value match(es) set aside by " + PUBLIC_FILE + ")"
     if not quiet:
         for fpath, line, kind, label in all_findings:
             if is_dir:
@@ -140,12 +269,12 @@ def main(argv):
 
     # 5. Summary and code
     if h == 0:
-        print("CLEAN: " + str(n_files) + " file(s) scanned, no leak found")
+        print("CLEAN: " + str(n_files) + " file(s) scanned, no leak found" + aside_note)
         return 0
-    print("FOUND " + str(h) + " leak(s) in " + str(file_with_leak) + " file(s)")
+    print("FOUND " + str(h) + " leak(s) in " + str(file_with_leak) + " file(s)" + aside_note)
     if not quiet:
         print("Fix: remove the value and load it from an environment variable, then scan again.")
-        print("False positive? Keep that file out of the scanned folder or list it in .gitignore.")
+        print("False positive? Keep that file out of the scanned folder, list it in .gitignore, or declare the exact public value in " + PUBLIC_FILE + ".")
     return 12
 
 
@@ -191,7 +320,7 @@ def _autotest():
                 timeout=300,
                 env=env,
             )
-            return proc.returncode, proc.stdout
+            return proc.returncode, proc.stdout + proc.stderr
 
         passed = 0
         self_path = os.path.abspath(__file__)
@@ -248,8 +377,69 @@ def _autotest():
               "test 5: exit 12 + private data person",
               "got rc=" + str(rc))
 
-        print("AUTOTEST " + str(passed) + "/5")
-        return 0 if passed == 5 else 1
+        # Tests 6-8: declared public values (.frugalflow-public)
+        pub_url = "github.com/Plimsoq/tool"
+
+        pub1 = os.path.join(tmp, "pub1")
+        os.mkdir(pub1)
+        with open(os.path.join(pub1, "notes.md"), "w", encoding="utf-8") as f:
+            f.write("Install from " + pub_url + "\n")
+        with open(os.path.join(pub1, PUBLIC_FILE), "w", encoding="utf-8") as f:
+            f.write("# comment line\n\n" + pub_url + "\n")
+
+        pub2 = os.path.join(tmp, "pub2")
+        os.mkdir(pub2)
+        with open(os.path.join(pub2, "notes.md"), "w", encoding="utf-8") as f:
+            f.write("Install from " + pub_url + "\nAsk Plimsoq for help\n")
+        with open(os.path.join(pub2, PUBLIC_FILE), "w", encoding="utf-8") as f:
+            f.write(pub_url + "\n")
+
+        pub3 = os.path.join(tmp, "pub3")
+        os.mkdir(pub3)
+        with open(os.path.join(pub3, "notes.md"), "w", encoding="utf-8") as f:
+            f.write("Install from " + pub_url + "\n")
+        with open(os.path.join(pub3, PUBLIC_FILE), "w", encoding="utf-8") as f:
+            f.write("Plimsoq\n")
+
+        # Test 6: the URL line is set aside, the scan is clean
+        rc, out = run(["--rules", private_rules_path, pub1])
+        ok = (rc == 0
+              and "notes.md:" not in out
+              and "1 public value match" in out
+              and "CLEAN: 1 file(s) scanned, no leak found" in out)
+        if ok:
+            passed += 1
+        print("PASS" if ok else "FAIL",
+              "test 6: public value sets aside its occurrence + exit 0",
+              "got rc=" + str(rc))
+
+        # Test 7: the same handle elsewhere stays a leak
+        rc, out = run(["--rules", private_rules_path, pub2])
+        leak_lines = [l for l in out.splitlines() if "notes.md:" in l]
+        ok = (rc == 12
+              and len(leak_lines) == 1
+              and leak_lines[0].startswith("notes.md:2:")
+              and "1 public value match" in out
+              and "FOUND 1 leak(s) in 1 file(s)" in out)
+        if ok:
+            passed += 1
+        print("PASS" if ok else "FAIL",
+              "test 7: handle outside the public value stays a leak",
+              "got rc=" + str(rc))
+
+        # Test 8: a value shorter than 8 characters is ignored, with a warning
+        rc, out = run(["--rules", private_rules_path, pub3])
+        ok = (rc == 12
+              and "notes.md:1:" in out
+              and "public value too short, ignored: Plimsoq" in out)
+        if ok:
+            passed += 1
+        print("PASS" if ok else "FAIL",
+              "test 8: short public value ignored + warning",
+              "got rc=" + str(rc))
+
+        print("AUTOTEST " + str(passed) + "/8")
+        return 0 if passed == 8 else 1
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
