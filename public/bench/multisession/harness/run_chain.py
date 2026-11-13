@@ -121,6 +121,11 @@ def setup_chain(P, cond, chain_dir, proj):
         write_text(os.path.join(proj, "kata", "__init__.py"), "")
         os.makedirs(os.path.join(proj, "tests"), exist_ok=True)
         os.makedirs(os.path.join(proj, "docs"), exist_ok=True)
+        if cond == "C":
+            write_text(
+                os.path.join(proj, "CLAUDE.md"),
+                read_text(os.path.join(P["H"], "tpl", "c_block.md")),
+            )
     hashes_path = os.path.join(chain_dir, "hashes.json")
     if not os.path.exists(hashes_path):
         write_json(hashes_path, {})
@@ -408,6 +413,15 @@ FALLBACK_TPL = {
     "s1.md": "## Session 1 du projet kata\n{EXERCISES}\n",
     "sk.md": "## Session {K} du projet kata\n{EXERCISES}\n",
     "b_block.md": "journal_add {BIN}\n",
+    "c_block.md": (
+        "# Memoire du projet\n"
+        "Ce projet garde sa memoire dans NOTES.md, a la racine. Aucun outil : tu le tiens toi-meme.\n"
+        "- Au debut de chaque session, lis NOTES.md s il existe, avant de toucher au code.\n"
+        "- Apres chaque decision de convention et chaque exercice termine, ajoute une ligne a NOTES.md "
+        "(ce qui est decide ou fait, et pourquoi).\n"
+        "- Avant de finir, mets a jour NOTES.md : les conventions et decisions en vigueur, puis ce qui "
+        "reste, une ligne par tache.\n"
+    ),
 }
 
 
@@ -464,7 +478,7 @@ def autotest():
                 write_text(os.path.join(harness, name), FALLBACK_MEASURE)
             else:
                 write_text(os.path.join(harness, name), FALLBACK_RULES)
-        for name in ("s1.md", "sk.md", "b_block.md"):
+        for name in ("s1.md", "sk.md", "b_block.md", "c_block.md"):
             src = os.path.join(real_harness, "tpl", name)
             if os.path.isfile(src):
                 shutil.copyfile(src, os.path.join(harness, "tpl", name))
@@ -539,6 +553,26 @@ def autotest():
             % (code3, no_resume, no_journal_2, no_journal_1),
             passed3,
         ))
+
+        c_dir = os.path.join(base, "setup_c")
+        c_proj = os.path.join(c_dir, "proj")
+        code_c = setup_chain(P, "C", c_dir, c_proj)
+        a_dir = os.path.join(base, "setup_a")
+        a_proj = os.path.join(a_dir, "proj")
+        code_a = setup_chain(P, "A", a_dir, a_proj)
+        c_expected = read_text(os.path.join(harness, "tpl", "c_block.md"))
+        c_path = os.path.join(c_proj, "CLAUDE.md")
+        a_path = os.path.join(a_proj, "CLAUDE.md")
+        c_equal = os.path.isfile(c_path) and read_text(c_path) == c_expected
+        a_absent = not os.path.isfile(a_path)
+        passed4 = code_c == 0 and code_a == 0 and c_equal and a_absent
+        epreuves.append((
+            "epreuve4_condition_C_claude_md",
+            "setup_chain C ecrit proj/CLAUDE.md egal a c_block.md, setup_chain A n en ecrit pas",
+            "exit_c=%s claude_md_egal=%s exit_a=%s claude_md_absent=%s"
+            % (code_c, c_equal, code_a, a_absent),
+            passed4,
+        ))
     finally:
         shutil.rmtree(base, ignore_errors=True)
     all_ok = True
@@ -551,7 +585,7 @@ def autotest():
 
 def main():
     parser = argparse.ArgumentParser(prog="run_chain.py")
-    parser.add_argument("--cond", choices=["A", "B"])
+    parser.add_argument("--cond", choices=["A", "B", "C"])
     parser.add_argument("--chain")
     parser.add_argument("--plan", choices=["pilot", "main"])
     parser.add_argument("--autotest", action="store_true")

@@ -5,6 +5,14 @@
 On a real project run over several sessions, with the memory set-up paid once, does FrugalFlow
 (condition B) cost fewer tokens, or succeed better, than the assistant alone (condition A)?
 
+## Condition C (discipline written down, no tool)
+
+C is A plus a `CLAUDE.md` at the project root (written by the harness before session 1, content
+`harness/tpl/c_block.md`), loaded by Claude Code each session: keep the memory by hand in `NOTES.md` —
+read it first, add a line after each decision, update it before closing. No FrugalFlow tool, no injected
+summary, no `FRUGALFLOW_HOME`. Purpose: separate the effect of written discipline from the effect of the
+tools. Its results come from a separate pre-registered bench, not from the four chains above.
+
 ## Headline result
 
 25 exercises, 5 sessions of 5, a fresh context each session, one local model, 2 chains per condition.
