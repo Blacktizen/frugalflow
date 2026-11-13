@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 import json, os, sys, subprocess, tempfile
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(HERE)), "public", "bin"))
 import shell_rules
 
 FAKE = {"a": "free", "b": "write", "c": "unknown", "d": "free", "e": "write"}
@@ -28,7 +30,7 @@ NOTICE = (
     "NAME      shell_bench.py - replays a bench of shell commands through shell_rules and counts holes and false refusals separately.\n"
     "READS     the JSON file given by --cases: {\"config\": {...}, \"cases\": [{\"id\", \"cmd\", \"expect\", \"known_limit\"?}]}.\n"
     "WRITES    nothing: one line per case that is not ok, then the summary line; exit 0 when there is no hole, no false refusal and no mismatch, 1 otherwise, 2 on usage or unreadable file.\n"
-    "EXAMPLE   python3 shell_bench.py --cases ../data/shell_cases.json\n"
+    "EXAMPLE   python3 shell_bench.py --cases public/data/shell_cases.json\n"
     "PITFALLS  2026-09-25 a false refusal is a defect like a hole: both are counted, never merged into one score.\n"
     "          A known_limit is a documented false refusal: it is printed, it does not fail the bench."
 )

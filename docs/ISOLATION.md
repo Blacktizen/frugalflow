@@ -1,0 +1,65 @@
+# Isolated mode
+
+[← Back to the README](../README.md)
+
+`frugalflow harden` turns on the isolated mode: Claude Code's native sandbox around Bash, and read-only protection of the FrugalFlow settings and journals against the assistant. `frugalflow doctor` then prints `isolation: isolated` instead of `isolation: cooperative`.
+
+## What harden does
+
+It writes into `~/.claude/settings.json` (or the folder given with `--claude-dir`):
+
+- `sandbox.enabled: true`, `sandbox.allowUnsandboxedCommands: false` (no escape from the sandbox), `sandbox.failIfUnavailable: true` (Bash fails when the sandbox cannot start, instead of running unsandboxed).
+- Every protected path into `sandbox.filesystem.denyWrite`: the FrugalFlow home, the two Claude Code settings files, the Claude Code folder's `hooks`, `skills`, `commands` and `agents` folders and its `CLAUDE.md`, and for each `--project DIR`: `DIR/vault/log.md`, the whole `DIR/.claude` folder (settings, hooks, skills, commands, agents), `DIR/.githooks`, `DIR/.git/hooks`, `DIR/.git/config`, `DIR/CLAUDE.md`, `DIR/CLAUDE.local.md`, every `CLAUDE.md` or `CLAUDE.local.md` that already exists under `DIR` (the walk skips `.git`, `node_modules` and hidden folders except `.claude`), and `DIR/.mcp.json`.
+- A `permissions.deny` rule `Edit(//path)` for each protected file and `Edit(//path/**)` for each protected folder: the file tools (Edit, Write, NotebookEdit) are refused on them too, not just Bash. For each `--project DIR` harden also writes the pattern rules `Edit(//DIR/**/CLAUDE.md)` and `Edit(//DIR/**/CLAUDE.local.md)`, which cover instruction files created later anywhere in the project.
+
+`--allow-instructions` leaves the `CLAUDE.md` and `CLAUDE.local.md` files out of the protected set — root, nested and pattern — for those who want the assistant to keep its own notes; harden then prints `NOTE: CLAUDE.md stays writable (--allow-instructions)`.
+
+Existing keys and rules are never removed, reordered or modified. The original settings.json is copied first to a dated `.before-frugalflow-` backup under `<home>/harden-backups/` (inside the protected home), and the exact list of additions — including the backup paths — is recorded in `<home>/harden.json`. A second run that changes nothing writes nothing and prints `ALREADY HARDENED`. Like `init`, harden refuses to run from inside a Claude Code session without a terminal: run it yourself. Restart Claude Code to apply.
+
+## What it does not do
+
+- The native sandbox covers **Bash only**. The file tools are protected by the `permissions.deny` rules harden writes, not by the sandbox.
+- Hooks and local MCP servers run **outside** the sandbox. The MCP server below uses exactly that: it is FrugalFlow's own writing path, not something the sandbox enforces.
+- The isolated mode is optional and never demanded: the doctor's isolation line is an INFO, never a FAIL.
+- An adversarial agent has attacked it (see Adversarial review below); an external auditor has not yet reviewed the design.
+- Native Windows is unsupported: the Claude Code sandbox needs macOS, Linux or WSL2. `harden` says so and exits; `doctor` prints `isolation: unsupported on native Windows`.
+
+## Adversarial review
+
+An adversarial agent (roadmap C3) attacked a repository hardened with `frugalflow harden`, trying roughly thirty write paths at the protected targets. The targets held: every write into the FrugalFlow home, the Claude Code settings and the protected project files was refused, and attempts to escape with `dangerouslyDisableSandbox` had no effect. Four deferred vectors did get through, and each is now closed:
+
+1. **A git hook planted for later.** The agent modified the project's `.githooks/pre-commit` through Bash. That hook runs at the user's next `git commit` — outside the sandbox, with the user's rights — where it could forge a receipt or a journal entry. Closed: `.githooks`, `.git/hooks` and `.git/config` of each `--project` are now protected.
+2. **Skills written into the project.** The Write tool created files under the project's `.claude/hooks`, `.claude/skills` and `.claude/commands` — a persistent injection into the next sessions. Closed: the whole `.claude` folder of each project is protected, as are the `hooks`, `skills`, `commands` and `agents` folders of the Claude Code folder.
+3. **The settings backup rewritten.** harden used to copy settings.json to `settings.json.before-frugalflow-*` next to the file itself, and that copy was writable: an attacker could rewrite the "original" settings. Closed: the copies now go to `<home>/harden-backups/`, inside the protected home.
+4. **Nested instructions.** Claude Code loads `CLAUDE.md` and `CLAUDE.local.md` at the project root *and* in every subfolder. harden protected only `DIR/CLAUDE.md`: the agent planted `DIR/CLAUDE.local.md` and `DIR/sub/CLAUDE.md` — an instruction read by the next session. Closed: `CLAUDE.local.md` at the root is protected like `CLAUDE.md`; every `CLAUDE.md` or `CLAUDE.local.md` that already exists under the project gets its own `denyWrite` entry and `Edit` rule; and the pattern rules `Edit(//DIR/**/CLAUDE.md)` and `Edit(//DIR/**/CLAUDE.local.md)` refuse the file tools anywhere in the project. Remaining limit: a `CLAUDE.md` created later in a brand-new subfolder by a shell command is not covered — `denyWrite` matches paths, not patterns; the file tools are covered by pattern.
+
+The closures above are covered by the test suite and were re-run live: an attacking agent on a local model, in a hardened project, tried each deferred target (git hooks and config, the project .claude folder, CLAUDE.md, CLAUDE.local.md, a nested CLAUDE.md, .mcp.json) by the file tools, by shell commands, through equivalent paths and git, and with dangerouslyDisableSandbox. None of the twelve targets changed; the same attack on an unhardened copy changed seventeen files. One agent, one run: an independent review is still welcome.
+
+What is not covered, by choice or by scope: vault pages other than `log.md` stay writable; and an attacker who controls the machine — who runs code as the user, outside every guard — is out of scope.
+
+## Receipts outside the sandbox
+
+In isolated mode, the assistant's Bash runs in the native sandbox: it can no longer write the vault journal or the delegation receipts — the protected paths are read-only to it. That is the point, but it leaves a problem: the journal entries and receipts still have to be written, and an assistant that cannot write them could also be an assistant that claims to have written them.
+
+`public/bin/mcp_server.py` is a local MCP server (JSON-RPC 2.0 over stdio, standard library only) that offers four tools: `journal_add`, `lint_brief`, `resume` and `delegate`. Hooks and local MCP servers run **outside** the sandbox, with the user's rights, so the server can do what the sandboxed Bash cannot: it launches the real tools (`journal_add.py`, `brief_check.py`, `resume_cmd.py`, `delegate.py`) and returns their output. The server writes nothing by itself — a journal entry exists only if `journal_add.py` verified the hash chain, a delegation receipt only if `delegate.py` wrote it. The assistant calls the tools; it cannot forge their result, because the verification happens in a process it does not control.
+
+The plugin registers the server through the repository's `.mcp.json`:
+
+```json
+{"mcpServers": {"frugalflow": {"command": "python3",
+  "args": ["-I", "${CLAUDE_PLUGIN_ROOT}/public/bin/mcp_server.py"]}}}
+```
+
+`frugalflow harden` also protects the delegation logs named by `<home>/guard.json` (resolved inside the home): a log kept outside the home folder gets its own `denyWrite` entry and `Edit` rule, so the assistant cannot append a receipt by hand either.
+
+Because the server itself runs outside the sandbox, it must never execute or write anything the agent chooses: over MCP the `delegate` tool accepts no `verify` command (the agent runs its own check in its sandboxed shell) and confines `out` to the project folder — never the FrugalFlow home, `.git`, `.githooks`, `.claude`, `vault`, `CLAUDE.md`, `CLAUDE.local.md`, a settings file, or a path listed in `harden.json`. The `journal_add` and `resume` tools confine their `vault` to the same project root (`CLAUDE_PROJECT_DIR`, else the server's working folder): an absolute vault outside it is refused, so the server cannot append a sealed entry to just any folder on the machine.
+
+What this changes: in isolated mode the writing path is a tool call the assistant makes, not a shell command it runs. What remains to be proven: an adverse review (roadmap C3) must attack this path — a forged `tools/call`, a tampered models file, a receipt written through a different tool — before the claim "a receipt cannot be forged" is worth printing anywhere else.
+
+## Taking it back
+
+```
+frugalflow harden --remove
+```
+
+`--remove` rereads `<home>/harden.json` and removes exactly what was added: the recorded list entries (including the git hooks, the project `.claude` folder and the `CLAUDE.md` paths), the three sandbox flags (restored to their previous values, or removed when harden created them), the empty containers. Settings that existed before harden come back identical, and `harden.json` is deleted. The dated backups stay in `<home>/harden-backups/`, in case you want to compare.

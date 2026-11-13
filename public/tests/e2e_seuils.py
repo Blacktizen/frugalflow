@@ -67,7 +67,8 @@ def setup_home(home):
         json.dump(cfg, f)
     with open(os.path.join(home, "delegations.jsonl"), "w", encoding="utf-8") as f:
         pass
-    prefs = {"schema_version": "1", "switch": {"enabled": True, "mode": "active"}}
+    # 2026-11-12: the code-receipt rule lives in orchestrator mode.
+    prefs = {"schema_version": "1", "switch": {"enabled": True, "mode": "orchestrator"}}
     with open(os.path.join(home, "preferences.json"), "w", encoding="utf-8") as f:
         json.dump(prefs, f)
 

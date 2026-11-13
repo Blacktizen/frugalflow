@@ -362,7 +362,9 @@ def _check_case_e():
 
 
 def _check_case_f():
-    """Case (f): observe mode, Bash write (tee) with no receipt -> observed:shell_write audit, allow."""
+    """Case (f): observe mode, Bash write (tee) with no receipt -> receipt_not_required audit, allow.
+    2026-11-12: outside orchestrator mode the receipt rule does not refuse, so the
+    audit keeps the trace under its own label instead of observed:shell_write."""
     home = tempfile.mkdtemp(dir="/tmp")
     try:
         _write_settings(home, "audit.jsonl", mode="observe")
@@ -384,19 +386,19 @@ def _check_case_f():
         if "permissionDecision" in stdout and "deny" in stdout:
             return False, f"FAIL case (f): unexpected deny in stdout: {stdout!r}"
 
-        # Check audit log has at least one line with audit starting with "observed:shell_write"
+        # Check audit log has at least one line with audit "receipt_not_required"
         audit_lines = _read_audit_lines(home, "audit.jsonl")
         found = False
         for line in audit_lines:
             audit_val = line.get("audit", "")
-            if audit_val.startswith("observed:shell_write"):
+            if audit_val == "receipt_not_required":
                 found = True
                 break
 
         if not found:
-            return False, f"FAIL case (f): no audit line with 'observed:shell_write' prefix, audit_lines={audit_lines}"
+            return False, f"FAIL case (f): no audit line with audit 'receipt_not_required', audit_lines={audit_lines}"
 
-        return True, "PASS case (f): observe, Bash write no receipt -> audit observed:shell_write, allow"
+        return True, "PASS case (f): observe, Bash write no receipt -> audit receipt_not_required, allow"
 
     finally:
         _cleanup_home(home)

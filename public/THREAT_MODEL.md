@@ -1,8 +1,11 @@
 # FrugalFlow threat model
 
-Draft of the security model for FrugalFlow, the tool that lets a paid coding assistant
-delegate bulky work (reading, writing code, triaging) to cheaper models, local or remote,
-without dropping the security bar. It is written for the operator who installs the guard.
+FrugalFlow is the tool that lets a paid coding assistant delegate bulky work (reading,
+writing code, triaging) to cheaper models, local or remote, without dropping the security
+bar. The guard is a safety net for a cooperative assistant: it catches the assistant
+forgetting the rules, skipping a delegation, overwriting a log, or turning a setting off.
+It is not a security boundary against a hostile agent: the hooks run as the same user as
+the assistant. This model is written for the operator who installs the guard.
 
 The guard works on one principle: it fails closed. A crashed check, a failed shell
 analysis, an unreadable delegation log, an unreadable write target — every doubt refuses,
@@ -15,7 +18,9 @@ This model covers what the guard protects:
 
 - **The project code.** Source files the operator works on. The guard refuses to write
   code that did not come from a recent, successful delegation. A receipt covers only its
-  exact file, and the content must match what was delegated.
+  exact file, and the content must match what was delegated. This receipt rule applies
+  only in orchestrator mode (`frugalflow mode orchestrator`); in the other armed modes a
+  bulky code write passes and the audit records it as `receipt_not_required`.
 - **The operator's secrets.** Environment variables and files outside the project. They
   are never sent to a model, and a verification check runs without sensitive variables.
 - **The guard's own logs.** The delegation log (`delegations.jsonl`, the receipts), the
@@ -88,6 +93,24 @@ chain.
 | An instruction injected into a note or a file that is read (prompt injection). | Read content is never an instruction; any write it would cause still passes through the guard. The reading gate never takes a page from `raw/`, reads `SCHEMA.md` only at the vault root, and skips lines hidden in YAML front matter, code blocks and comments. | `attaque_note_piegee` |
 | An unlogged refusal stops the tools from improving. | Every refusal writes its line: `block_log` appends the refused input, `exit_log` logs every non-zero exit. | `attack_refus_journalises`, E2E security suite |
 
+## Known bypass families
+
+Five successive adversarial reviews of the text guard (fixed in v0.1.3 to v0.1.7) found
+19, 12, 13, 3 and 5 bypasses. Each was fixed red then green, but the count does not
+converge: a rule on the text of a command cannot see what the command will do.
+
+- Case and Unicode folding of protected names on macOS (closed in v0.1.2).
+- Settings changed through an interpreter or a shell form instead of the frugalflow
+  command (v0.1.3, widened in v0.1.4).
+- Interpreter options placed before the script, and the startup files .pth,
+  sitecustomize.py, usercustomize.py (v0.1.4).
+- Git plumbing that rewrites a vault: read-tree, checkout-index, cherry-pick, revert,
+  am, stash apply, worktree add, git -C and --work-tree (v0.1.3 and v0.1.4).
+- A frugalflow command hidden behind a variable, a substitution, an alias, a link or
+  xargs (v0.1.5 and v0.1.6).
+- Eval bodies, python subprocess calls and git alias bodies (v0.1.7).
+- Protected files copied into a folder under another name (v0.1.5).
+
 ## Known limits
 
 - A script run as `python3 script.py` is not inspected: the guard judges the command and
@@ -102,6 +125,9 @@ chain.
   machine or the assistant's own process.
 - An agent without operating-system isolation can read everything its user can read: the guard
   gates writes, not reads.
+- In isolated mode, `denyWrite` matches paths, not patterns: a `CLAUDE.md` created later in a
+  brand-new subfolder of a hardened project by a shell command is not covered; the file tools
+  are covered by the `Edit(//DIR/**/CLAUDE.md)` pattern.
 
 ## Out of scope
 
@@ -112,9 +138,17 @@ not things the guard defends:
 - Compromise of the models themselves (their engines or their answers).
 - Compromise of a package repository or any dependency supply chain.
 
+## The text guard is frozen
+
+The text guard is frozen at v0.1.7: no new rule on command text will be added. The next
+layer is an isolated mode built on the native Claude Code sandbox, where FrugalFlow
+settings and the vault journal are not writable from inside the sandbox, and receipts are
+written by a process outside it. Until that mode ships and passes an external review,
+treat FrugalFlow as cooperative only.
+
 ## Status
 
-Draft, 2026-10-03.
+Reviewed 2026-11-12 for v0.1.7.
 
 Every row of the threats table points to a replayable attack. The attacks are rerun
 together before every commit of the project, with the end-to-end suites and

@@ -20,14 +20,30 @@ NAME_RULE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 COMMANDS = ("new-project", "nouveau-projet")   # lang-ok: French alias
 
 USAGE = (
+    "usage: frugalflow COMMAND [ARGS] | --notice | --autotest\n"
+    "  init [--mode observe|active|silent|orchestrator] [options]   (installs FrugalFlow; --here mounts it in this repository; starts in observe mode)\n"
+    "  resume [--vault DIR] [--entries N]   (prints the handoff for a new session)\n"
+    "  delegate --role ROLE --file BRIEF --out FILE [--verify CMD]   (sends a checked brief to a cheaper model)\n"
+    "  close [--vault DIR] [--repo DIR]   (the closing pass: checks the vault and says if the handoff is ready)\n"
+    "  doctor [options]   (one line per check)\n"
+    "  run COMMAND [ARGS]   (every other command: frugalflow help all)\n"
+    "  options: --home DIR --claude-dir DIR --ollama-url URL --lmstudio-url URL (any OpenAI-compatible server, with or without /v1)"
+)
+
+USAGE_ALL = (
     "usage: frugalflow.py COMMAND [ARGS] | --notice | --autotest\n"
     "  new-project NAME [--root DIR]   (creates DIR/NAME; DIR defaults to the current folder)\n"
-    "  init [--mode observe|active|silent] [--remove] [options]\n"
+    "  init [--mode observe|active|silent|orchestrator] [--remove] [options]\n"
+    "  init --here   (mounts the memory in the existing git repository of the current folder; global settings untouched)\n"
+    "  harden [--claude-dir DIR] [--home DIR] [--project DIR]... [--remove]   (the isolated mode: Bash runs in the native Claude Code sandbox, FrugalFlow settings and journals are read-only to the assistant; --remove takes it back)\n"
     "  scan [PATH] [--staged] [--rules FILE] [--quiet]   (finds secrets and private data in a folder or repo; exit 12 on a leak; needs no model)\n"
     "  setup [--yes] [--home DIR] [--claude-dir DIR] [--engine ENGINE] [--endpoint URL]   (guided: detects your engines, backs up, writes, runs doctor)\n"
     "  uninstall [--home DIR] [--claude-dir DIR] [--project-dir DIR]   (restores the backups made by setup)\n"
     "  resume [--vault DIR] [--entries N]   (prints a text to paste into a new session: where the project stands, open todos, recent decisions)\n"
+    "  delegate --role ROLE --file BRIEF --out FILE [--verify CMD]   (sends a checked brief to a cheaper model)\n"
+    "  close [--vault DIR] [--repo DIR]   (the closing pass: checks the vault and says if the handoff is ready)\n"
     "  run TOOL [ARGS]   (runs one tool of the installed package; the hooks call this, so they survive a move or a pipx install)\n"
+    "  run mcp_server   (the MCP server: journal_add, lint_brief, resume, delegate; it writes receipts and the journal outside the sandbox)\n"
     "  setup --layers [--home DIR] [--answer ROLE=MODEL_ID]...[--ollama-url URL] [--lmstudio-url URL]   (walks the layers, proposes the detected models first)\n"
     "  notes add-pitfall|show|check|merge|measure [--home DIR] [...]   (pitfalls and measures per model, each with its proof)\n"
     "  doctor [options]\n"
@@ -40,6 +56,18 @@ USAGE = (
     "  options: --home DIR --claude-dir DIR --ollama-url URL --lmstudio-url URL (any OpenAI-compatible server, with or without /v1)"
 )
 
+DELEGATE_USAGE = (
+    "usage: frugalflow delegate --role ROLE --file BRIEF --out FILE [--verify CMD] "
+    "[--tries N] [--trust LEVEL] [--models FILE] [--effort LEVEL] [--no-thinking] "
+    "[--bench] [--max-tokens N] [--brief-waiver REASON] [--verify-weak REASON] "
+    "[--verify-timeout SECONDS] | --notice"
+)
+
+# Commands that change a FrugalFlow setting: they never pass through run.
+SETTINGS_COMMANDS = ("init", "setup", "uninstall", "config", "on", "off", "mode", "display", "memory", "harden")
+# Commands that keep their full behavior behind run.
+DISPATCH_COMMANDS = COMMANDS + ("scan", "report", "lint", "notes", "resume", "doctor", "delegate", "close")
+
 NOTICE = (
     "NAME      frugalflow.py - the product entry point: new-project mounts a project, init installs FrugalFlow, doctor checks it, config, on, off, mode and display steer the switch and the screen.\n"
     "READS     COMMAND and its arguments; the subcommand it dispatches to; new-project reads NAME and --root (default: the current folder).\n"
@@ -50,6 +78,7 @@ NOTICE = (
     "          init wires the guard and the status line in the user settings, ~/.claude/settings.json.\n"
     "          2026-10-05 a newcomer read --root as the project folder and got DIR/NAME/NAME: the usage now says DIR/NAME.\n"
     "          2026-10-05 a project tool refused for weeks without a trace: new-project now lays the refusal log loop, the bench and the commit gate.\n"
+    "          2026-11-12 newcomers saw 17 commands; --help now shows five and run; the rest are listed by frugalflow help all.\n"
 )
 
 OWN_SETTINGS = "{\"permissions\": {}}\n"
@@ -121,12 +150,58 @@ def git_gate(project):
     return True
 
 
-def new_project(name, root):
-    """Mount a project: create vault via vault_new.py, lay the tools dir, the bench and the commit gate, then write Claude Code hooks.
+def append_ignore(ignore_path, wanted):
+    """Add the wanted lines to .gitignore, creating the file when missing; existing lines keep their place and order."""
+    if not os.path.exists(ignore_path):
+        with open(ignore_path, "w", encoding="utf-8") as handle:
+            handle.write("".join(line + "\n" for line in wanted))
+        return
+    with open(ignore_path, "r", encoding="utf-8") as handle:
+        content = handle.read()
+    present = set(content.splitlines())
+    missing = [line for line in wanted if line not in present]
+    if not missing:
+        return
+    with open(ignore_path, "a", encoding="utf-8") as handle:
+        if content and not content.endswith("\n"):
+            handle.write("\n")
+        handle.write("".join(line + "\n" for line in missing))
 
+
+def git_gate_existing(project):
+    """init --here: never git init, never change a core.hooksPath that already has a value. Return a note line, or None when the gate is active."""
+    if not shutil.which("git"):
+        return "COMMIT GATE NOT ACTIVE: git not found"
+    current = subprocess.run(
+        ["git", "-C", project, "config", "core.hooksPath"],
+        capture_output=True, text=True
+    )
+    value = current.stdout.strip()
+    if current.returncode == 0 and value:
+        return ("COMMIT GATE NOT ACTIVE: core.hooksPath is already set to " + value
+                + "; add .githooks/pre-commit to it by hand.")
+    subprocess.run(
+        ["git", "-C", project, "config", "core.hooksPath", ".githooks"],
+        capture_output=True, text=True
+    )
+    return None
+
+
+def mount_project(project, name, existing):
+    """Mount the FrugalFlow memory in a project folder: vault via vault_new.py, tools dir, bench, commit gate, Claude Code hooks, .gitignore.
+
+    existing=False: new-project, a folder made for FrugalFlow. existing=True: init --here, the current folder of an existing git repository; the global Claude Code settings are untouched and git init is never run.
     Returns (exit_code, list_of_lines_to_print).
     """
-    project = os.path.abspath(os.path.join(root, name))
+    vault = os.path.join(project, "vault")
+    if existing:
+        if not os.path.isdir(os.path.join(project, ".git")):
+            return (3, [
+                "NO GIT REPOSITORY: frugalflow init --here mounts FrugalFlow in an existing "
+                "git repository; for a new folder use frugalflow run new-project NAME."
+            ])
+        if os.path.exists(vault):
+            return (0, ["ALREADY MOUNTED: " + vault + " (nothing written). Next: frugalflow resume"])
     result = subprocess.run(
         [sys.executable, os.path.join(BIN, "vault_new.py"), "--root", project, "--name", name],
         capture_output=True, text=True
@@ -143,7 +218,9 @@ def new_project(name, root):
         with open(cases_path, "w", encoding="utf-8") as handle:
             handle.write("[]\n")
     gate_path = commit_gate(BIN, sys.executable, project)
-    git_found = git_gate(project)
+    gate_note = git_gate_existing(project) if existing else None
+    if not existing and not git_gate(project):
+        gate_note = "COMMIT GATE NOT ACTIVE: git not found"
     settings = os.path.join(project, ".claude", "settings.json")
     if os.path.isfile(settings):
         return (4, [
@@ -156,20 +233,31 @@ def new_project(name, root):
         handle.write(json.dumps(hooks_config(BIN, sys.executable, project), indent=2) + "\n")
     # The hooks hold this machine's paths: keep them out of commits, or the leak scan would stop the first one.
     ignore = os.path.join(project, ".gitignore")
-    if not os.path.exists(ignore):
+    if existing:
+        append_ignore(ignore, [".claude/settings.json", ".githooks/"])
+    elif not os.path.exists(ignore):
         with open(ignore, "w", encoding="utf-8") as handle:
             handle.write(".claude/settings.json\n.githooks/\n")
     lines = [
-        "PROJECT READY " + project,
-        "  vault  " + os.path.join(project, "vault"),
+        ("PROJECT MOUNTED " if existing else "PROJECT READY ") + project,
+        "  vault  " + vault,
         "  hooks  " + settings,
         "  tools  " + bin_dir,
         "  bench  " + cases_path,
         "  gate   " + gate_path
     ]
-    if not git_found:
-        lines.append("COMMIT GATE NOT ACTIVE: git not found")
+    if gate_note:
+        lines.append(gate_note)
+    if existing:
+        lines.append("Guard mode: observe until you run frugalflow mode active (nothing is blocked yet). "
+                     "At the end of a session: frugalflow close, then frugalflow resume.")
     return (0, lines)
+
+
+def new_project(name, root):
+    """Mount a project created from scratch: the shared mount, with the new-project behavior."""
+    project = os.path.abspath(os.path.join(root, name))
+    return mount_project(project, name, False)
 
 
 def run_autotest():
@@ -197,13 +285,19 @@ def run_autotest():
         if ok:
             with open(settings_path, "r", encoding="utf-8") as fh:
                 cfg = json.load(fh)
+            # The launcher writes the installed form when frugalflow is on PATH and the
+            # bin-folder form otherwise; names_tool recognizes both, so the autotest
+            # passes whether or not frugalflow is installed on this machine.
+            def hook_ok(event, index, tool, tail=None):
+                cmd = cfg["hooks"][event][0]["hooks"][index]["command"]
+                return launcher.names_tool(cmd, tool, BIN) and (tail is None or cmd.endswith(tail))
             ok = (
-                "r1_guard.py" in cfg["hooks"]["Stop"][0]["hooks"][1]["command"]
-                and cfg["hooks"]["Stop"][0]["hooks"][2]["command"].endswith("usage_report.py --hook")
-                and "session_log.py" in cfg["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+                hook_ok("Stop", 1, "r1_guard")
+                and hook_ok("Stop", 2, "usage_report", "--hook")
+                and hook_ok("PreToolUse", 0, "session_log")
                 and cfg["hooks"]["PreToolUse"][0]["matcher"] == "*"
-                and cfg["hooks"]["SessionStart"][0]["hooks"][1]["command"].endswith("session_summary.py --show")
-                and cfg["hooks"]["SessionEnd"][0]["hooks"][1]["command"].endswith("session_summary.py --record-hook")
+                and hook_ok("SessionStart", 1, "session_summary", "--show")
+                and hook_ok("SessionEnd", 1, "session_summary", "--record-hook")
             )
         detail = "rc=%d first=%r" % (proc.returncode, proc.stdout.splitlines()[0] if proc.stdout else "")
         results.append((1, ok, "exit 0 + PROJECT READY + vault/log.md + settings hooks verified", detail))
@@ -276,7 +370,7 @@ def run_autotest():
             and proc_notice.stdout.startswith("NAME      frugalflow.py")
             and proc_escape.returncode == 2
             and proc_bogus.returncode == 2
-            and "usage: frugalflow.py" in proc_bogus.stdout
+            and "usage: frugalflow" in proc_bogus.stdout
         )
         detail = "notice_rc=%d escape_rc=%d bogus_rc=%d" % (
             proc_notice.returncode, proc_escape.returncode, proc_bogus.returncode
@@ -366,7 +460,7 @@ def run_autotest():
             and "  gate   " + gate7 in proc.stdout
             and gate_content is not None
             and os.access(gate7, os.X_OK)
-            and "refusal_loop.py" in gate_content
+            and any(launcher.names_tool(line, "refusal_loop", BIN) for line in gate_content.splitlines())
             and "check --project" in gate_content
         )
         if ok:
@@ -374,7 +468,7 @@ def run_autotest():
                 cfg7 = json.load(fh)
             start_cmds = [h["command"] for group in cfg7["hooks"]["SessionStart"] for h in group["hooks"]]
             ok = any(
-                "refusal_loop.py" in cmd and "todo --project" in cmd and project7 in cmd
+                launcher.names_tool(cmd, "refusal_loop", BIN) and "todo --project" in cmd and project7 in cmd
                 for cmd in start_cmds
             )
         if ok and shutil.which("git"):
@@ -468,13 +562,40 @@ def main():
         sys.exit(2)
 
     if args[0] in ("--help", "-h", "help"):
-        sys.stdout.write(USAGE + "\n")
+        if len(args) > 1 and args[1] == "all":
+            sys.stdout.write(USAGE_ALL + "\n")
+        else:
+            sys.stdout.write(USAGE + "\n")
         sys.exit(0)
 
     command = args[0]
 
     # Check CLAUDECODE + TTY for setting-change commands (but allow --notice, --help, status, doctor)
-    _check_claudecode_tty(command, args[1:])
+    if command == "harden":
+        # harden changes Claude Code settings: the same refusal as init. claudecode_check
+        # lists the FrugalFlow setting commands; harden joins the check here.
+        _check_claudecode_tty("init", [])
+    else:
+        _check_claudecode_tty(command, args[1:])
+
+    if command == "run":
+        tool = args[1] if len(args) > 1 else ""
+        if tool in SETTINGS_COMMANDS:
+            sys.stdout.write("run does not change settings: type frugalflow " + tool + " yourself, in your own terminal.\n")
+            sys.exit(2)
+        if tool in DISPATCH_COMMANDS:
+            # run COMMAND behaves exactly like COMMAND itself, the CLAUDECODE check included.
+            command = tool
+            args = args[1:]
+            _check_claudecode_tty(command, args[1:])
+        else:
+            path = os.path.join(BIN, tool + ".py")
+            if not NAME_RULE.fullmatch(tool) or not os.path.isfile(path):
+                sys.stdout.write(USAGE + "\n")
+                sys.exit(2)
+            # -I: the tool runs isolated from the user site-packages, so a planted
+            # .pth file cannot run before it. Each tool puts its own folder on the path.
+            os.execv(sys.executable, [sys.executable, "-I", path] + args[2:])
 
     if command in COMMANDS:
         if len(args) < 2:
@@ -496,17 +617,23 @@ def main():
             print(line)
         sys.exit(code)
 
-    if command == "run":
-        tool = args[1] if len(args) > 1 else ""
-        path = os.path.join(BIN, tool + ".py")
-        if not NAME_RULE.fullmatch(tool) or not os.path.isfile(path):
-            sys.stdout.write(USAGE + "\n")
+    if command == "delegate":
+        rest = args[1:]
+        if not rest:
+            sys.stdout.write(DELEGATE_USAGE + "\n")
             sys.exit(2)
-        # -I: the tool runs isolated from the user site-packages, so a planted
-        # .pth file cannot run before it. Each tool puts its own folder on the path.
-        os.execv(sys.executable, [sys.executable, "-I", path] + args[2:])
+        # -I: same isolation as run; delegate.py puts its own folder on the path.
+        os.execv(sys.executable, [sys.executable, "-I", os.path.join(BIN, "delegate.py")] + rest)
 
-    if command in ("init", "doctor", "report", "lint", "setup", "scan", "uninstall", "resume"):
+    if command == "init" and "--here" in args[1:]:
+        # init --here: mount the memory in the current folder's git repository; other arguments are ignored.
+        project = os.getcwd()
+        code, lines = mount_project(project, os.path.basename(project), True)
+        for line in lines:
+            print(line)
+        sys.exit(code)
+
+    if command in ("init", "doctor", "report", "lint", "setup", "scan", "uninstall", "resume", "close", "harden"):
         rest = args[1:]
         if command == "setup" and "--layers" not in rest and "--answer" not in rest:
             command = "onboard"

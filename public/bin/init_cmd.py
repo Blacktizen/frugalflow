@@ -183,6 +183,72 @@ def _fetch_ollama_model(ollama_url):
     return None
 
 
+def write_home_files(home, mode, endpoint=None, model_id=None, quiet=False):
+    """Write the five settings files in home from the config examples, keeping an existing file.
+
+    Shared by init and by the plugin launcher (plugin_hook.py): the plugin seeds the home
+    once, in observe mode, without touching CLAUDE.md or any Claude Code settings.json.
+    With quiet=True the WROTE/KEPT lines are not printed (a hook must not pollute stdout).
+    """
+    def say(*parts):
+        if not quiet:
+            print(*parts)
+
+    config_dir = os.path.join(os.path.dirname(BIN), "config")
+    for name in ("models", "preferences", "guard", "anonymization", "model_notes"):
+        dest = os.path.join(home, name + ".json")
+        if os.path.exists(dest):
+            say("KEPT " + dest)
+            continue
+        example_path = os.path.join(config_dir, name + ".example.json")
+        with open(example_path, "r", encoding="utf-8", newline="") as f:
+            example_text = f.read()
+        doc = json.loads(example_text)
+        os.makedirs(home, exist_ok=True)
+        if name == "models":
+            lr_name = None
+            for m in doc["models"]:
+                if m.get("id") == "local-reader" and endpoint is not None:
+                    m["endpoint"] = endpoint
+                    if model_id is not None:
+                        m["name"] = model_id
+                    lr_name = m.get("name")
+            if endpoint is None:
+                text = example_text
+            else:
+                text = json.dumps(doc, indent=2, ensure_ascii=False) + "\n"
+            with open(dest, "w", encoding="utf-8", newline="") as f:
+                f.write(text)
+            say("WROTE " + dest)
+            if endpoint is not None:
+                say("SET local-reader endpoint " + endpoint + " model " + lr_name)
+            else:
+                say("UNSET local-reader: no local engine answered, edit " + dest)
+            for key in doc:
+                say("  " + key + ": " + KEY_HELP[name + ".json"][key])
+            continue
+        if name == "preferences":
+            doc["switch"] = {"enabled": True, "mode": mode}
+            text = json.dumps(doc, indent=2, ensure_ascii=False) + "\n"
+        elif name == "guard":
+            examples_dir = os.path.join(os.path.dirname(BIN), "examples")
+            doc["fix_hint"] = (
+                "Delegate it: copy " + examples_dir + "/brief_template.md to a task file, "
+                "describe the code there, then run: python3 " + BIN + "/delegate.py --role code "
+                "--file <task file> --out <file>. The delegation leaves the receipt that lets the write pass."
+                " Check the task file first: python3 " + BIN + "/frugalflow.py lint <task file>; "
+                "each refusal names the line to add. Never read FrugalFlow source code."
+            )
+            text = json.dumps(doc, indent=2, ensure_ascii=False) + "\n"
+        else:
+            text = example_text
+        with open(dest, "w", encoding="utf-8", newline="") as f:
+            f.write(text)
+        say("WROTE " + dest)
+        for key in doc:
+            say("  " + key + ": " + KEY_HELP[name + ".json"][key])
+
+
 def _init(mode, home, claude_dir, ollama_url, lmstudio_url):
     ollama_url = _normalize_url(ollama_url)
     lmstudio_url = _normalize_url(lmstudio_url)
@@ -218,68 +284,16 @@ def _init(mode, home, claude_dir, ollama_url, lmstudio_url):
     ollama_found = any(f["kind"] == "ollama" for f in findings)
 
     # Step 4: the five settings files in --home.
-    config_dir = os.path.join(os.path.dirname(BIN), "config")
-    for name in ("models", "preferences", "guard", "anonymization", "model_notes"):
-        dest = os.path.join(home, name + ".json")
-        if os.path.exists(dest):
-            print("KEPT " + dest)
-            continue
-        example_path = os.path.join(config_dir, name + ".example.json")
-        with open(example_path, "r", encoding="utf-8", newline="") as f:
-            example_text = f.read()
-        doc = json.loads(example_text)
-        os.makedirs(home, exist_ok=True)
-        if name == "models":
-            if lmstudio_found:
-                endpoint = lmstudio_url + "/v1"
-                model_id = _fetch_local_model(lmstudio_url)
-            elif ollama_found:
-                endpoint = ollama_url + "/v1"
-                model_id = _fetch_ollama_model(ollama_url)
-            else:
-                endpoint = None
-                model_id = None
-            lr_name = None
-            for m in doc["models"]:
-                if m.get("id") == "local-reader" and endpoint is not None:
-                    m["endpoint"] = endpoint
-                    if model_id is not None:
-                        m["name"] = model_id
-                    lr_name = m.get("name")
-            if endpoint is None:
-                text = example_text
-            else:
-                text = json.dumps(doc, indent=2, ensure_ascii=False) + "\n"
-            with open(dest, "w", encoding="utf-8", newline="") as f:
-                f.write(text)
-            print("WROTE " + dest)
-            if endpoint is not None:
-                print("SET local-reader endpoint " + endpoint + " model " + lr_name)
-            else:
-                print("UNSET local-reader: no local engine answered, edit " + dest)
-            for key in doc:
-                print("  " + key + ": " + KEY_HELP[name + ".json"][key])
-            continue
-        if name == "preferences":
-            doc["switch"] = {"enabled": True, "mode": mode}
-            text = json.dumps(doc, indent=2, ensure_ascii=False) + "\n"
-        elif name == "guard":
-            examples_dir = os.path.join(os.path.dirname(BIN), "examples")
-            doc["fix_hint"] = (
-                "Delegate it: copy " + examples_dir + "/brief_template.md to a task file, "
-                "describe the code there, then run: python3 " + BIN + "/delegate.py --role code "
-                "--file <task file> --out <file>. The delegation leaves the receipt that lets the write pass."
-                " Check the task file first: python3 " + BIN + "/frugalflow.py lint <task file>; "
-                "each refusal names the line to add. Never read FrugalFlow source code."
-            )
-            text = json.dumps(doc, indent=2, ensure_ascii=False) + "\n"
-        else:
-            text = example_text
-        with open(dest, "w", encoding="utf-8", newline="") as f:
-            f.write(text)
-        print("WROTE " + dest)
-        for key in doc:
-            print("  " + key + ": " + KEY_HELP[name + ".json"][key])
+    if lmstudio_found:
+        endpoint = lmstudio_url + "/v1"
+        model_id = _fetch_local_model(lmstudio_url)
+    elif ollama_found:
+        endpoint = ollama_url + "/v1"
+        model_id = _fetch_ollama_model(ollama_url)
+    else:
+        endpoint = None
+        model_id = None
+    write_home_files(home, mode, endpoint, model_id)
 
     # Step 5: write the CLAUDE.md block.
     if new_claude == claude_raw:

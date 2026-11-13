@@ -5,7 +5,7 @@ its licence next to it; an idea rewritten here was proven by a test seen red.
 
 | Idea | From | Where it lives here |
 |---|---|---|
-| Secret detection rules, **reused as is** (439 of 463 rules; `generic-` rules and patterns Python refuses are left out) | **Zachary Rice**, [`betterleaks/betterleaks`](https://github.com/betterleaks/betterleaks), MIT (`data/BETTERLEAKS_LICENSE`) | `data/betterleaks_rules.json`, rebuilt by `bin/import_betterleaks.py`, loaded by `bin/anon_rules.py` |
+| Secret detection rules, **reused as is** (439 of 463 rules; `generic-` rules and patterns Python refuses are left out) | **Zachary Rice**, [`betterleaks/betterleaks`](https://github.com/betterleaks/betterleaks), MIT (`data/BETTERLEAKS_LICENSE`) | `data/betterleaks_rules.json`, rebuilt by `dev/bin/import_betterleaks.py`, loaded by `bin/anon_rules.py` |
 | A leak detector is proven on planted fixtures **before** it is trusted on the repository | `mpommrehn/agent-delegation-kit`, `tests/run-tests.sh` | `tests/e2e_anonymizer.py`, test 1: ten planted leaks, each must be found, then the rules are disarmed and the private ones must disappear |
 
 ## Ideas taken, rewritten (no code copied)

@@ -4,7 +4,7 @@ import subprocess
 
 TRUST = ["private", "trusted_third_party", "untrusted_third_party"]
 
-MODES = ("observe", "active", "silent")
+MODES = ("observe", "active", "silent", "orchestrator")
 
 KEYS = [
     ("verbosity", "final_answer_words", "count"),
@@ -55,7 +55,7 @@ def _check_switch(doc):
     if "mode" not in switch:
         errors.append("switch.mode is missing")
     elif switch["mode"] not in MODES:
-        errors.append("switch.mode must be one of observe, active, silent")
+        errors.append("switch.mode must be one of observe, active, silent, orchestrator")
     return errors
 
 
@@ -300,7 +300,7 @@ def _autotest():
     BAD_SWITCH3 = dict(PREFS)
     BAD_SWITCH3["switch"] = None
     PROJECT_SWITCH = {"schema_version": "1", "switch": {"enabled": False, "mode": "silent"}}
-    expected6a = ["unknown key switch.extra", "switch.enabled must be true or false", "switch.mode must be one of observe, active, silent"]
+    expected6a = ["unknown key switch.extra", "switch.enabled must be true or false", "switch.mode must be one of observe, active, silent, orchestrator"]
     got6a = validate_preferences(BAD_SWITCH)
     r6 = (validate_preferences(PREFS_SWITCH) == []
           and got6a == expected6a

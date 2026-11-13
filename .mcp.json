@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "frugalflow": {
+      "command": "python3",
+      "args": ["-I", "${CLAUDE_PLUGIN_ROOT}/public/bin/mcp_server.py"]
+    }
+  }
+}

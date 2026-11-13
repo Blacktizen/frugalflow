@@ -1,0 +1,7 @@
+# Exact values this repository declares public. The frugalflow scan sets a finding
+# aside only when the text it recognized sits entirely inside an occurrence of one
+# of these lines, on the same line; the same value elsewhere is still a leak.
+# The repository URL, as listed in pyproject.toml (Homepage), without the https:// prefix.
+github.com/Blacktizen/frugalflow
+# The marketplace short form used by /plugin marketplace add.
+Blacktizen/frugalflow

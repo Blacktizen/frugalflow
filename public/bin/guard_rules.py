@@ -82,7 +82,7 @@ def code_line_count(path, content):
     return len(content.splitlines())
 
 
-def decide(tool_name, tool_input, config, records, checks=(), judge=None, now=None, audit_records=()):
+def decide(tool_name, tool_input, config, records, checks=(), judge=None, now=None, audit_records=(), require_receipt=True):
     if judge is None:
         judge = shell_rules.judge_command
     if now is None:
@@ -111,6 +111,10 @@ def decide(tool_name, tool_input, config, records, checks=(), judge=None, now=No
             return result("deny", "shell_failed", [], f"Command refused: the shell analysis failed ({e}). To fix: split the command into simpler commands.")
         if r["verdict"] == "free":
             return result("allow", None, [], "")
+        if not require_receipt:
+            # Outside orchestrator mode the receipt rule does not apply: the
+            # shell write is allowed, and the audit keeps the trace.
+            return result("allow", "receipt_not_required", r["targets"], "")
         if records is None:
             return result("deny", "log_unreadable", r["targets"], LOG_UNREADABLE)
         if r["verdict"] == "unknown":
@@ -148,6 +152,13 @@ def decide(tool_name, tool_input, config, records, checks=(), judge=None, now=No
 
         lines = code_line_count(path, content)
         size = len(content.encode("utf-8"))
+
+        if not require_receipt:
+            # Outside orchestrator mode the receipt rule does not apply: the
+            # code write is allowed, and the audit keeps the trace.
+            r = result("allow", "receipt_not_required", [path], "")
+            r["lines"] = lines
+            return r
 
         if lines <= line_threshold and size <= byte_threshold:
             # Small path
@@ -210,7 +221,7 @@ def decide(tool_name, tool_input, config, records, checks=(), judge=None, now=No
             r["lines"] = lines
             return r
         elif v == "no_receipt":
-            r = result("deny", "no_receipt", [path], f"Code write refused: {lines} lines in {path}, and no recent successful delegation for this file. To fix: {hint}")
+            r = result("deny", "no_receipt", [path], f"Code write refused: {lines} lines in {path}, and no recent delegation receipt for this file. To fix: {hint}")
             r["lines"] = lines
             return r
         elif v == "no_fingerprint":

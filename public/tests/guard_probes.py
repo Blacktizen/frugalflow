@@ -35,6 +35,10 @@ def run_probe(settings, probe):
         with open(os.path.join(h, "delegations.jsonl"), "w", encoding="utf-8") as f:
             for r in subst(probe["log"], h, now):
                 f.write(json.dumps(r) + "\n")
+        # 2026-11-12: the code-receipt rule lives in orchestrator mode; the
+        # probes were written against the old default (active) and run armed.
+        with open(os.path.join(h, "preferences.json"), "w", encoding="utf-8") as f:
+            f.write('{"schema_version": "1", "switch": {"enabled": true, "mode": "orchestrator"}}')
         env = dict(os.environ)
         env["FRUGALFLOW_HOME"] = h
         call = subst(probe["call"], h, now)

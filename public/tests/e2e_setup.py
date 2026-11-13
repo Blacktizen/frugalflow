@@ -108,7 +108,7 @@ def _step3(tmp):
 
 def _step4(tmp):
     home, claude = make_env(tmp, "s4")
-    if ff(tmp, home, claude, "init", "--mode", "active").returncode != 0:
+    if ff(tmp, home, claude, "init", "--mode", "orchestrator").returncode != 0:
         return False
     call = {"file_path": "/w/big.py", "content": CONTENT}
     if ff(tmp, home, claude, "off").returncode != 0:

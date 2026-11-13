@@ -2,6 +2,8 @@
 
 FrugalFlow's code is useful, but the rarest thing in this repository is the way of working behind it. Each principle below is something we learned by being wrong, each one is enforced by a tool in `public/bin/` where a tool can enforce it, and each comes with a neutral example you can transpose to any project that puts AI models in the loop.
 
+Each principle is also a Claude Code skill: install the plugin (/plugin marketplace add Blacktizen/frugalflow, then /plugin install frugalflow@frugalflow) and the ten skills come with it.
+
 ## 1. A false refusal is a defect, exactly like a hole
 
 A guard can fail in two directions: it lets something bad through (a hole), or it blocks something good (a false refusal). Teams count holes and shrug at false refusals, because a refusal feels safe. It is not. An operator who meets wrong refusals learns to work around the guard, and then the guard protects nothing.

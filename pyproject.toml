@@ -4,20 +4,23 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "frugalflow"
-version = "0.1.7"
-description = "A memory per project for your AI coding assistant, and guards that stop the waste before it is billed. Standard library only."
-readme = "README.md"
+version = "0.2.0"
+description = "Project memory your coding agent can't skip: a vault, a reading gate and a sealed journal for Claude Code. Standard library only."
+readme = "docs/PYPI_README.md"
 requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE"]
-keywords = ["memory", "claude-code", "llm", "delegation", "guardrails", "secrets", "anonymization"]
+keywords = ["claude-code", "agent-memory", "hooks", "guardrails", "local-llm", "memory", "delegation"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Environment :: Console",
   "Intended Audience :: Developers",
+  "Operating System :: MacOS",
+  "Operating System :: POSIX :: Linux",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Topic :: Software Development :: Quality Assurance",
 ]
 dependencies = []
@@ -25,6 +28,9 @@ dependencies = []
 [project.urls]
 Homepage = "https://github.com/Blacktizen/frugalflow"
 Issues = "https://github.com/Blacktizen/frugalflow/issues"
+Changelog = "https://github.com/Blacktizen/frugalflow/blob/main/CHANGELOG.md"
+Security = "https://github.com/Blacktizen/frugalflow/blob/main/SECURITY.md"
+Documentation = "https://github.com/Blacktizen/frugalflow/blob/main/docs/INSTALL.md"
 
 [project.scripts]
 frugalflow = "frugalflow_app.bin.frugalflow:entry"

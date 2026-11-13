@@ -16,7 +16,8 @@ import xml.etree.ElementTree
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import demo_svg
 
-FRUGAL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frugalflow.py")
+FRUGAL = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                      "public", "bin", "frugalflow.py")
 
 USAGE = "usage: demo_record.py --out FILE | --notice | --autotest"
 

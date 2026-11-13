@@ -65,9 +65,12 @@ def join_halves(pairs):
 SUBSTRINGS = join_halves(_SUBSTRINGS_HALVES)
 WORDS = join_halves(_WORDS_HALVES)
 
+# The repo URL is split in halves too, so this file passes its own scan.
+REPO_URL = join_halves([("Black", "tizen/frugalflow")])[0]
+
 
 def find_forbidden(text):
-    t = text.replace("Blacktizen/frugalflow", "").lower()
+    t = text.replace(REPO_URL, "").lower()
     for s in SUBSTRINGS:
         if s in t:
             return True
@@ -201,6 +204,10 @@ def test3():
             fh.write(guard_fixture)
         with open(os.path.join(home3, "log.jsonl"), "w", encoding="utf-8") as fh:
             fh.write("")
+        # 2026-11-12: the code-receipt rule lives in orchestrator mode; the
+        # threshold cases below need it armed.
+        with open(os.path.join(home3, "preferences.json"), "w", encoding="utf-8") as fh:
+            fh.write('{"schema_version": "1", "switch": {"enabled": true, "mode": "orchestrator"}}')
 
         big_lines = "".join("line\n" for _ in range(120))
         with open(os.path.join(home3, "big.txt"), "w", encoding="utf-8") as fh:
