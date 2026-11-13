@@ -20,7 +20,8 @@ NOTICE = (
     "EXAMPLE   python3 mcp_server.py   (the plugin registers it in .mcp.json; the client talks to it over stdio)\n"
     "PITFALLS  2026-11-13 inside the sandbox Bash can no longer write the journal or the receipts: this server runs with the user's rights outside the sandbox, so a receipt written through a tool cannot be forged by the assistant.\n"
     "          2026-11-13 stdout carries JSON responses only: one stray print breaks the client's stream; debug lines go to stderr.\n"
-    "          2026-11-13 delegate over MCP ran the verify command and wrote out anywhere outside the sandbox; verify is refused and out is confined to the project."
+    "          2026-11-13 delegate over MCP ran the verify command and wrote out anywhere outside the sandbox; verify is refused and out is confined to the project.\n"
+    "          2026-11-13 Claude Code loads CLAUDE.md and CLAUDE.local.md as instructions at any depth: an out whose base name is either one is refused."
 )
 
 BIN = os.path.dirname(os.path.abspath(__file__))
@@ -30,7 +31,7 @@ DEFAULT_PROTOCOL = "2025-06-18"
 # inside the project, and no component of a request is ever run as a command.
 WORK_ROOT = os.path.realpath(os.getcwd())
 PROTECTED_COMPONENTS = {".git", ".githooks", ".claude", "vault"}
-PROTECTED_NAMES = {"CLAUDE.md", ".mcp.json", "settings.json", "settings.local.json"}
+PROTECTED_NAMES = {"CLAUDE.md", "CLAUDE.local.md", ".mcp.json", "settings.json", "settings.local.json"}
 
 
 def server_version():

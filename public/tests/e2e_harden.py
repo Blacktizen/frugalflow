@@ -19,13 +19,14 @@ USAGE = "usage: e2e_harden.py | --notice\n"
 NOTICE = (
     "NAME      e2e_harden.py - end-to-end test: runs frugalflow.py harden and frugalflow.py doctor against a disposable claude dir and home, in subprocesses.\n"
     "READS     the tools in ../bin, frugalflow.py, harden_cmd.py, doctor_cmd.py.\n"
-    "WRITES    only a temporary folder, always removed, even on failure: a disposable HOME, a claude dir holding one settings.json, a FrugalFlow home, one project folder. Exit 0 all twelve steps pass, 1 a step failed, 2 usage.\n"
+    "WRITES    only a temporary folder, always removed, even on failure: a disposable HOME, a claude dir holding one settings.json, a FrugalFlow home, one project folder. Exit 0 all fourteen steps pass, 1 a step failed, 2 usage.\n"
     "EXAMPLE   python3 e2e_harden.py\n"
     "PITFALLS  2026-11-13 the subprocesses get CLAUDECODE dropped: harden refuses without a terminal, and this test must run inside a Claude Code session too.\n"
     "          2026-11-13 doctor may exit 1 here (the home holds no models.json): the isolation line is INFO, so the steps check the line, never the exit code.\n"
     "          2026-11-13 --remove must give back the original JSON object, not a rewritten one: the step compares objects, and a leftover key fails step 5.\n"
     "          2026-11-13 guard.json can name a delegation log outside the home: harden protects it too (step 9), and a log inside the home adds no extra entry — the home rule already covers it.\n"
     "          2026-11-13 the settings copies go to <home>/harden-backups/, never next to settings.json: the copy beside the settings was itself a writable target (adversarial review); step 12 checks the location and the harden.json list.\n"
+    "          2026-11-13 Claude Code loads CLAUDE.local.md at the root and CLAUDE.md/CLAUDE.local.md of subfolders: step 13 checks they are protected (existing files literally, later files through the /** pattern rules), step 14 checks --allow-instructions leaves every one of them free.\n"
 )
 
 ORIG = {"model": "x", "permissions": {"deny": ["Bash(rm:*)"]}}
@@ -336,6 +337,74 @@ def _step12(env, tmp, home, claude, settings_path):
     return ok, expected, got
 
 
+def _step13(env, tmp, home, claude, settings_path, proj):
+    with open(settings_path, "w", encoding="utf-8") as handle:
+        json.dump(ORIG, handle, indent=2)
+    os.makedirs(os.path.join(proj, "sub"), exist_ok=True)
+    with open(os.path.join(proj, "sub", "CLAUDE.md"), "w", encoding="utf-8") as handle:
+        handle.write("planted instruction\n")
+    proc = run_frugalflow(env, tmp, "harden", "--claude-dir", claude, "--home", home, "--project", proj)
+    expected = ("harden --project PROJ protects PROJ/CLAUDE.local.md and the existing "
+                "PROJ/sub/CLAUDE.md (denyWrite plus the literal Edit rule), writes the "
+                "pattern rules Edit(//PROJ/**/CLAUDE.md) and Edit(//PROJ/**/CLAUDE.local.md) "
+                "and prints the Limit line; --remove gives back the original settings.json")
+    got = "code=" + str(proc.returncode)
+    if proc.returncode != 0:
+        got += " out=" + repr(proc.stdout.splitlines()[:2])
+        return False, expected, got
+    doc = read_settings(settings_path)
+    deny_write = doc.get("sandbox", {}).get("filesystem", {}).get("denyWrite", [])
+    deny = doc.get("permissions", {}).get("deny", [])
+    want = [(os.path.join(proj, "CLAUDE.local.md"), False),
+            (os.path.join(proj, "sub", "CLAUDE.md"), False)]
+    missing = [p for p, is_dir in want if not covered(deny_write, deny, p, is_dir)]
+    pl = proj.lstrip("/")
+    patterns = ["Edit(//" + pl + "/**/CLAUDE.md)", "Edit(//" + pl + "/**/CLAUDE.local.md)"]
+    missing_patterns = [r for r in patterns if r not in deny]
+    limit = ("Limit: a CLAUDE.md created later in a new subfolder by a shell command "
+             "is not covered (the sandbox matches paths, not patterns); the file "
+             "tools are covered by pattern.") in proc.stdout
+    proc2 = run_frugalflow(env, tmp, "harden", "--claude-dir", claude, "--home", home, "--remove")
+    doc2 = read_settings(settings_path)
+    ok = (not missing and not missing_patterns and limit
+          and proc2.returncode == 0 and doc2 == ORIG)
+    got = ("code=0 missing=" + repr(missing) + " missing_patterns=" + repr(missing_patterns)
+           + " limit_line=" + str(limit)
+           + " remove_code=" + str(proc2.returncode) + " settings_back=" + str(doc2 == ORIG))
+    return ok, expected, got
+
+
+def _step14(env, tmp, home, claude, settings_path, proj):
+    with open(settings_path, "w", encoding="utf-8") as handle:
+        json.dump(ORIG, handle, indent=2)
+    # PROJ/sub/CLAUDE.md exists since step 13: --allow-instructions must not protect it either.
+    proc = run_frugalflow(env, tmp, "harden", "--claude-dir", claude, "--home", home,
+                          "--project", proj, "--allow-instructions")
+    expected = ("harden --allow-instructions protects no CLAUDE.md or CLAUDE.local.md path "
+                "and writes no rule naming them (root files, the subfolder file created "
+                "before harden, the pattern rules), while PROJ/.githooks stays protected; "
+                "--remove is exact")
+    got = "code=" + str(proc.returncode)
+    if proc.returncode != 0:
+        got += " out=" + repr(proc.stdout.splitlines()[:2])
+        return False, expected, got
+    doc = read_settings(settings_path)
+    deny_write = doc.get("sandbox", {}).get("filesystem", {}).get("denyWrite", [])
+    deny = doc.get("permissions", {}).get("deny", [])
+    free = (not any("CLAUDE" in p for p in deny_write)
+            and not any("CLAUDE" in d for d in deny))
+    holds = (free
+             and covered(deny_write, deny, os.path.join(proj, ".githooks"), True)
+             and "NOTE: CLAUDE.md stays writable (--allow-instructions)" in proc.stdout)
+    proc2 = run_frugalflow(env, tmp, "harden", "--claude-dir", claude, "--home", home, "--remove")
+    doc2 = read_settings(settings_path)
+    ok = holds and proc2.returncode == 0 and doc2 == ORIG
+    got = ("code=0 claude_free=" + str(free)
+           + " githooks=" + str(covered(deny_write, deny, os.path.join(proj, ".githooks"), True))
+           + " remove_code=" + str(proc2.returncode) + " settings_back=" + str(doc2 == ORIG))
+    return ok, expected, got
+
+
 def main_run():
     tmp = tempfile.mkdtemp()
     try:
@@ -362,6 +431,8 @@ def main_run():
             lambda: _step10(env, tmp, home, claude, settings_path, proj),
             lambda: _step11(env, tmp, home, claude, settings_path, proj),
             lambda: _step12(env, tmp, home, claude, settings_path),
+            lambda: _step13(env, tmp, home, claude, settings_path, proj),
+            lambda: _step14(env, tmp, home, claude, settings_path, proj),
         ]
         results = []
         for num, fn in enumerate(fns, start=1):

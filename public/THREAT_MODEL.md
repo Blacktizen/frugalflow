@@ -125,6 +125,9 @@ converge: a rule on the text of a command cannot see what the command will do.
   machine or the assistant's own process.
 - An agent without operating-system isolation can read everything its user can read: the guard
   gates writes, not reads.
+- In isolated mode, `denyWrite` matches paths, not patterns: a `CLAUDE.md` created later in a
+  brand-new subfolder of a hardened project by a shell command is not covered; the file tools
+  are covered by the `Edit(//DIR/**/CLAUDE.md)` pattern.
 
 ## Out of scope
 

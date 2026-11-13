@@ -23,12 +23,13 @@ USAGE = "usage: e2e_mcp_server.py | --notice\n"
 NOTICE = (
     "NAME      e2e_mcp_server.py - end-to-end test: drives the MCP server over stdio in a subprocess, with a disposable HOME and FRUGALFLOW_HOME and a fake local engine.\n"
     "READS     the tools in ../bin (mcp_server.py, vault_new.py, vault_check.py); everything else lives in temporary folders.\n"
-    "WRITES    only a temporary folder, always removed, even on failure: a vault, a models.json, brief rules, one out file, one delegation log, one harden.json. Exit 0 all fourteen steps pass, 1 a step failed, 2 usage.\n"
+    "WRITES    only a temporary folder, always removed, even on failure: a vault, a models.json, brief rules, one out file, one delegation log, one harden.json. Exit 0 all fifteen steps pass, 1 a step failed, 2 usage.\n"
     "EXAMPLE   python3 e2e_mcp_server.py\n"
     "PITFALLS  2026-11-13 the delegate tool takes no trust argument, so the route lands on trust private: the models.json must declare a local model, and the fake engine must answer the card probe (GET /api/v0/models) and the sampling call (POST /v1/chat/completions).\n"
     "          2026-11-13 the card probe POSTs 'Reply with 1.' before the delegation call: a queue that answers every POST in order hands the probe the queued answer and the delegation gets none.\n"
     "          2026-11-13 the receipt is proof: the delegation log line must exist in the disposable FRUGALFLOW_HOME after the tools/call, written by delegate.py itself, not by the server.\n"
     "          2026-11-13 the server confines out to its working folder (its cwd), so the server runs with cwd=work and every refused out path is checked for absence: a refusal that wrote the file is not a refusal.\n"
+    "          2026-11-13 out is refused by base name at any depth: CLAUDE.local.md in a subfolder is refused like CLAUDE.md at the root — Claude Code loads both as instructions.\n"
 )
 
 RULES = {"limits": {}, "rules": [{"id": "N1", "title": "no nature",
@@ -169,6 +170,9 @@ def run_e2e():
                       "out": os.path.join(protected_dir, "answer.py")}),
             call(14, {"role": "code", "brief": BRIEF, "out": "answer/relative.py"}),
             call(15, {"role": "code", "brief": BRIEF, "out": out_path}),
+            call(16, {"role": "code", "brief": BRIEF, "out": os.path.join(work, "CLAUDE.local.md")}),
+            call(17, {"role": "code", "brief": BRIEF,
+                      "out": os.path.join(work, "sub", "CLAUDE.local.md")}),
         ]
 
         proc = subprocess.Popen([sys.executable, "-I", SERVER],
@@ -303,6 +307,13 @@ def run_e2e():
         step(12, "out outside the working folder refused: isError True, file absent", s12)
         step(13, "out covered by a harden.json protected path refused: isError True, file absent", s13)
         step(14, "delegate with out inside the working folder: isError False, out file written, one receipt line status success in the delegation log", s14)
+
+        def s15():
+            ok_a, got_a = refused(16, os.path.join(work, "CLAUDE.local.md"))
+            ok_b, got_b = refused(17, os.path.join(work, "sub", "CLAUDE.local.md"))
+            return ok_a and ok_b, "root=" + got_a + " nested=" + got_b
+
+        step(15, "out named CLAUDE.local.md refused at the root and in a subfolder: isError True, file absent", s15)
 
         if stderr.strip():
             sys.stderr.write(stderr)

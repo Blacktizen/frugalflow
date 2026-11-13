@@ -26,6 +26,7 @@ NOTICE = (
     "          2026-11-13 hooks and local MCP servers run outside the sandbox with the user's rights: harden protects the files, not the hooks.\n"
     "          2026-11-13 nothing is removed that harden.json did not record: settings that existed before stay untouched, and a rerun that adds nothing writes zero bytes.\n"
     "          2026-11-13 an adversarial review planted a git pre-commit hook that the user would run later outside the sandbox, and skills through the Write tool; harden now locks .githooks, .git/hooks, .git/config, .claude and CLAUDE.md of each project.\n"
+    "          2026-11-13 Claude Code also loads CLAUDE.local.md at the project root and the CLAUDE.md and CLAUDE.local.md of its subfolders: harden protects them too — every instruction file that already exists under the project gets its own rule, and the Edit(//.../**/CLAUDE.md) patterns cover the file tools for files created later; a shell command creating a CLAUDE.md in a brand-new subfolder is not covered by the sandbox, which matches paths, not patterns.\n"
 )
 
 # The three sandbox booleans harden sets, and the values it sets them to.
@@ -66,11 +67,39 @@ def _delegation_logs(home):
     return out
 
 
+def _instruction_files(project):
+    """CLAUDE.md and CLAUDE.local.md files that already exist under the project.
+    Claude Code loads those nested instruction files as instructions too, so each
+    one gets its own literal protection. The walk skips .git, node_modules and
+    hidden folders, except .claude."""
+    found = []
+    for root, dirs, files in os.walk(project):
+        dirs[:] = sorted(d for d in dirs
+                         if d not in (".git", "node_modules")
+                         and (not d.startswith(".") or d == ".claude"))
+        for name in files:
+            if name in ("CLAUDE.md", "CLAUDE.local.md"):
+                found.append(os.path.join(root, name))
+    return found
+
+
+def _instruction_pattern_rules(projects):
+    """The two permission rules per project that cover the file tools for any
+    instruction file anywhere under it, including one created after harden:
+    permission rules take patterns, the sandbox's denyWrite does not."""
+    rules = []
+    for project in projects:
+        rules.append("Edit(//" + project.lstrip("/") + "/**/CLAUDE.md)")
+        rules.append("Edit(//" + project.lstrip("/") + "/**/CLAUDE.local.md)")
+    return rules
+
+
 def _protected_paths(home, claude_dir, projects, allow_instructions):
     """Every path the isolated mode keeps read-only to the assistant, as
     (path, is_dir), in order, no duplicate path. A folder gets the Edit(//.../**)
-    rule, a file the plain Edit(//...) rule. --allow-instructions leaves the two
-    CLAUDE.md files out: the assistant may keep its own notes there."""
+    rule, a file the plain Edit(//...) rule. --allow-instructions leaves the
+    CLAUDE.md and CLAUDE.local.md files out: the assistant may keep its own notes
+    there."""
     paths = [(home, True),
              (os.path.join(claude_dir, "settings.json"), False),
              (os.path.join(claude_dir, "settings.local.json"), False),
@@ -92,6 +121,8 @@ def _protected_paths(home, claude_dir, projects, allow_instructions):
                   (os.path.join(project, ".mcp.json"), False)]
         if not allow_instructions:
             paths.append((os.path.join(project, "CLAUDE.md"), False))
+            paths.append((os.path.join(project, "CLAUDE.local.md"), False))
+            paths += [(path, False) for path in _instruction_files(project)]
     out = []
     seen = set()
     for path, is_dir in paths:
@@ -152,11 +183,12 @@ def _write_json(path, doc):
         f.write(json.dumps(doc, indent=2, ensure_ascii=False) + "\n")
 
 
-def _plan(doc, protected):
+def _plan(doc, protected, extra_rules=()):
     """Return (new_doc, added): new_doc is a copy of doc (or {} when absent) with
     the harden keys merged in; added records exactly what was added, so --remove
     can take it back. No other key is touched, moved or removed. protected is a
-    list of (path, is_dir)."""
+    list of (path, is_dir); extra_rules are permission rules that are not the
+    rule of a protected path (the instruction-file patterns)."""
     new_doc = json.loads(json.dumps(doc if doc is not None else {}))
     added = {
         "sandbox_created": False,
@@ -211,6 +243,10 @@ def _plan(doc, protected):
         added["deny_created"] = True
     for path, is_dir in protected:
         rule = _edit_rule(path, is_dir)
+        if rule not in deny:
+            deny.append(rule)
+            added["permissions_deny_added"].append(rule)
+    for rule in extra_rules:
         if rule not in deny:
             deny.append(rule)
             added["permissions_deny_added"].append(rule)
@@ -273,7 +309,8 @@ def _harden(home, claude_dir, projects, allow_instructions):
         return 5
 
     protected = _protected_paths(home, claude_dir, projects, allow_instructions)
-    new_doc, added = _plan(doc, protected)
+    extra_rules = [] if allow_instructions else _instruction_pattern_rules(projects)
+    new_doc, added = _plan(doc, protected, extra_rules)
     if allow_instructions:
         print("NOTE: CLAUDE.md stays writable (--allow-instructions)")
     if doc is not None and new_doc == doc:
@@ -302,6 +339,10 @@ def _harden(home, claude_dir, projects, allow_instructions):
           "and journals are read-only to the assistant. Restart Claude Code to apply.")
     print("Git hooks, project instructions and Claude Code extensions of each "
           "--project are read-only to the assistant too.")
+    if not allow_instructions:
+        print("Limit: a CLAUDE.md created later in a new subfolder by a shell command "
+              "is not covered (the sandbox matches paths, not patterns); the file "
+              "tools are covered by pattern.")
     return 0
 
 
@@ -653,14 +694,18 @@ def _autotest():
         results.append(("10 git hooks, .git/config, .claude, CLAUDE.md and .mcp.json are protected, "
                         "--remove is exact", ok, "rc=%d rc2=%d" % (r.returncode, r2.returncode)))
 
-    # Test 11: --allow-instructions leaves the two CLAUDE.md files out and says so;
-    # everything else is protected as usual.
+    # Test 11: --allow-instructions leaves every CLAUDE.md and CLAUDE.local.md out
+    # and says so — the root files, a subfolder file that already exists, and the
+    # pattern rules; everything else is protected as usual.
     with tempfile.TemporaryDirectory() as tmp:
         env = dict(base_env, HOME=tmp, PYTHONPYCACHEPREFIX=os.path.join(tmp, "pycache"))
         home, claude, project = (os.path.join(tmp, "home"), os.path.join(tmp, "claude"),
                                  os.path.join(tmp, "proj"))
         os.makedirs(home, exist_ok=True)
         os.makedirs(claude, exist_ok=True)
+        os.makedirs(os.path.join(project, "sub"), exist_ok=True)
+        with open(os.path.join(project, "sub", "CLAUDE.md"), "w", encoding="utf-8") as f:
+            f.write("planted")
         settings_path = os.path.join(claude, "settings.json")
         with open(settings_path, "w", encoding="utf-8") as f:
             json.dump(ORIG, f, indent=2)
@@ -669,17 +714,57 @@ def _autotest():
         doc = settings_of(settings_path)
         deny_write = doc.get("sandbox", {}).get("filesystem", {}).get("denyWrite", [])
         deny = doc.get("permissions", {}).get("deny", [])
-        md_paths = [os.path.join(project, "CLAUDE.md"), os.path.join(claude, "CLAUDE.md")]
+        md_paths = [os.path.join(project, "CLAUDE.md"), os.path.join(claude, "CLAUDE.md"),
+                    os.path.join(project, "CLAUDE.local.md"),
+                    os.path.join(project, "sub", "CLAUDE.md")]
         ok = (r.returncode == 0
               and "NOTE: CLAUDE.md stays writable (--allow-instructions)" in r.stdout
               and all(p not in deny_write for p in md_paths)
               and all(_edit_rule(p, False) not in deny for p in md_paths)
+              and not any("CLAUDE" in p for p in deny_write)
+              and not any("CLAUDE" in rule for rule in deny)
               and os.path.join(project, ".githooks") in deny_write
               and _edit_rule(os.path.join(project, ".githooks"), True) in deny
               and os.path.join(claude, "hooks") in deny_write)
         r2 = run(env, tmp, "--home", home, "--claude-dir", claude, "--remove")
         ok = ok and r2.returncode == 0 and settings_of(settings_path) == ORIG
-        results.append(("11 --allow-instructions: CLAUDE.md stays writable, the rest is protected", ok,
+        results.append(("11 --allow-instructions: no CLAUDE.md or CLAUDE.local.md is protected, "
+                        "the rest is", ok, "rc=%d rc2=%d" % (r.returncode, r2.returncode)))
+
+    # Test 12: nested instructions. CLAUDE.local.md at the project root is protected
+    # like CLAUDE.md; a CLAUDE.md that already exists in a subfolder is protected
+    # literally; the two /** pattern rules are written; the Limit line is printed;
+    # --remove is exact.
+    with tempfile.TemporaryDirectory() as tmp:
+        env = dict(base_env, HOME=tmp, PYTHONPYCACHEPREFIX=os.path.join(tmp, "pycache"))
+        home, claude, project = (os.path.join(tmp, "home"), os.path.join(tmp, "claude"),
+                                 os.path.join(tmp, "proj"))
+        os.makedirs(home, exist_ok=True)
+        os.makedirs(claude, exist_ok=True)
+        os.makedirs(os.path.join(project, "sub"), exist_ok=True)
+        settings_path = os.path.join(claude, "settings.json")
+        with open(settings_path, "w", encoding="utf-8") as f:
+            json.dump(ORIG, f, indent=2)
+        with open(os.path.join(project, "sub", "CLAUDE.md"), "w", encoding="utf-8") as f:
+            f.write("planted")
+        r = run(env, tmp, "--home", home, "--claude-dir", claude, "--project", project)
+        doc = settings_of(settings_path)
+        deny_write = doc.get("sandbox", {}).get("filesystem", {}).get("denyWrite", [])
+        deny = doc.get("permissions", {}).get("deny", [])
+        want_file = [os.path.join(project, "CLAUDE.local.md"),
+                     os.path.join(project, "sub", "CLAUDE.md")]
+        want_rule = ["Edit(//" + project.lstrip("/") + "/**/CLAUDE.md)",
+                     "Edit(//" + project.lstrip("/") + "/**/CLAUDE.local.md)"]
+        ok = (r.returncode == 0
+              and all(p in deny_write and _edit_rule(p, False) in deny for p in want_file)
+              and all(rule in deny for rule in want_rule)
+              and "Limit: a CLAUDE.md created later in a new subfolder by a shell command "
+                  "is not covered (the sandbox matches paths, not patterns); the file "
+                  "tools are covered by pattern." in r.stdout)
+        r2 = run(env, tmp, "--home", home, "--claude-dir", claude, "--remove")
+        ok = ok and r2.returncode == 0 and settings_of(settings_path) == ORIG
+        results.append(("12 CLAUDE.local.md and an existing subfolder CLAUDE.md are protected, "
+                        "the /** pattern rules are written, --remove is exact", ok,
                         "rc=%d rc2=%d" % (r.returncode, r2.returncode)))
 
     # Test 9: --notice prints the notice.
