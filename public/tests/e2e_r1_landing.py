@@ -67,6 +67,23 @@ def run_r1_guard_session(session, env):
     return proc.returncode, proc.stdout.strip()
 
 
+def run_r1_guard_hook(payload, env):
+    """Run r1_guard.py in Stop hook mode and return (returncode, stdout)."""
+    proc = subprocess.run(
+        [sys.executable, R1_GUARD],
+        input=json.dumps(payload),
+        capture_output=True, text=True, env=env
+    )
+    return proc.returncode, proc.stdout.strip()
+
+
+def write_prefs(home, enabled, mode):
+    """Write the switch where the guard reads it: FRUGALFLOW_HOME/preferences.json."""
+    os.makedirs(home, exist_ok=True)
+    with open(os.path.join(home, "preferences.json"), "w", encoding="utf-8") as f:
+        f.write(json.dumps({"switch": {"enabled": enabled, "mode": mode}}))
+
+
 def make_before_fixed_ts(ident, command, cwd, ts):
     return {
         "ts": ts,
@@ -271,6 +288,40 @@ def main():
             results.append(("PASS", "scenario6 witness git -c commit + real journal_add rc=0 R1 OK", f"got rc={rc_guard} out={out_guard[:60]}"))
         else:
             results.append(("FAIL", "scenario6 witness git -c commit + real journal_add rc=0 R1 OK", f"got rc={rc_guard} out={out_guard[:60]}"))
+
+        # ==================== SCENARIO 7 (observe): hook mode blocks nothing, vault present ====================
+        session_s7 = "s7"
+        proj7 = os.path.join(tmp, "proj7")
+        os.makedirs(os.path.join(proj7, "vault"), exist_ok=True)
+        env7 = dict(env)
+        env7["FRUGALFLOW_HOME"] = os.path.join(tmp, "home7")
+        write_prefs(env7["FRUGALFLOW_HOME"], True, "observe")
+
+        session_log.append(session_s7, make_before("g7", "git commit -m fix", proj7))
+        session_log.append(session_s7, make_after("g7", '{"stdout": "[main 1234567] fix"}'))
+
+        rc_guard, out_guard = run_r1_guard_hook({"session_id": session_s7, "cwd": proj7}, env7)
+        if rc_guard == 0 and "decision" not in out_guard and "block" not in out_guard:
+            results.append(("PASS", "scenario7 observe hook rc=0 no block (vault present)", f"got rc={rc_guard} out={out_guard[:60]}"))
+        else:
+            results.append(("FAIL", "scenario7 observe hook rc=0 no block (vault present)", f"got rc={rc_guard} out={out_guard[:60]}"))
+
+        # ==================== SCENARIO 8 (no vault): hook mode blocks nothing, switch active ====================
+        session_s8 = "s8"
+        proj8 = os.path.join(tmp, "proj8")
+        os.makedirs(proj8, exist_ok=True)
+        env8 = dict(env)
+        env8["FRUGALFLOW_HOME"] = os.path.join(tmp, "home8")
+        write_prefs(env8["FRUGALFLOW_HOME"], True, "active")
+
+        session_log.append(session_s8, make_before("g8", "git commit -m fix", proj8))
+        session_log.append(session_s8, make_after("g8", '{"stdout": "[main 1234567] fix"}'))
+
+        rc_guard, out_guard = run_r1_guard_hook({"session_id": session_s8, "cwd": proj8}, env8)
+        if rc_guard == 0 and "decision" not in out_guard and "block" not in out_guard:
+            results.append(("PASS", "scenario8 active hook rc=0 no block (no vault)", f"got rc={rc_guard} out={out_guard[:60]}"))
+        else:
+            results.append(("FAIL", "scenario8 active hook rc=0 no block (no vault)", f"got rc={rc_guard} out={out_guard[:60]}"))
 
     finally:
         # Print results

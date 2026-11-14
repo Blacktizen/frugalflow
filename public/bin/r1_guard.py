@@ -11,6 +11,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import session_log
 import r1_rules
 import chain_rules
+import guard_hook
+
+HOME = os.environ.get("FRUGALFLOW_HOME") or os.path.expanduser("~/.frugalflow")
 
 # Use GIT_GLOBAL from r1_rules for commit gesture matching
 COMMIT = re.compile(r"\bgit" + r1_rules.GIT_GLOBAL + r"\s+commit\b")
@@ -121,11 +124,12 @@ USAGE = "usage: r1_guard.py [--session SESSION] | --notice | --autotest   (no ar
 
 NOTICE = (
     "NAME      r1_guard.py - the end-of-turn hook: blocks the end of a turn while a state-changing command ran without a vault log entry after it.\n"
-    "READS     the Stop hook payload on stdin; the session log (session_log.py); git log of the repository a commit touched, for the trace-only exemption.\n"
-    "WRITES    a block decision on stdout; on a second stop in a row, one line to <sessions>/r1-missing.log instead. Exit 0 hook done or R1 OK, 1 guard down, 2 usage, 6 R1 missing.\n"
+    "READS     the Stop hook payload on stdin; the session log (session_log.py); git log of the repository a commit touched, for the trace-only exemption; FRUGALFLOW_HOME/preferences.json (the switch, read like guard_hook.read_switch).\n"
+    "WRITES    a block decision on stdout, only in a folder with a vault and only when the switch is on and not observe; on a second stop in a row, one line to <sessions>/r1-missing.log instead. Exit 0 hook done or R1 OK, 1 guard down, 2 usage, 6 R1 missing.\n"
     "EXAMPLE   python3 r1_guard.py --session 4f1c2a9e\n"
     "PITFALLS  2026-09-06 55 minutes and 5 commits went by without one log entry, then 8 entries were dumped in 3 minutes.\n"
-    "          A guard that crashes blocks, it never lets the turn end in silence; a commit that only carries vault/log.md is exempt, read from git."
+    "          A guard that crashes blocks, it never lets the turn end in silence; a commit that only carries vault/log.md is exempt, read from git.\n"
+    "          2026-11-14 observe and a folder without a vault block nothing; a missing preferences.json means active, never off."
 )
 
 
@@ -190,10 +194,48 @@ def reason(missing):
     return "R1 MISSING: " + str(len(missing)) + " gesture(s) without a log entry: " + " | ".join(missing[-5:]) + ". Run journal_add.py --vault <project vault>, then finish."
 
 
+def has_vault(folder):
+    """True when the folder holds a vault: a vault/ subfolder, or the folder itself is a vault (SCHEMA.md + log.md)."""
+    if not folder:
+        return False
+    if os.path.isdir(os.path.join(folder, "vault")):
+        return True
+    return os.path.isfile(os.path.join(folder, "SCHEMA.md")) and os.path.isfile(os.path.join(folder, "log.md"))
+
+
+def gesture_folders(entries):
+    """Folders the executed gestures ran in."""
+    folders = []
+    for entry, command in r1_rules.executed_commands(entries):
+        if r1_rules.gesture_in(command):
+            folders.append(r1_rules.command_repo(command, entry.get("cwd", "")))
+    return folders
+
+
+def turn_blocks(payload, entries):
+    """The end of turn may block only in a folder with a vault, switch on, mode not observe.
+
+    The switch is read exactly like the PreToolUse hook reads it (guard_hook.read_switch):
+    a missing or broken preferences.json means active, never off.
+    """
+    folders = []
+    cwd = payload.get("cwd")
+    if isinstance(cwd, str) and cwd:
+        folders.append(cwd)
+    folders.extend(gesture_folders(entries))
+    if not any(has_vault(folder) for folder in folders):
+        return False
+    enabled, mode = guard_hook.read_switch(HOME)
+    return enabled and mode != "observe"
+
+
 def run_hook(text):
     payload = json.loads(text)
     session = payload["session_id"]
-    missing = r1_rules.missing_log(load_entries(session), exempt, landed=entry_landed)
+    entries = load_entries(session)
+    if not turn_blocks(payload, entries):
+        return ""
+    missing = r1_rules.missing_log(entries, exempt, landed=entry_landed)
     if not missing:
         return ""
     if payload.get("stop_hook_active"):
@@ -226,6 +268,13 @@ def autotest():
     os.environ["FRUGALFLOW_SESSIONS"] = os.path.join(base, "sessions")
     os.environ["FRUGALFLOW_ANCHORS"] = os.path.join(base, "anchors")
     env = dict(os.environ)
+    # Hook mode reads the switch from FRUGALFLOW_HOME/preferences.json: pin it to a
+    # temporary active home so the tests measure the product, not the machine's settings.
+    home_dir = os.path.join(base, "home")
+    os.makedirs(home_dir, exist_ok=True)
+    with open(os.path.join(home_dir, "preferences.json"), "w", encoding="utf-8") as handle:
+        handle.write(json.dumps({"switch": {"enabled": True, "mode": "active"}}))
+    env["FRUGALFLOW_HOME"] = home_dir
     results = []
 
     try:
@@ -237,7 +286,9 @@ def autotest():
 
         s1_ok = True
         try:
-            session_log.append("s1", before("b1", "git push", base))
+            # The push runs in the repo (a folder with a vault): the hook mode only
+            # blocks where a vault exists.
+            session_log.append("s1", before("b1", "git push", repo))
             session_log.append("s1", after("b1"))
         except Exception:
             s1_ok = False

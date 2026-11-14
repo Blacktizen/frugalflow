@@ -8,7 +8,7 @@
 
 FrugalFlow gives Claude Code a memory per project.
 
-A reading gate refuses every write until the project's rules have been reread; every decision is sealed in a hash-chained journal the moment it is made; the next session starts where the previous one stopped.
+A reading gate refuses the first write into a project's vault until its rules have been reread; every decision is sealed in a hash-chained journal the moment it is made; `frugalflow resume` writes the handoff the next session starts from.
 
 Other memory tools suggest what to remember; FrugalFlow requires it, and refuses to go on until it is done.
 
@@ -45,13 +45,13 @@ Or as a Claude Code plugin:
 Every project gets a vault on the *LLM Wiki* pattern: raw sources, a wiki of linked pages, a schema that says how to keep it. Entry is always the same path: `overview`, then `index`, then two or three targeted pages, never everything. The closing pass (`vault_check`) keeps it healthy: no orphan page, no dead link, a todo always present.
 
 ### 2. Rereading is not a suggestion: it is enforced
-The reading gate refuses any write until the project's bearing lines (its rules, its warnings, its validated methods) have gone through the assistant's context. It is a check, not an instruction: the assistant cannot forget it. The rule that matters is in front of it every time it acts.
+The reading gate refuses the first write into a project's vault until its bearing lines (its rules, its warnings, its validated methods) have gone through the assistant's context; it does not look at code writes. It is a check, not an instruction: the assistant cannot forget it. The rule that matters is in front of it every time it acts.
 
 ### 3. Every decision is written when it is made
-After any action that changes state (a commit, a merge, a setting, a measurement that settles a question), a sealed journal entry must follow, or the end of the turn is blocked (`r1_guard`). The journal is append-only and hash-chained: an entry is superseded, never rewritten. Nothing is reconstructed from memory at the end of the day.
+After any action that changes state (a commit, a merge, a setting, a measurement that settles a question), a sealed journal entry must follow, or the end of the turn is blocked (`r1_guard`, active mode, in a folder with a vault; in `observe`, nothing is blocked). The journal is append-only and hash-chained: an entry is superseded, never rewritten. Nothing is reconstructed from memory at the end of the day.
 
-### 4. The next session starts where the last one stopped
-`frugalflow resume` builds the handoff from the vault and the sealed journal. It is generated, never hand-copied, so it cannot drift from what really happened.
+### 4. `frugalflow resume` writes where the last session stopped
+`frugalflow resume` builds the handoff from the project: its vault and its sealed journal. It is not injected at startup: run it in the project and paste what it writes at the start of the next session. It is generated, never hand-copied, so it cannot drift from what really happened.
 
 ### 5. Nothing is accepted on a model's word
 "Done" means nothing until an independent check says so (`delegate.py --verify`). A test only counts once it has been seen red, then green: `bite` breaks the code on purpose to prove the suite really fails. Inside the hook, a check that crashes or doubts refuses, with a "To fix:" line, never a silent pass.
