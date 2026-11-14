@@ -103,6 +103,30 @@ def has_assistant(path):
     return False
 
 
+def preflight(proj):
+    """Return a refusal message if any parent of proj holds a CLAUDE.md.
+
+    Claude Code loads CLAUDE.md from the working directory and its parents,
+    so a bench project nested under a folder that holds one (CLAUDE.md or
+    .claude/CLAUDE.md) would run its sessions under personal rules. The
+    project's own CLAUDE.md is not checked: condition C writes one on purpose.
+    """
+    parent = os.path.dirname(os.path.abspath(proj))
+    while True:
+        for rel in ("CLAUDE.md", os.path.join(".claude", "CLAUDE.md")):
+            found = os.path.join(parent, rel)
+            if os.path.isfile(found):
+                return (
+                    "refus: %s sits under %s which holds %s; "
+                    "bench sessions would load personal rules"
+                    % (proj, parent, found)
+                )
+        next_parent = os.path.dirname(parent)
+        if next_parent == parent:
+            return None
+        parent = next_parent
+
+
 def setup_chain(P, cond, chain_dir, proj):
     if not os.path.isdir(proj):
         if cond == "B":
@@ -331,6 +355,10 @@ def run_chain(P, cond, chain_id, plan_key):
     sessions = plan[plan_key]
     chain_dir = os.path.join(P["RUNS"], chain_id)
     proj = os.path.join(chain_dir, "proj")
+    refusal = preflight(proj)
+    if refusal:
+        print(refusal)
+        return 1
     os.makedirs(chain_dir, exist_ok=True)
     if setup_chain(P, cond, chain_dir, proj) != 0:
         return 1
@@ -589,9 +617,16 @@ def main():
     parser.add_argument("--chain")
     parser.add_argument("--plan", choices=["pilot", "main"])
     parser.add_argument("--autotest", action="store_true")
+    parser.add_argument("--preflight", metavar="PROJ")
     args = parser.parse_args()
     if args.autotest:
         sys.exit(autotest())
+    if args.preflight is not None:
+        refusal = preflight(args.preflight)
+        if refusal:
+            print(refusal, file=sys.stderr)
+            sys.exit(1)
+        sys.exit(0)
     if not args.cond or not args.chain or not args.plan:
         parser.error("--cond, --chain et --plan sont requis (sauf avec --autotest)")
     P = make_paths(W, AGENT)
