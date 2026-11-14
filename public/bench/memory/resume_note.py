@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 
 NOTICE = [
-    "NAME      resume_note.py - prints the open tasks and the last journal entry of a project vault, in under 25 lines, to resume a session without reading the vault.",
+    "NAME      resume_note.py - prints the open tasks, the convention entries (titles holding 'convention') and the last journal entry of a project vault, in under 25 lines, to resume a session without reading the vault.",
     "READS     --vault: todo.md and the log.md found by name under it (the raw folder is skipped).",
     "WRITES    nothing: the summary on the standard output; exit 0 done, 2 usage, 3 todo.md or log.md missing.",
     "EXAMPLE   python3 resume_note.py --vault project/vault",
@@ -37,6 +37,24 @@ Done: items 1-3 complete
 Partial: item 4 in stock/adjust.py, decided to mutate in place
 Next step: finish item 4
 <!-- chain prev=aaaa hash=bbbb -->
+"""
+
+FIXTURE_L_CONV = """\
+# Log - append-only, sealed
+
+## [2026-10-22 00:00] setup
+Decision: vault created
+<!-- chain prev=0000 hash=aaaa -->
+
+## [2026-10-22 10:00] Conventions session 1
+Decision: annotations complete, docstring 'Kata: <slug>'
+Why: readability
+<!-- chain prev=aaaa hash=bbbb -->
+
+## [2026-10-22 16:40] Session 1 closing note (stock)
+Done: items 1-3 complete
+Next step: finish item 4
+<!-- chain prev=bbbb hash=cccc -->
 """
 
 FIXTURE_T_CLOSED = """\
@@ -73,7 +91,8 @@ def parse_todo(path):
     return tasks
 
 
-def parse_log_last(path):
+def parse_log_entries(path):
+    """All journal entries as (title, content) pairs, in log order."""
     with open(path, "r", encoding="utf-8") as f:
         lines = f.readlines()
     entry_indices = []
@@ -81,21 +100,32 @@ def parse_log_last(path):
         s = line.rstrip("\n")
         if s.startswith("## [") and "] " in s:
             entry_indices.append(i)
-    if not entry_indices:
-        return None, []
-    last = entry_indices[-1]
-    title_line = lines[last].rstrip("\n")
-    pos = title_line.index("] ")
-    title = title_line[pos + 2:]
-    content = []
-    for i in range(last + 1, len(lines)):
-        s = lines[i].rstrip("\n")
-        if s.startswith("## [") and "] " in s:
-            break
-        if s == "" or s.startswith("<!--"):
-            continue
-        content.append(s)
-    return title, content
+    entries = []
+    for k, start in enumerate(entry_indices):
+        end = entry_indices[k + 1] if k + 1 < len(entry_indices) else len(lines)
+        title_line = lines[start].rstrip("\n")
+        pos = title_line.index("] ")
+        title = title_line[pos + 2:]
+        content = []
+        for i in range(start + 1, end):
+            s = lines[i].rstrip("\n")
+            if s == "" or s.startswith("<!--"):
+                continue
+            content.append(s)
+        entries.append((title, content))
+    return entries
+
+
+def select_log_entries(entries):
+    """Entries the resume must carry: every entry whose title holds
+    'convention' (case-insensitive) — durable decisions settled once and
+    never to be rediscovered — plus the last entry. Conventions come first;
+    the last entry is never duplicated."""
+    if not entries:
+        return [], (None, [])
+    last = entries[-1]
+    conventions = [e for e in entries[:-1] if "convention" in e[0].lower()]
+    return conventions, last
 
 
 def build_output(vault_path):
@@ -115,7 +145,7 @@ def build_output(vault_path):
         return None, "log.md not found in vault"
 
     tasks = parse_todo(todo_path)
-    title, content = parse_log_last(log_path)
+    conventions, (title, content) = select_log_entries(parse_log_entries(log_path))
 
     out = []
     out.append("RESUME " + name)
@@ -125,6 +155,9 @@ def build_output(vault_path):
     else:
         for t in tasks:
             out.append(t)
+    for conv_title, conv_content in conventions:
+        out.append("CONVENTION " + conv_title)
+        out.extend(conv_content)
     out.append("LAST ENTRY " + title)
     for c in content:
         out.append(c)
@@ -234,6 +267,28 @@ def run_autotest():
     if not ok5:
         all_pass = False
     results.append("PASS test 5 notice 5 lines" if ok5 else "FAIL test 5 expected 5 lines got {} lines".format(len(lines5)))
+
+    # --- Test 6: a convention entry in the middle of the log is carried
+    # whole, before the last entry. ---
+    vault6 = os.path.join(tmpdir, "kata", "vault")
+    os.makedirs(vault6, exist_ok=True)
+    with open(os.path.join(vault6, "todo.md"), "w", encoding="utf-8") as f:
+        f.write(FIXTURE_T)
+    with open(os.path.join(vault6, "log.md"), "w", encoding="utf-8") as f:
+        f.write(FIXTURE_L_CONV)
+    exp6 = (
+        "RESUME kata\n"
+        "OPEN\n"
+        "- (me) item 4: finish stock/adjust.py\n"
+        "- (me) item 5: implement stock/merge.py per SPEC.md\n"
+        "CONVENTION Conventions session 1\n"
+        "Decision: annotations complete, docstring 'Kata: <slug>'\n"
+        "Why: readability\n"
+        "LAST ENTRY Session 1 closing note (stock)\n"
+        "Done: items 1-3 complete\n"
+        "Next step: finish item 4"
+    )
+    check(6, ["--vault", "kata/vault"], 0, exp6)
 
     shutil.rmtree(tmpdir, ignore_errors=True)
 

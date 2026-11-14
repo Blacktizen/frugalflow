@@ -59,9 +59,12 @@ def _journal_entry_blocks(body):
 
 def _fallback_resume(lines):
     """Build the capped resume, in this order: the carrier lines (the session
-    rules, the Log line), then the journal entries newest first whole, then
-    open todos, then where we stand, then pointers to what did not fit.
-    An entry is added whole or not at all, never cut mid-line."""
+    rules, the Log line), then the journal entries: the convention entries
+    (titles holding "convention") first, then the other entries newest first.
+    The last entry is never truncated; the convention entries are truncated
+    last; the other entries are dropped first. Then open todos, then where we
+    stand, then pointers to what did not fit. An entry is added whole or not
+    at all, never cut mid-line."""
     head, sections = _split_resume_sections(lines)
     rules = recent = todos = stand = None
     for header, body in sections:
@@ -95,16 +98,40 @@ def _fallback_resume(lines):
         for line in rules:
             add(line)
 
-    # 2. Journal entries, newest first, whole or not at all.
+    # 2. Journal entries: conventions first, then the rest newest first.
+    # The last entry is kept whatever the budget; a convention entry is kept
+    # whole if it still fits once the last entry is reserved; the other
+    # entries are dropped first, whole or not at all.
     blocks = _journal_entry_blocks(recent or [])
-    kept = 0
-    for block in reversed(blocks):
-        if len("\n".join(out + block)) <= budget:
-            out.extend(block)
-            kept += 1
+    last_block = blocks[-1] if blocks else None
+    conv_blocks = [b for b in blocks if "convention" in b[0][4:].lower()]
+    conv_ids = set(id(b) for b in conv_blocks)
+    other_blocks = [b for b in blocks
+                    if b is not last_block and id(b) not in conv_ids]
+
+    kept_conv = []
+    kept_recent = []
+    if last_block is not None and id(last_block) not in conv_ids:
+        kept_recent.append(last_block)
+
+    def fits(block):
+        flat = out + [line for b in kept_conv + kept_recent for line in b] + block
+        return len("\n".join(flat)) <= budget
+
+    for block in conv_blocks:
+        if block is last_block or fits(block):
+            kept_conv.append(block)
+    for block in reversed(other_blocks):
+        if fits(block):
+            kept_recent.append(block)
         else:
             break
-    omitted_entries = len(blocks) - kept
+
+    for block in kept_conv:
+        out.extend(block)
+    for block in kept_recent:
+        out.extend(block)
+    omitted_entries = len(blocks) - len(kept_conv) - len(kept_recent)
 
     # 3. Open todos, then where we stand: whole if they fit, else line by line.
     def add_section(header, body):
@@ -279,8 +306,15 @@ def run_autotest():
         results.append(("4 --notice exits 0 with the notice", ok4,
                         "rc=%d" % r4.returncode))
 
-        # Test 5: a big resume (long journal entries) -> the carrier lines and
-        # the last entry are present, the omitted entries get a log pointer.
+        # Test 5: a big resume (long journal entries) -> the carrier lines,
+        # the last entry and the convention entry are present, the omitted
+        # entries get a log pointer.
+        subprocess.run(
+            [sys.executable, os.path.join(bin_dir, "journal_add.py"),
+             "--vault", vault, "--title", "Conventions demo",
+             "--field", "Decision=annotations and 'Kata: <slug>' docstrings",
+             "--field", "Why=durable project conventions, kept in every resume"],
+            check=True, capture_output=True, env=env, timeout=30)
         for n in range(6):
             subprocess.run(
                 [sys.executable, os.path.join(bin_dir, "journal_add.py"),
@@ -303,13 +337,15 @@ def run_autotest():
                 context5 = obj["hookSpecificOutput"]["additionalContext"]
                 ok5 = ("Never edit an old log entry" in context5
                        and "LastDecision" in context5
+                       and "Conventions demo" in context5
                        and "vault/log.md" in context5
                        and "run frugalflow resume for the full handoff" in context5
                        and len(context5) < 6000)
             except (ValueError, KeyError, TypeError):
                 ok5 = False
-        results.append(("5 big resume: carrier lines and last entry present, "
-                        "log pointer for omitted entries, under 6000", ok5,
+        results.append(("5 big resume: carrier lines, last entry and convention "
+                        "entry present, log pointer for omitted entries, "
+                        "under 6000", ok5,
                         "rc=%d len=%d" % (r5.returncode, len(context5))))
     finally:
         shutil.rmtree(base, ignore_errors=True)

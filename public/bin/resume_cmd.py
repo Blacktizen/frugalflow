@@ -21,6 +21,9 @@ NOTICE = (
     "PITFALLS  2026-10-25 a new session started from memory of the last one "
     "and repeated a settled decision; the text is built from the sealed log, "
     "never from recall.\n"
+    "          2026-11-14 the conventions settled in the first journal entry "
+    "were lost at the next session; the resume carries whole every entry "
+    "whose title holds 'convention', before the recent ones.\n"
     "          2026-11-14 the README quickstart runs resume right after "
     "new-project without a cd: when ./vault is absent, resume falls back to "
     "the vault recorded by the last mount "
@@ -53,6 +56,16 @@ def _get_project_name(overview_text, vault_dir):
     abs_vault = os.path.abspath(vault_dir)
     parent = os.path.dirname(abs_vault)
     return os.path.basename(parent)
+
+
+def _entry_title(entry):
+    """Title of a journal entry: the text after '] ' on its '## [when] title' line."""
+    body_lines = entry["body"].splitlines()
+    first = body_lines[0] if body_lines else ""
+    if first.startswith("## "):
+        first = first[3:]
+    pos = first.find("] ")
+    return first[pos + 2:] if pos != -1 else first
 
 
 def _extract_required_reading(text):
@@ -143,9 +156,17 @@ def _build_resume_lines(vault_dir, entries_count):
     if log_text is not None:
         all_entries = chain_rules.entries(log_text)
         if entries_count < len(all_entries):
-            selected = all_entries[-entries_count:]
+            recent = all_entries[-entries_count:]
         else:
-            selected = all_entries
+            recent = all_entries
+        # Conventions settled in an early entry are durable decisions: every
+        # entry whose title holds "convention" is carried whole, before the
+        # recent ones, even when it falls outside the recent window.
+        recent_ids = set(id(e) for e in recent)
+        conventions = [e for e in all_entries
+                       if id(e) not in recent_ids
+                       and "convention" in _entry_title(e).lower()]
+        selected = conventions + recent
         if selected:
             for entry in selected:
                 body = entry["body"]
@@ -409,8 +430,49 @@ def _run_autotest():
             + ", " + str(t4c_ok)
         )
 
+        # Test 5: an entry whose title holds "convention" is carried whole,
+        # before the recent ones, even with --entries 1. The log is restored
+        # first: test 3 broke its chain on purpose.
+        with open(log_path, "w", encoding="utf-8") as f:
+            f.write(log_content)
+        subprocess.run(
+            [sys.executable, os.path.join(bin_dir, "journal_add.py"),
+             "--vault", vault_dir, "--title", "Conventions session 2",
+             "--field", "Decision=annotations and 'Kata: <slug>' docstrings",
+             "--field", "Why=durable project conventions, kept in every resume"],
+            check=True, capture_output=True)
+        subprocess.run(
+            [sys.executable, os.path.join(bin_dir, "journal_add.py"),
+             "--vault", vault_dir, "--title", "Final decision",
+             "--field", "Decision=Final decision",
+             "--field", "Why=the only entry the recent window keeps"],
+            check=True, capture_output=True)
+        res = subprocess.run(
+            [sys.executable, script_path, "--vault", vault_dir,
+             "--entries", "1"],
+            capture_output=True, text=True)
+        out5 = res.stdout
+        code5 = res.returncode
+        t5_ok = (
+            out5 != ""
+            and code5 == 0
+            and "Conventions session 2" in out5
+            and "annotations and 'Kata: <slug>' docstrings" in out5
+            and "Final decision" in out5
+            and "Dropped the cache" not in out5
+            and out5.find("Conventions session 2") < out5.find("Final decision")
+        )
+        if not t5_ok:
+            all_pass = False
+        print(
+            ("PASS" if t5_ok else "FAIL")
+            + " 5: expected the convention entry carried whole before the recent"
+            " one with --entries 1; got code " + str(code5)
+            + (", EMPTY OUTPUT" if out5 == "" else "")
+        )
+
         if all_pass:
-            print("AUTOTEST 4/4")
+            print("AUTOTEST 5/5")
         return 0 if all_pass else 1
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
