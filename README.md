@@ -37,6 +37,8 @@ Or as a Claude Code plugin:
 /plugin install frugalflow@frugalflow
 ```
 
+In the project folder, `/frugalflow:init` mounts the vault of the current git repository. Inside a Claude Code session it is refused by design (it changes a setting): run `frugalflow init --here` in your own terminal instead.
+
 `init` starts in `observe` mode (nothing is blocked); `doctor` shows the mode; `frugalflow mode active` turns enforcement on. Install details: [public/QUICKSTART.md](public/QUICKSTART.md), [docs/INSTALL.md](docs/INSTALL.md).
 
 ## How the memory works
@@ -45,10 +47,10 @@ Or as a Claude Code plugin:
 Every project gets a vault on the *LLM Wiki* pattern: raw sources, a wiki of linked pages, a schema that says how to keep it. Entry is always the same path: `overview`, then `index`, then two or three targeted pages, never everything. The closing pass (`vault_check`) keeps it healthy: no orphan page, no dead link, a todo always present.
 
 ### 2. Rereading is not a suggestion: it is enforced
-The reading gate refuses the first write into a project's vault until its bearing lines (its rules, its warnings, its validated methods) have gone through the assistant's context; it does not look at code writes. It is a check, not an instruction: the assistant cannot forget it. The rule that matters is in front of it every time it acts.
+The reading gate refuses the first write into a project's vault until its bearing lines (its rules, its warnings, its validated methods) have gone through the assistant's context; it does not look at code writes. It is a check, not an instruction: the assistant cannot forget it.
 
 ### 3. Every decision is written when it is made
-After any action that changes state (a commit, a merge, a setting, a measurement that settles a question), a sealed journal entry must follow, or the end of the turn is blocked (`r1_guard`, active mode, in a folder with a vault; in `observe`, nothing is blocked). The journal is append-only and hash-chained: an entry is superseded, never rewritten. Nothing is reconstructed from memory at the end of the day.
+After any action that changes state (a commit, a merge, a setting, a measurement that settles a question), a sealed journal entry must follow, or the end of the turn is blocked (`r1_guard`, active mode, in a folder with a vault; in `observe`, nothing is blocked). The journal is append-only and hash-chained: a rewritten entry breaks the chain, and the check refuses it. Nothing is reconstructed from memory at the end of the day.
 
 ### 4. `frugalflow resume` writes where the last session stopped
 `frugalflow resume` builds the handoff from the project: its vault and its sealed journal. At startup, a folder with a vault gets the resume injected on its own into the session context: journal entries by title, open todos, pages to reread. The injected resume is capped so the whole injected context stays under 6,000 characters; past the cap it injects pointers to vault/overview.md, vault/todo.md, vault/log.md, vault/SCHEMA.md and the line "run frugalflow resume for the full handoff". A folder without a vault gets nothing of the resume. `frugalflow resume` also stays available by hand. It is generated, never hand-copied, so it cannot drift from what really happened.

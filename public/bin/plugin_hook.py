@@ -9,11 +9,12 @@ BIN = os.path.dirname(os.path.abspath(__file__))
 if BIN not in sys.path:
     sys.path.insert(0, BIN)
 # Closed list: a hook command can only launch one of these tools, nothing else.
-TOOLS = ("session_log", "r1_guard", "session_summary", "session_banner", "session_resume", "usage_report", "guard_hook")
+TOOLS = ("session_log", "r1_guard", "session_summary", "session_banner", "session_resume", "usage_report", "guard_hook", "frugalflow")
 
 USAGE = (
     "usage: plugin_hook.py TOOL [ARGS] | --notice | --autotest\n"
     "  TOOL: one of " + ", ".join(TOOLS) + " (ARGS are passed through to the tool)\n"
+    "  frugalflow: the CLI verbs (init, close, doctor, resume) run through this launcher too\n"
 )
 
 NOTICE = (
@@ -23,6 +24,7 @@ NOTICE = (
     "EXAMPLE   echo '{\"tool_name\": \"Write\", \"tool_input\": {}}' | python3 plugin_hook.py guard_hook --hook\n"
     "PITFALLS  2026-11-13 a launcher that seeded on every run would overwrite settings the user edited: the home is seeded only when it does not exist; an existing home with a missing or broken guard.json stays a refusal, never a free pass.\n"
     "          2026-11-13 a hook command without -I let python run a planted .pth file before the guard: the tool runs with -I, like every FrugalFlow hook command.\n"
+    "          2026-11-14 the launcher also passes the CLI verbs (frugalflow init, close, doctor, resume): they keep their own guards, the CLAUDECODE + TTY refusal included.\n"
 )
 
 FIRST_RUN_LINE = ("FrugalFlow plugin: first run, settings written to {home} in observe mode "
