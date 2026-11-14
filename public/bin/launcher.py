@@ -7,11 +7,12 @@ import sys
 
 NOTICE = (
     "NAME      launcher.py - builds the shell command that runs a FrugalFlow tool from a hook, and recognizes such a command.\n"
-    "READS     nothing from disk: the bin folder and the python path it is given, and the PATH through shutil.which.\n"
+    "READS     whether bin_dir/<tool>.py and bin_dir/frugalflow.py exist, and the PATH through shutil.which; the python path it is given; the frugalflow found on the PATH, asked with --notice only.\n"
     "WRITES    nothing: command() returns text, names_tool() returns true or false.\n"
     "EXAMPLE   python3 launcher.py --notice\n"
     "PITFALLS  2026-10-25 hooks held the absolute path of the clone, so moving or deleting it broke every hook without a word; the command name or the installed package is used first.\n"
     "          2026-11-12 a hook command without -I let python run a .pth file planted in the user site-packages before the guard; every command now carries -I right after the interpreter.\n"
+    "          2026-11-14 an older frugalflow installed on the PATH answered the generated hooks and did not know the branch tools; the found program is now asked, with --notice only, whether its notice text equals bin_dir/frugalflow.py's and whether it knows the tool: only then the portable form is kept, else the bin_dir file runs.\n"
 )
 
 
@@ -47,6 +48,21 @@ def command(bin_dir, python, tool, which=None):
     name = tool
     if name.endswith(".py"):
         name = name[:-3]
+
+    def ask(interp, script, args):
+        """Run <script> under -I with these args, asked with --notice only:
+        the program prints its notice and exits, nothing is written.
+        Return (ran, stdout); ran is None when the script cannot be run."""
+        try:
+            if not os.path.exists(script):
+                return None, ""
+            proc = subprocess.run(
+                [interp, "-I", script] + args,
+                stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=20)
+        except (OSError, subprocess.TimeoutExpired):
+            return None, ""
+        return proc.returncode == 0, proc.stdout
+
     if which is None:
         which = shutil.which
     found = which("frugalflow")
@@ -56,10 +72,37 @@ def command(bin_dir, python, tool, which=None):
         # The console script runs with its own shebang interpreter, so an
         # install inside a virtualenv keeps working under -I.
         interp = shebang_python(found) or python
-        return shlex.quote(interp) + " -I " + shlex.quote(found) + " run " + name
+        # Two questions to the frugalflow found on the PATH, both asked with
+        # --notice only (it prints and exits; no side effect):
+        # 1. Is it the same code as bin_dir? Its --notice text must equal the
+        #    --notice text of bin_dir/frugalflow.py. An older install answers
+        #    the tools it knows but misses the branch tools, so when the two
+        #    texts differ every command runs the bin_dir file: the hooks then
+        #    carry the code that generated them.
+        # 2. When the texts match, does it know this tool? run <name> --notice
+        #    must not fail. A script that cannot be run at all is no evidence
+        #    of ignorance: the portable form stays.
+        entry = os.path.join(bin_dir, "frugalflow.py")
+        portable = False
+        found_ran, found_out = ask(interp, found, ["--notice"])
+        if found_ran is None:
+            portable = True
+        elif not os.path.exists(entry):
+            tool_ran, _ = ask(interp, found, ["run", name, "--notice"])
+            portable = tool_ran is not False
+        else:
+            local_ran, local_out = ask(python, entry, ["--notice"])
+            if local_ran and found_out == local_out:
+                tool_ran, _ = ask(interp, found, ["run", name, "--notice"])
+                portable = tool_ran is not False
+        if portable:
+            return shlex.quote(interp) + " -I " + shlex.quote(found) + " run " + name
+    local = os.path.join(bin_dir, name + ".py")
+    if os.path.exists(local):
+        return shlex.quote(python) + " -I " + shlex.quote(local)
     if installed(bin_dir):
         return shlex.quote(python) + " -I -m frugalflow_app.bin.frugalflow run " + name
-    return shlex.quote(python) + " -I " + shlex.quote(os.path.join(bin_dir, name + ".py"))
+    return shlex.quote(python) + " -I " + shlex.quote(local)
 
 
 def _tool_index(parts):
