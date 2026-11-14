@@ -95,11 +95,12 @@ def hooks_config(bin_dir, python, project=None):
     guard = launcher.command(bin_dir, python, "r1_guard")
     summary_show = launcher.command(bin_dir, python, "session_summary") + " --show"
     banner = launcher.command(bin_dir, python, "session_banner")
+    resume = launcher.command(bin_dir, python, "session_resume")
     summary_record = launcher.command(bin_dir, python, "session_summary") + " --record-hook"
     receipt = launcher.command(bin_dir, python, "usage_report") + " --hook"
     cfg = {
         "hooks": {
-            "SessionStart": [{"hooks": [hook(log), hook(summary_show), hook(banner)]}],
+            "SessionStart": [{"hooks": [hook(log), hook(summary_show), hook(banner), hook(resume)]}],
             "UserPromptSubmit": [{"hooks": [hook(log)]}],
             "PreToolUse": [{"matcher": "*", "hooks": [hook(log)]}],
             "PostToolUse": [{"matcher": "*", "hooks": [hook(log)]}],

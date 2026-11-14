@@ -9,7 +9,7 @@ BIN = os.path.dirname(os.path.abspath(__file__))
 if BIN not in sys.path:
     sys.path.insert(0, BIN)
 # Closed list: a hook command can only launch one of these tools, nothing else.
-TOOLS = ("session_log", "r1_guard", "session_summary", "session_banner", "usage_report", "guard_hook")
+TOOLS = ("session_log", "r1_guard", "session_summary", "session_banner", "session_resume", "usage_report", "guard_hook")
 
 USAGE = (
     "usage: plugin_hook.py TOOL [ARGS] | --notice | --autotest\n"
