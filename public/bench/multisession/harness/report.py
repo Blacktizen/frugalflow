@@ -1,9 +1,12 @@
+import importlib.util
 import json
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
+
+HARNESS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def read_sessions(chain_dir):
@@ -59,6 +62,48 @@ def session_at(chain, k):
         if int(s.get("k", 0)) == k:
             return s
     return {}
+
+
+def load_analyse_conformite():
+    path = os.path.join(HARNESS_DIR, "analyse_conformite.py")
+    spec = importlib.util.spec_from_file_location("analyse_conformite", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def tolerant_counts(runs_dir, chains):
+    """Per chain: modules conforming under the tolerant reading (the one
+    already defined in analyse_conformite.py) on the final state of the
+    chain, counting the sessions 2-5 modules only."""
+    ac = load_analyse_conformite()
+    check_rules = ac.load_check_rules()
+    counts = {}
+    for name in sorted(chains):
+        chain = chains[name]
+        kata_dir = os.path.join(runs_dir, name, "proj", "kata")
+        n = 0
+        for s in chain["sessions"]:
+            k = int(s.get("k", 0))
+            if k not in ac.LATE_SESSIONS:
+                continue
+            for slug in s.get("slugs", []):
+                path = os.path.join(kata_dir, slug.replace("-", "_") + ".py")
+                res = check_rules.analyze_module(path, slug)
+                if not res["delivered"]:
+                    continue
+                first = ac.docstring_first_line(path)
+                if res["t1"] and res["t2"] and res["t4"] and ac.t3_tolerant(first, slug):
+                    n += 1
+        counts[name] = n
+    return counts
+
+
+def section_tolerant(chains, counts):
+    out = ["## Tolerant par chaine (lecture tolerante, etat final, sessions 2-5)", ""]
+    for name in sorted(chains):
+        out.append("tolerant {} {}".format(name, counts[name]))
+    return out
 
 
 def mean(vals):
@@ -132,7 +177,7 @@ def cond_stats(chains, cond):
 
 def section1(chains):
     out = ["## 1. Tableau session par session", ""]
-    out.append("| chaine | k | jetons entree | jetons sortie | total | cumule | resolus session | resolus cumules | modules conformes | tours | duree mur | tuee |")
+    out.append("| chaine | k | jetons entree | jetons sortie | total | cumule | resolus session | resolus cumules | strict cumule | tours | duree mur | tuee |")
     out.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
     for name in sorted(chains):
         chain = chains[name]
@@ -270,6 +315,8 @@ def report(runs_dir):
     stats = {cond: cond_stats(chains, cond) for cond in ("A", "B")}
     lines = ["# Rapport du banc", ""]
     lines.extend(section1(chains))
+    lines.append("")
+    lines.extend(section_tolerant(chains, tolerant_counts(runs_dir, chains)))
     lines.append("")
     lines.extend(section2(stats))
     lines.append("")

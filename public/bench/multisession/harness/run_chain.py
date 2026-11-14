@@ -325,7 +325,7 @@ def run_session(P, cond, chain_id, chain_dir, proj, k, slugs, all_slugs, results
     rules_modules = rules.get("modules", {}) if isinstance(rules, dict) else {}
     rules_summary = rules.get("summary", {}) if isinstance(rules, dict) else {}
     print(
-        "%s %d solved=%d/%d cum=%d/%d tokens=%d wall=%ds killed=%s conformes=%d/%d"
+        "%s %d solved=%d/%d cum=%d/%d tokens=%d wall=%ds killed=%s strict_cumule=%d/%d"
         % (
             chain_id,
             k,
